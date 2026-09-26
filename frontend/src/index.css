@@ -1,0 +1,215 @@
+:root {
+  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Cinzel', serif;
+  
+  /* Brand Colors - Universidad Ricardo Palma & Lenguas Modernas (Light Mode Palette) */
+  --urp-green-deep: #064e3b;
+  --urp-green-primary: #0f5142;
+  --urp-green-light: #ecfdf5;
+  --urp-green-glow: #059669;
+  
+  --urp-gold-primary: #b45309;
+  --urp-gold-light: #fef3c7;
+  --urp-gold-dark: #78350f;
+  
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+  --bg-card-hover: #f8fafc;
+  
+  --border-card: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --border-focus: #0f5142;
+  
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-subtle: #64748b;
+  
+  --accent-blue: #0284c7;
+  --accent-blue-light: #e0f2fe;
+  --accent-purple: #7c3aed;
+  --accent-rose: #e11d48;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+  
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 10px 25px -3px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 20px rgba(15, 81, 66, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(15, 81, 66, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(180, 83, 9, 0.04) 0%, transparent 45%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background-attachment: fixed;
+}
+
+/* Light Glassmorphism and Card Panels */
+.glass-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.glass-panel:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.glass-panel-subtle {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Typography elements */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 60%, #92400e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-emerald {
+  background: linear-gradient(135deg, #0f5142 0%, #064e3b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom interactive input styles for Light Mode */
+.input-futuristic {
+  width: 100%;
+  background: #ffffff;
+  border: 1.5px solid var(--border-card);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  padding: 13px 16px;
+  font-size: 1rem;
+  font-family: var(--font-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.input-futuristic:focus {
+  border-color: var(--urp-green-primary);
+  box-shadow: 0 0 0 3px rgba(15, 81, 66, 0.12);
+  background: #ffffff;
+}
+
+.input-futuristic::placeholder {
+  color: #94a3b8;
+}
+
+/* Primary Button (URP Emerald) */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, #0f5142 0%, #064e3b 100%);
+  color: #ffffff;
+  border: none;
+  padding: 13px 22px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 81, 66, 0.25);
+}
+
+.btn-primary-gradient:hover {
+  background: linear-gradient(135deg, #136351 0%, #0a5843 100%);
+  box-shadow: 0 6px 16px rgba(15, 81, 66, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-primary-gradient:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary Button (URP Amber/Gold) */
+.btn-gold-gradient {
+  background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+  color: #ffffff;
+  border: none;
+  padding: 11px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.2);
+}
+
+.btn-gold-gradient:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 6px 16px rgba(180, 83, 9, 0.3);
+  transform: translateY(-1px);
+}
+
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Typewriter blinking cursor */
+@keyframes cursorBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.typewriter-cursor {
+  animation: cursorBlink 0.85s infinite ease-in-out;
+}
