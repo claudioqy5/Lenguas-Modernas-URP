@@ -7,6 +7,7 @@ namespace AsistenciaLenguas.Api.DTOs
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Career { get; set; } = "Traducción e Interpretación";
+        public string Faculty { get; set; } = "Humanidades y Lenguas Modernas";
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string PrimaryLanguage { get; set; } = "Inglés";
@@ -23,6 +24,7 @@ namespace AsistenciaLenguas.Api.DTOs
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Career { get; set; } = string.Empty;
+        public string Faculty { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string PrimaryLanguage { get; set; } = string.Empty;

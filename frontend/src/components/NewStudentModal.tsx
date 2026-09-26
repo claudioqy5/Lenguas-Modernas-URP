@@ -8,44 +8,54 @@ interface NewStudentModalProps {
   prefilledCode: string;
   onClose: () => void;
   onSuccess: (student: Student, checkInRes?: CheckInResponse) => void;
+  initialStudent?: Student;
 }
 
 const CAREERS = [
   "Traducción e Interpretación",
   "Humanidades y Lingüística",
   "Turismo, Hotelería y Lenguas",
+  "Biología",
+  "Ingeniería Civil",
+  "Medicina Humana",
+  "Arquitectura",
+  "Psicología",
+  "Administración y Negocios Internacionales",
   "Otras Carreras URP"
 ];
 
-const LANGUAGES = [
-  "Inglés - Francés",
-  "Inglés - Alemán",
-  "Inglés - Italiano",
-  "Inglés - Chino Mandarín",
-  "Inglés - Portugués",
-  "Inglés",
-  "Francés",
-  "Alemán",
-  "Italiano",
-  "Chino Mandarín",
-  "Portugués"
+const FACULTIES = [
+  "Humanidades y Lenguas Modernas",
+  "Ingeniería",
+  "Medicina Humana",
+  "Ciencias Biológicas",
+  "Ciencias Económicas y Empresariales",
+  "Arquitectura y Urbanismo",
+  "Psicología",
+  "Derecho y Ciencia Política",
+  "Otras Facultades"
 ];
+
+
 
 export const NewStudentModal: React.FC<NewStudentModalProps> = ({
   isOpen,
   prefilledCode,
   onClose,
-  onSuccess
+  onSuccess,
+  initialStudent
 }) => {
+  const isEdit = !!initialStudent;
   const [formData, setFormData] = useState({
     studentCode: prefilledCode,
     documentNumber: '',
     firstName: '',
     lastName: '',
     career: CAREERS[0],
+    faculty: FACULTIES[0],
     email: prefilledCode ? `${prefilledCode}@urp.edu.pe` : '',
     phone: '',
-    primaryLanguage: LANGUAGES[0],
+    primaryLanguage: 'N/A',
     checkInNow: true,
     visitReason: 'Lectura / Estudio',
     languageFocus: 'General'
@@ -55,14 +65,29 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (prefilledCode) {
+    if (initialStudent) {
+      setFormData({
+        studentCode: initialStudent.studentCode,
+        documentNumber: initialStudent.documentNumber,
+        firstName: initialStudent.firstName,
+        lastName: initialStudent.lastName,
+        career: initialStudent.career,
+        faculty: initialStudent.faculty,
+        email: initialStudent.email,
+        phone: initialStudent.phone,
+        primaryLanguage: initialStudent.primaryLanguage || 'N/A',
+        checkInNow: false,
+        visitReason: 'Lectura / Estudio',
+        languageFocus: 'General'
+      });
+    } else if (prefilledCode) {
       setFormData(prev => ({
         ...prev,
         studentCode: prefilledCode,
         email: prev.email || `${prefilledCode}@urp.edu.pe`
       }));
     }
-  }, [prefilledCode]);
+  }, [prefilledCode, initialStudent]);
 
   if (!isOpen) return null;
 
@@ -76,11 +101,22 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const res = await api.registerStudent(formData);
-      if (res.success && res.student) {
-        onSuccess(res.student, res.checkInResult);
+      
+      if (isEdit && initialStudent?.id) {
+        const res = await api.updateStudent(initialStudent.id, formData);
+        if (res.success) {
+          // Send updated student via onSuccess (it might not return the full student depending on the API but let's assume it returns success)
+          onSuccess({ ...initialStudent, ...formData } as Student);
+        } else {
+          setError(res.message || 'Error al actualizar el estudiante.');
+        }
       } else {
-        setError(res.message || 'Error al guardar el estudiante.');
+        const res = await api.registerStudent(formData);
+        if (res.success && res.student) {
+          onSuccess(res.student, res.checkInResult);
+        } else {
+          setError(res.message || 'Error al guardar el estudiante.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Error de conexión.');
@@ -163,14 +199,16 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  Registro de Nuevo Estudiante
+                  {isEdit ? 'Editar Estudiante' : 'Registro de Nuevo Estudiante'}
                 </h2>
-                <span className="badge-tag" style={{ background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)', border: '1px solid rgba(180, 83, 9, 0.25)' }}>
-                  <Sparkles size={12} /> Primera Visita
-                </span>
+                {!isEdit && (
+                  <span className="badge-tag" style={{ background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)', border: '1px solid rgba(180, 83, 9, 0.25)' }}>
+                    <Sparkles size={12} /> Primera Visita
+                  </span>
+                )}
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Completa tus datos por única vez para el acceso libre a la biblioteca.
+                {isEdit ? 'Modifica los datos del estudiante en la base de datos.' : 'Completa tus datos por única vez para el acceso libre a la biblioteca San Jerónimo.'}
               </p>
             </div>
           </div>
@@ -190,6 +228,7 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                 <input
                   type="text"
                   required
+                  disabled={isEdit}
                   value={formData.studentCode}
                   onChange={(e) => setFormData({ ...formData, studentCode: e.target.value })}
                   className="input-futuristic"
@@ -248,6 +287,20 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Facultad
+                </label>
+                <select
+                  value={formData.faculty}
+                  onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
+                  className="input-futuristic"
+                  style={{ fontSize: '0.92rem', padding: '10px 14px' }}
+                >
+                  {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
                   Carrera Profesional
                 </label>
                 <select
@@ -257,20 +310,6 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                   style={{ fontSize: '0.92rem', padding: '10px 14px' }}
                 >
                   {CAREERS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
-                  Idioma(s) de Especialidad / Interés
-                </label>
-                <select
-                  value={formData.primaryLanguage}
-                  onChange={(e) => setFormData({ ...formData, primaryLanguage: e.target.value })}
-                  className="input-futuristic"
-                  style={{ fontSize: '0.92rem', padding: '10px 14px' }}
-                >
-                  {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
             </div>
@@ -306,28 +345,30 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
             </div>
 
             {/* Check-in now checkbox */}
-            <div 
-              style={{ 
-                padding: '12px 16px', 
-                background: '#f8fafc', 
-                borderRadius: '10px', 
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}
-            >
-              <input
-                type="checkbox"
-                id="checkInNow"
-                checked={formData.checkInNow}
-                onChange={(e) => setFormData({ ...formData, checkInNow: e.target.checked })}
-                style={{ width: '18px', height: '18px', accentColor: '#0f5142', cursor: 'pointer' }}
-              />
-              <label htmlFor="checkInNow" style={{ fontSize: '0.88rem', color: 'var(--text-main)', fontWeight: 500, cursor: 'pointer' }}>
-                Marcar ingreso a la biblioteca de inmediato al registrarme
-              </label>
-            </div>
+            {!isEdit && (
+              <div 
+                style={{ 
+                  padding: '12px 16px', 
+                  background: '#f8fafc', 
+                  borderRadius: '10px', 
+                  border: '1px solid #e2e8f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="checkInNow"
+                  checked={formData.checkInNow}
+                  onChange={(e) => setFormData({ ...formData, checkInNow: e.target.checked })}
+                  style={{ width: '18px', height: '18px', accentColor: '#0f5142', cursor: 'pointer' }}
+                />
+                <label htmlFor="checkInNow" style={{ fontSize: '0.88rem', color: 'var(--text-main)', fontWeight: 500, cursor: 'pointer' }}>
+                  Marcar ingreso a la biblioteca San Jerónimo de inmediato al registrarme
+                </label>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
               <button
@@ -355,7 +396,7 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
               >
                 {loading ? 'Guardando...' : (
                   <>
-                    <Check size={18} /> Guardar y Continuar
+                    <Check size={18} /> {isEdit ? 'Guardar Cambios' : 'Guardar y Continuar'}
                   </>
                 )}
               </button>

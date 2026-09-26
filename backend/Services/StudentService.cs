@@ -58,6 +58,7 @@ namespace AsistenciaLenguas.Api.Services
                 FirstName = dto.FirstName.Trim(),
                 LastName = dto.LastName.Trim(),
                 Career = string.IsNullOrWhiteSpace(dto.Career) ? "Traducción e Interpretación" : dto.Career.Trim(),
+                Faculty = string.IsNullOrWhiteSpace(dto.Faculty) ? "Humanidades y Lenguas Modernas" : dto.Faculty.Trim(),
                 Email = dto.Email.Trim(),
                 Phone = dto.Phone.Trim(),
                 PrimaryLanguage = string.IsNullOrWhiteSpace(dto.PrimaryLanguage) ? "Inglés" : dto.PrimaryLanguage.Trim(),
@@ -77,6 +78,7 @@ namespace AsistenciaLenguas.Api.Services
                 .Set(s => s.FirstName, dto.FirstName.Trim())
                 .Set(s => s.LastName, dto.LastName.Trim())
                 .Set(s => s.Career, dto.Career.Trim())
+                .Set(s => s.Faculty, dto.Faculty.Trim())
                 .Set(s => s.Email, dto.Email.Trim())
                 .Set(s => s.Phone, dto.Phone.Trim())
                 .Set(s => s.PrimaryLanguage, dto.PrimaryLanguage.Trim());

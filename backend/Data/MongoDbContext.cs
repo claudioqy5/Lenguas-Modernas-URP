@@ -67,17 +67,24 @@ namespace AsistenciaLenguas.Api.Data
             }
         }
 
+        public void ReSeedData()
+        {
+            _database.DropCollection("Students");
+            _database.DropCollection("AttendanceRecords");
+            InitIndexesAndSeed();
+        }
+
         private void SeedInitialData()
         {
             var sampleStudents = new List<Student>
             {
-                new() { StudentCode = "202310452", DocumentNumber = "74125896", FirstName = "Valeria", LastName = "Mendoza Rojas", Career = "Traducción e Interpretación", Email = "valeria.mendoza@urp.edu.pe", PrimaryLanguage = "Inglés - Francés", TotalVisits = 14, CreatedAt = DateTime.UtcNow.AddMonths(-3) },
-                new() { StudentCode = "202220184", DocumentNumber = "71234567", FirstName = "Mateo", LastName = "Villanueva Castro", Career = "Traducción e Interpretación", Email = "mateo.villanueva@urp.edu.pe", PrimaryLanguage = "Alemán - Inglés", TotalVisits = 22, CreatedAt = DateTime.UtcNow.AddMonths(-4) },
-                new() { StudentCode = "202410889", DocumentNumber = "78965412", FirstName = "Camila", LastName = "Flores Paredes", Career = "Humanidades y Lingüística", Email = "camila.flores@urp.edu.pe", PrimaryLanguage = "Italiano", TotalVisits = 9, CreatedAt = DateTime.UtcNow.AddMonths(-1) },
-                new() { StudentCode = "202110567", DocumentNumber = "70891234", FirstName = "Sebastián", LastName = "Gómez Alarcón", Career = "Traducción e Interpretación", Email = "sebastian.gomez@urp.edu.pe", PrimaryLanguage = "Chino Mandarín", TotalVisits = 31, CreatedAt = DateTime.UtcNow.AddMonths(-5) },
-                new() { StudentCode = "202320711", DocumentNumber = "75641239", FirstName = "Luciana", LastName = "Herrera Silva", Career = "Traducción e Interpretación", Email = "luciana.herrera@urp.edu.pe", PrimaryLanguage = "Portugués", TotalVisits = 18, CreatedAt = DateTime.UtcNow.AddMonths(-2) },
-                new() { StudentCode = "202420319", DocumentNumber = "73456789", FirstName = "Joaquín", LastName = "Ríos Chávez", Career = "Turismo, Hotelería y Lenguas", Email = "joaquin.rios@urp.edu.pe", PrimaryLanguage = "Inglés", TotalVisits = 12, CreatedAt = DateTime.UtcNow.AddMonths(-1) },
-                new() { StudentCode = "202210940", DocumentNumber = "76543210", FirstName = "Andrea", LastName = "Salazar Quiroz", Career = "Traducción e Interpretación", Email = "andrea.salazar@urp.edu.pe", PrimaryLanguage = "Francés", TotalVisits = 25, CreatedAt = DateTime.UtcNow.AddMonths(-4) }
+                new() { StudentCode = "202310452", DocumentNumber = "74125896", FirstName = "Valeria", LastName = "Mendoza Rojas", Career = "Traducción e Interpretación", Faculty = "Humanidades y Lenguas Modernas", Email = "valeria.mendoza@urp.edu.pe", PrimaryLanguage = "Inglés - Francés", TotalVisits = 14, CreatedAt = DateTime.UtcNow.AddMonths(-3) },
+                new() { StudentCode = "202220184", DocumentNumber = "71234567", FirstName = "Mateo", LastName = "Villanueva Castro", Career = "Ingeniería Civil", Faculty = "Ingeniería", Email = "mateo.villanueva@urp.edu.pe", PrimaryLanguage = "Alemán - Inglés", TotalVisits = 22, CreatedAt = DateTime.UtcNow.AddMonths(-4) },
+                new() { StudentCode = "202410889", DocumentNumber = "78965412", FirstName = "Camila", LastName = "Flores Paredes", Career = "Biología", Faculty = "Ciencias Biológicas", Email = "camila.flores@urp.edu.pe", PrimaryLanguage = "Italiano", TotalVisits = 9, CreatedAt = DateTime.UtcNow.AddMonths(-1) },
+                new() { StudentCode = "202110567", DocumentNumber = "70891234", FirstName = "Sebastián", LastName = "Gómez Alarcón", Career = "Medicina Humana", Faculty = "Medicina Humana", Email = "sebastian.gomez@urp.edu.pe", PrimaryLanguage = "Chino Mandarín", TotalVisits = 31, CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+                new() { StudentCode = "202320711", DocumentNumber = "75641239", FirstName = "Luciana", LastName = "Herrera Silva", Career = "Administración y Negocios Internacionales", Faculty = "Ciencias Económicas y Empresariales", Email = "luciana.herrera@urp.edu.pe", PrimaryLanguage = "Portugués", TotalVisits = 18, CreatedAt = DateTime.UtcNow.AddMonths(-2) },
+                new() { StudentCode = "202420319", DocumentNumber = "73456789", FirstName = "Joaquín", LastName = "Ríos Chávez", Career = "Arquitectura", Faculty = "Arquitectura y Urbanismo", Email = "joaquin.rios@urp.edu.pe", PrimaryLanguage = "Inglés", TotalVisits = 12, CreatedAt = DateTime.UtcNow.AddMonths(-1) },
+                new() { StudentCode = "202210940", DocumentNumber = "76543210", FirstName = "Andrea", LastName = "Salazar Quiroz", Career = "Psicología", Faculty = "Psicología", Email = "andrea.salazar@urp.edu.pe", PrimaryLanguage = "Francés", TotalVisits = 25, CreatedAt = DateTime.UtcNow.AddMonths(-4) }
             };
 
             Students.InsertMany(sampleStudents);

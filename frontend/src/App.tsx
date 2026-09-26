@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { PolyglotGlobe3D } from './components/PolyglotGlobe3D';
 import { RotatingGreeting } from './components/RotatingGreeting';
-import { OccupancyMonitor } from './components/OccupancyMonitor';
 import { NewStudentModal } from './components/NewStudentModal';
 import { CheckInSuccessModal } from './components/CheckInSuccessModal';
 import { LibrarianLoginModal } from './components/LibrarianLoginModal';
@@ -18,24 +17,16 @@ const VISIT_REASONS = [
   { id: 'Lectura / Estudio', label: 'Sala de Lectura', icon: BookOpen },
   { id: 'Computadoras', label: 'Uso de Computadoras', icon: Laptop },
   { id: 'Préstamo de Libros', label: 'Préstamo / Devolución', icon: Library },
-  { id: 'Tándem / Idiomas', label: 'Tándem Lingüístico', icon: Globe },
-  { id: 'Trabajo Grupal', label: 'Estudio Grupal', icon: Users },
 ];
 
-const LANGUAGE_OPTIONS = [
-  "General",
-  "Inglés",
-  "Francés",
-  "Alemán",
-  "Italiano",
-  "Chino Mandarín",
-  "Portugués"
-];
 
 export function App() {
   // Views & Modals
-  const [isAdminView, setIsAdminView] = useState(false);
-  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [isAdminView, setIsAdminView] = useState(() => localStorage.getItem('isAdminView') === 'true');
+  const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
+    const saved = localStorage.getItem('authSession');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -43,7 +34,6 @@ export function App() {
   // Data State
   const [studentCodeInput, setStudentCodeInput] = useState('');
   const [selectedReason, setSelectedReason] = useState(VISIT_REASONS[0].id);
-  const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGE_OPTIONS[0]);
   const [occupancy, setOccupancy] = useState<OccupancyData>({ currentOccupancy: 24, maxCapacity: 60, occupancyPercentage: 40 });
   const [checkInResult, setCheckInResult] = useState<CheckInResponse | null>(null);
   const [unregisteredCode, setUnregisteredCode] = useState('');
@@ -76,7 +66,21 @@ export function App() {
 
     try {
       setLoading(true);
-      const res = await api.checkIn(code, selectedReason, selectedLanguage, method);
+      
+      // Check identity to prevent checking in as someone else by mistake
+      const checkRes = await api.checkStudent(code);
+      if (checkRes.exists && checkRes.student) {
+        // We pause the loading state so the UI doesn't look stuck during the native confirm
+        setLoading(false);
+        const confirmed = window.confirm(`Verificación:\n¿Eres ${checkRes.student.fullName}?`);
+        if (!confirmed) {
+          setStudentCodeInput('');
+          return;
+        }
+        setLoading(true);
+      }
+
+      const res = await api.checkIn(code, selectedReason, "General", method);
 
       if (res.isNewStudent) {
         setUnregisteredCode(code);
@@ -128,8 +132,13 @@ export function App() {
         onLogout={() => {
           setAuthSession(null);
           setIsAdminView(false);
+          localStorage.removeItem('authSession');
+          localStorage.removeItem('isAdminView');
         }}
-        onBackToKiosk={() => setIsAdminView(false)}
+        onBackToKiosk={() => {
+          setIsAdminView(false);
+          localStorage.removeItem('isAdminView');
+        }}
       />
     );
   }
@@ -157,8 +166,16 @@ export function App() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* URP Institutional Badge with SVG */}
+          {/* URP Institutional Badge with SVG (Hidden Login Trigger) */}
           <div
+            onClick={() => {
+              if (authSession) {
+                setIsAdminView(true);
+                localStorage.setItem('isAdminView', 'true');
+              } else {
+                setShowLoginModal(true);
+              }
+            }}
             style={{
               width: '44px',
               height: '44px',
@@ -168,7 +185,8 @@ export function App() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--urp-green-primary)'
+              color: 'var(--urp-green-primary)',
+              cursor: 'pointer'
             }}
           >
             <Landmark size={22} />
@@ -181,7 +199,7 @@ export function App() {
               Facultad de Humanidades y Lenguas Modernas
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Biblioteca Especializada — Sistema de Control de Asistencia
+              Biblioteca Especializada San Jerónimo — Sistema de Control de Asistencia
             </div>
           </div>
         </div>
@@ -220,33 +238,6 @@ export function App() {
               <strong style={{ color: 'var(--text-main)' }}>{currentTime.toLocaleTimeString('es-PE')}</strong>
             </span>
           </div>
-
-          <button
-            onClick={() => {
-              if (authSession) {
-                setIsAdminView(true);
-              } else {
-                setShowLoginModal(true);
-              }
-            }}
-            style={{
-              background: 'var(--urp-gold-light)',
-              border: '1px solid rgba(180, 83, 9, 0.3)',
-              color: 'var(--urp-gold-primary)',
-              padding: '9px 16px',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Shield size={15} />
-            {authSession ? 'Ver Panel Administrador' : 'Acceso Bibliotecólogo'}
-          </button>
         </div>
       </header>
 
@@ -283,11 +274,6 @@ export function App() {
 
           {/* Spacer so the massive 3D planetary system and orbiting rings are unobstructed */}
           <div style={{ flex: 1, minHeight: '80px' }} />
-
-          {/* Bottom: Occupancy Monitor Frosted Card */}
-          <div>
-            <OccupancyMonitor occupancy={occupancy} />
-          </div>
         </div>
 
         {/* Right Side: Check-In Form (Frosted Glass Panel) */}
@@ -414,22 +400,7 @@ export function App() {
               </div>
             </div>
 
-            {/* Language Focus */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
-                Idioma de Estudio / Consulta (Opcional)
-              </label>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="input-futuristic"
-                style={{ fontSize: '0.9rem', padding: '10px 14px' }}
-              >
-                {LANGUAGE_OPTIONS.map(l => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </div>
+
 
             {/* Submit Button */}
             <button
@@ -446,7 +417,7 @@ export function App() {
             >
               {loading ? 'Verificando...' : (
                 <>
-                  <CheckCircle2 size={18} /> Marcar Ingreso a la Biblioteca
+                  <CheckCircle2 size={18} /> Marcar Ingreso a la Biblioteca San Jerónimo
                 </>
               )}
             </button>
@@ -526,6 +497,8 @@ export function App() {
         onLoginSuccess={(session) => {
           setAuthSession(session);
           setIsAdminView(true);
+          localStorage.setItem('authSession', JSON.stringify(session));
+          localStorage.setItem('isAdminView', 'true');
         }}
       />
     </div>

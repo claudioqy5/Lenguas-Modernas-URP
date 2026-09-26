@@ -20,5 +20,12 @@ namespace AsistenciaLenguas.Api.Controllers
             var summary = await _analyticsService.GetSummaryAsync();
             return Ok(summary);
         }
+
+        [HttpPost("seed")]
+        public IActionResult Seed([FromServices] AsistenciaLenguas.Api.Data.MongoDbContext dbContext)
+        {
+            dbContext.ReSeedData();
+            return Ok(new { success = true, message = "Database seeded." });
+        }
     }
 }

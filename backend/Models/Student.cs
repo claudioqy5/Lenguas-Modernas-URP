@@ -24,6 +24,9 @@ namespace AsistenciaLenguas.Api.Models
         [BsonElement("career")]
         public string Career { get; set; } = "Traducción e Interpretación";
 
+        [BsonElement("faculty")]
+        public string Faculty { get; set; } = "Humanidades y Lenguas Modernas";
+
         [BsonElement("email")]
         public string Email { get; set; } = string.Empty;
 

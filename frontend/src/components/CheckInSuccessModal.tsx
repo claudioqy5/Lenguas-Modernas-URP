@@ -10,8 +10,17 @@ interface CheckInSuccessModalProps {
 }
 
 export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, onClose }) => {
+  const hasRun = React.useRef(false);
+  const [greetingWord, setGreetingWord] = React.useState("¡Bienvenido/a");
+
   useEffect(() => {
-    if (data?.success) {
+    if (!data?.success) {
+      hasRun.current = false;
+      return;
+    }
+
+    if (!hasRun.current) {
+      hasRun.current = true;
       confetti({
         particleCount: 60,
         spread: 60,
@@ -19,9 +28,30 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
         colors: ['#0f5142', '#b45309', '#0284c7', '#059669']
       });
 
+      // TTS Random Greeting
+      if (data.student?.firstName) {
+        const greetings = [
+          { text: "Bienvenido", display: "¡Bienvenido/a", lang: "es-ES" },
+          { text: "Welcome", display: "Welcome", lang: "en-US" },
+          { text: "Bienvenue", display: "Bienvenue", lang: "fr-FR" },
+          { text: "Willkommen", display: "Willkommen", lang: "de-DE" },
+          { text: "Bem-vindo", display: "Bem-vindo", lang: "pt-BR" },
+          { text: "欢迎", display: "欢迎", lang: "zh-CN" }
+        ];
+        const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+        
+        setGreetingWord(randomGreeting.display);
+        
+        const textToSpeak = `${randomGreeting.text}, ${data.student.firstName}`;
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = randomGreeting.lang;
+        utterance.rate = 1.15; // Increased speed
+        window.speechSynthesis.speak(utterance);
+      }
+
       const timer = setTimeout(() => {
         onClose();
-      }, 7000);
+      }, 2000);
 
       return () => clearTimeout(timer);
     }
@@ -104,7 +134,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
           </span>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
-            ¡Bienvenido/a, {student?.firstName || 'Estudiante'}!
+            {greetingWord}, {student?.firstName || 'Estudiante'}!
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '18px' }}>
             {student?.career} • Código: <strong style={{ color: 'var(--text-main)' }}>{student?.studentCode}</strong>
@@ -134,10 +164,10 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
             <div style={{ borderLeft: '1px solid #e2e8f0' }} />
             <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-                Especialidad
+                Carrera
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-blue)', marginTop: '3px' }}>
-                {student?.primaryLanguage || 'Idiomas'}
+                {student?.career || 'Universidad Ricardo Palma'}
               </div>
             </div>
           </div>
@@ -170,13 +200,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
             </div>
           )}
 
-          <button
-            onClick={onClose}
-            className="btn-primary-gradient"
-            style={{ width: '100%', padding: '14px', fontSize: '1rem' }}
-          >
-            Continuar a la Sala de Estudio <ArrowRight size={18} />
-          </button>
+
         </motion.div>
       </div>
     </AnimatePresence>

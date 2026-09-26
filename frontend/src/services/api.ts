@@ -1,4 +1,4 @@
-// API Client for Biblioteca Lenguas Modernas - URP
+// API Client for Biblioteca Especializada San Jerónimo - URP
 
 const API_BASE = '/api';
 
@@ -10,6 +10,7 @@ export interface Student {
   lastName: string;
   fullName: string;
   career: string;
+  faculty: string;
   email: string;
   phone: string;
   primaryLanguage: string;
@@ -139,6 +140,39 @@ const FALLBACK_QUOTES: LiteraryQuote[] = [
 ];
 
 export const api = {
+  // Check if student exists
+  async checkStudent(code: string): Promise<{ exists: boolean; student?: Student }> {
+    try {
+      const res = await fetch(`${API_BASE}/students/check/${code}`);
+      if (res.ok) {
+        return await res.json();
+      }
+      return { exists: false };
+    } catch (e) {
+      // Offline fallback: if the code is 9 chars long we assume it might exist for testing, but let's just return false
+      // or we can mock a student
+      if (code.length >= 8 && code !== "99999999") {
+        return {
+          exists: true,
+          student: {
+            studentCode: code,
+            documentNumber: '72345678',
+            firstName: 'Estudiante',
+            lastName: 'URP',
+            fullName: 'Estudiante URP Lenguas',
+            career: 'Traducción e Interpretación',
+            faculty: 'Humanidades y Lenguas Modernas',
+            email: `${code}@urp.edu.pe`,
+            phone: '987654321',
+            primaryLanguage: 'Inglés',
+            totalVisits: 14
+          }
+        };
+      }
+      return { exists: false };
+    }
+  },
+
   // Check-In (Barcode or Manual)
   async checkIn(
     studentCode: string, 
@@ -174,7 +208,7 @@ export const api = {
       return {
         success: true,
         isNewStudent: false,
-        message: `¡Bienvenido/a a la biblioteca! Asistencia registrada con éxito.`,
+        message: `¡Bienvenido/a a la biblioteca San Jerónimo! Asistencia registrada con éxito.`,
         student: {
           studentCode,
           documentNumber: '72345678',
@@ -182,6 +216,7 @@ export const api = {
           lastName: 'URP',
           fullName: 'Estudiante URP Lenguas',
           career: 'Traducción e Interpretación',
+          faculty: 'Humanidades y Lenguas Modernas',
           email: `${studentCode}@urp.edu.pe`,
           phone: '987654321',
           primaryLanguage: languageFocus || 'Inglés',
@@ -202,6 +237,7 @@ export const api = {
     firstName: string;
     lastName: string;
     career: string;
+    faculty: string;
     email: string;
     phone: string;
     primaryLanguage: string;
@@ -229,6 +265,7 @@ export const api = {
         lastName: data.lastName,
         fullName: `${data.firstName} ${data.lastName}`,
         career: data.career,
+        faculty: data.faculty,
         email: data.email,
         phone: data.phone,
         primaryLanguage: data.primaryLanguage,
@@ -279,6 +316,16 @@ export const api = {
     return null;
   },
 
+  // Seed Database
+  async seedDatabase(): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/analytics/seed`, { method: 'POST' });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
   // Get All Students
   async getAllStudents(): Promise<Student[]> {
     try {
@@ -288,17 +335,19 @@ export const api = {
     return [];
   },
 
+
   // Update Student
-  async updateStudent(id: string, data: Partial<Student>): Promise<boolean> {
+  async updateStudent(id: string, data: any): Promise<{ success: boolean; message?: string; student?: Student }> {
     try {
       const res = await fetch(`${API_BASE}/students/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      return res.ok;
+      return await res.json();
     } catch (e) {
-      return false;
+      console.error(e);
+      return { success: false, message: 'Error de conexión' };
     }
   },
 

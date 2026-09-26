@@ -9,13 +9,13 @@ interface Greeting {
 }
 
 const GREETINGS: Greeting[] = [
-  { phrase: "Bienvenido a la Biblioteca", sub: "Facultad de Humanidades y Lenguas Modernas", lang: "Español", code: "ES" },
-  { phrase: "Welcome to the Library", sub: "Faculty of Humanities and Modern Languages", lang: "English", code: "EN" },
-  { phrase: "Bienvenue à la Bibliothèque", sub: "Faculté des Sciences Humaines et Langues Modernes", lang: "Français", code: "FR" },
-  { phrase: "Willkommen in der Bibliothek", sub: "Fakultät für Geisteswissenschaften und Moderne Sprachen", lang: "Deutsch", code: "DE" },
-  { phrase: "Benvenuto nella Biblioteca", sub: "Facoltà di Scienze Umanistiche e Lingue Moderne", lang: "Italiano", code: "IT" },
-  { phrase: "欢迎来到图书馆", sub: "人文与现代语言学院", lang: "Chino Mandarín", code: "ZH" },
-  { phrase: "Bem-vindo à Biblioteca", sub: "Faculdade de Humanidades e Línguas Modernas", lang: "Português", code: "PT" },
+  { phrase: "Bienvenido a la\nBiblioteca San Jerónimo", sub: "Facultad de Humanidades y Lenguas Modernas", lang: "Español", code: "ES" },
+  { phrase: "Welcome to the\nSan Jerónimo Library", sub: "Faculty of Humanities and Modern Languages", lang: "English", code: "EN" },
+  { phrase: "Bienvenue à la\nBibliothèque San Jerónimo", sub: "Faculté des Sciences Humaines et Langues Modernes", lang: "Français", code: "FR" },
+  { phrase: "Willkommen in der\nBibliothek San Jerónimo", sub: "Fakultät für Geisteswissenschaften und Moderne Sprachen", lang: "Deutsch", code: "DE" },
+  { phrase: "Benvenuto nella\nBiblioteca San Jerónimo", sub: "Facoltà di Scienze Umanistiche e Lingue Moderne", lang: "Italiano", code: "IT" },
+  { phrase: "欢迎来到圣赫罗尼莫图书馆", sub: "人文与现代语言学院", lang: "Chino Mandarín", code: "ZH" },
+  { phrase: "Bem-vindo à\nBiblioteca San Jerónimo", sub: "Faculdade de Humanidades e Línguas Modernas", lang: "Português", code: "PT" },
 ];
 
 export const RotatingGreeting: React.FC = () => {
@@ -100,19 +100,19 @@ export const RotatingGreeting: React.FC = () => {
         <h1 
           className="font-display" 
           style={{ 
-            fontSize: 'clamp(2.1rem, 3.8vw, 3rem)', 
+            fontSize: 'clamp(3rem, 5.5vw, 4.8rem)', 
             fontWeight: 800, 
-            lineHeight: 1.15,
+            lineHeight: 1.1,
             color: 'var(--urp-green-deep)',
-            marginBottom: '6px',
+            marginBottom: '12px',
             minHeight: '1.25em',
             textShadow: '0 2px 16px rgba(255, 255, 255, 0.95), 0 0 30px rgba(255, 255, 255, 0.9)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-end',
             flexWrap: 'wrap'
           }}
         >
-          <span>{displayedPhrase}</span>
+          <span style={{ whiteSpace: 'pre-line' }}>{displayedPhrase}</span>
           <span 
             className="typewriter-cursor"
             style={{
@@ -132,7 +132,7 @@ export const RotatingGreeting: React.FC = () => {
         <p 
           style={{ 
             color: 'var(--text-muted)', 
-            fontSize: '1.05rem', 
+            fontSize: '1.15rem', 
             fontWeight: 600,
             textShadow: '0 1px 10px rgba(255, 255, 255, 0.9)',
             opacity: charIndex > 0 ? 1 : 0,

@@ -119,7 +119,7 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
             Acceso Bibliotecólogo
           </h2>
           <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-            Panel de administración y estadísticas de la biblioteca
+            Panel de administración y estadísticas de la biblioteca San Jerónimo
           </p>
 
           {error && (

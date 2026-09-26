@@ -20,7 +20,7 @@ export function exportAttendanceToPDF(
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Facultad de Humanidades y Lenguas Modernas - Biblioteca Especializada', 14, 18);
+  doc.text('Facultad de Humanidades y Lenguas Modernas - Biblioteca Especializada San Jerónimo', 14, 18);
   doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`, 14, 24);
 
   // Subtitle
@@ -111,5 +111,5 @@ export function exportAttendanceToExcel(
   const wsStudents = XLSX.utils.json_to_sheet(studentRows);
   XLSX.utils.book_append_sheet(wb, wsStudents, 'Directorio_Estudiantes');
 
-  XLSX.writeFile(wb, `Base_Datos_Biblioteca_URP_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.writeFile(wb, `Base_Datos_Biblioteca_San_Jeronimo_URP_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
