@@ -94,3 +94,4 @@ C:\Users\FAMHURP\Desktop\CFQY\LENGUAS\lenguas-modernas-urp\backend\obj\Debug\net
 C:\Users\FAMHURP\Desktop\CFQY\LENGUAS\lenguas-modernas-urp\backend\obj\Debug\net9.0\AsistenciaLenguas.Api.pdb
 C:\Users\FAMHURP\Desktop\CFQY\LENGUAS\lenguas-modernas-urp\backend\obj\Debug\net9.0\AsistenciaLenguas.Api.genruntimeconfig.cache
 C:\Users\FAMHURP\Desktop\CFQY\LENGUAS\lenguas-modernas-urp\backend\obj\Debug\net9.0\ref\AsistenciaLenguas.Api.dll
+C:\Users\ADMIN\Desktop\MIS PROYECTOS\Asistencia LenguasModernas\backend\obj\Debug\net9.0\AsistenciaLenguas.Api.sourcelink.json

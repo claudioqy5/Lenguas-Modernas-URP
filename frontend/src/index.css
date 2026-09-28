@@ -136,57 +136,65 @@ body {
   color: #94a3b8;
 }
 
-/* Primary Button (URP Emerald) */
+/* Primary Button (Vibrant Emerald & Azure Gradient) */
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #0f5142 0%, #064e3b 100%);
+  background: linear-gradient(135deg, #059669 0%, #0d9488 45%, #0284c7 100%);
   color: #ffffff;
-  border: none;
-  padding: 13px 22px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 15px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   border-radius: var(--radius-md);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(15, 81, 66, 0.25);
+  gap: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px -4px rgba(5, 150, 105, 0.4), 0 4px 10px -2px rgba(2, 132, 199, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-primary-gradient:hover {
-  background: linear-gradient(135deg, #136351 0%, #0a5843 100%);
-  box-shadow: 0 6px 16px rgba(15, 81, 66, 0.35);
-  transform: translateY(-1px);
+.btn-primary-gradient:hover:not(:disabled) {
+  background: linear-gradient(135deg, #10b981 0%, #0f766e 45%, #0369a1 100%);
+  box-shadow: 0 14px 32px -4px rgba(5, 150, 105, 0.5), 0 8px 16px -2px rgba(2, 132, 199, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-primary-gradient:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-primary-gradient:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  background: #94a3b8;
 }
 
 /* Secondary Button (URP Amber/Gold) */
 .btn-gold-gradient {
-  background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 11px 18px;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: var(--radius-md);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.2);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);
 }
 
 .btn-gold-gradient:hover {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  box-shadow: 0 6px 16px rgba(180, 83, 9, 0.3);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.35);
   transform: translateY(-1px);
 }
 
@@ -213,3 +221,12 @@ body {
 .typewriter-cursor {
   animation: cursorBlink 0.85s infinite ease-in-out;
 }
+
+/* Radar pulse animation for scanner active indicator */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+

@@ -116,7 +116,7 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
           </div>
 
           <h2 style={{ textAlign: 'center', fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '4px' }}>
-            Acceso Bibliotecólogo
+            Acceso Administrativo
           </h2>
           <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
             Panel de administración y estadísticas de la biblioteca San Jerónimo
