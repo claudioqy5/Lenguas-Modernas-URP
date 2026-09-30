@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
-  TrendingUp, Landmark, RotateCcw, Send, GraduationCap
+  TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User
 } from 'lucide-react';
 import { 
   api, AnalyticsSummary, AttendanceRecord, Student, AuthSession 
@@ -14,6 +14,7 @@ import { TabReportes } from './admin/TabReportes';
 import { TabAlumnos } from './admin/TabAlumnos';
 import { TabDifusion } from './admin/TabDifusion';
 import { TabAcademic } from './admin/TabAcademic';
+import { TabSettings } from './admin/TabSettings';
 import { 
   getISOWeekFromDateStr, getCurrentWeek, getCurrentMonth, 
   formatWeekLabel, formatMonthLabel, getTodayDateStr
@@ -30,7 +31,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout,
   onBackToKiosk
 }) => {
-  const [activeTab, setActiveTab] = useState<'inicio' | 'historico' | 'records' | 'students' | 'academic' | 'difusion'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'historico' | 'records' | 'students' | 'academic' | 'difusion' | 'settings'>('inicio');
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -354,6 +355,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}>
               {students.filter(s => s.email && s.email.trim()).length}
             </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'settings' ? 'var(--urp-green-light)' : 'transparent',
+              color: activeTab === 'settings' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
+              fontWeight: activeTab === 'settings' ? 600 : 400,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              transition: 'all 0.2s ease',
+              width: '100%'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <User size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Mi Perfil</span>
+            </div>
           </button>
         </nav>
 
@@ -682,6 +706,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 }).catch(() => {});
               }}
             />
+          )}
+
+          {/* TAB 7: MI PERFIL */}
+          {activeTab === 'settings' && (
+            <TabSettings session={session} />
           )}
         </main>
       </div>

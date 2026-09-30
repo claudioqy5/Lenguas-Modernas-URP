@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_lenguas
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend_lenguas
+    environment:
+      - MongoDbSettings__ConnectionString=mongodb://mongodb:27017
+      - MongoDbSettings__DatabaseName=BibliotecaLenguasModernas
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # Exposed optionally if you need to hit the backend directly
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_lenguas
+    ports:
+      - "80:80" # Maps the standard HTTP port to Nginx
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

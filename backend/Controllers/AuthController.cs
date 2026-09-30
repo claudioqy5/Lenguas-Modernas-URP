@@ -1,6 +1,8 @@
 using AsistenciaLenguas.Api.DTOs;
 using AsistenciaLenguas.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace AsistenciaLenguas.Api.Controllers
 {
@@ -30,6 +32,25 @@ namespace AsistenciaLenguas.Api.Controllers
             }
 
             return Ok(result);
+        }
+
+        [Authorize]
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateAdminDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var success = await _authService.UpdateAdminAsync(userId, dto);
+            if (success)
+            {
+                return Ok(new { success = true, message = "Perfil actualizado exitosamente." });
+            }
+
+            return BadRequest(new { success = false, message = "No se pudo actualizar el perfil." });
         }
     }
 }

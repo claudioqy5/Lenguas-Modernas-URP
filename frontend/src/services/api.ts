@@ -175,26 +175,6 @@ export const api = {
       }
       return { exists: false };
     } catch (e) {
-      // Offline fallback: if the code is 9 chars long we assume it might exist for testing, but let's just return false
-      // or we can mock a student
-      if (code.length >= 8 && code !== "99999999") {
-        return {
-          exists: true,
-          student: {
-            studentCode: code,
-            documentNumber: '72345678',
-            firstName: 'Estudiante',
-            lastName: 'URP',
-            fullName: 'Estudiante URP Lenguas',
-            career: 'Traducción e Interpretación',
-            faculty: 'Humanidades y Lenguas Modernas',
-            email: `${code}@urp.edu.pe`,
-            phone: '987654321',
-            primaryLanguage: 'Inglés',
-            totalVisits: 14
-          }
-        };
-      }
       return { exists: false };
     }
   },
@@ -218,41 +198,7 @@ export const api = {
       return await res.json();
     } catch (err) {
       console.warn('[API fallback checkin]', err);
-      // Offline fallback mock
-      const isRegistered = studentCode.length >= 8 && studentCode !== "99999999";
-      if (!isRegistered) {
-        return {
-          success: false,
-          isNewStudent: true,
-          message: `El código '${studentCode}' no está registrado aún. Por favor completa tus datos.`,
-          currentOccupancy: 24,
-          maxCapacity: 60,
-          occupancyPercentage: 40.0,
-          quote: FALLBACK_QUOTES[0]
-        };
-      }
-      return {
-        success: true,
-        isNewStudent: false,
-        message: `¡Bienvenido/a a la biblioteca San Jerónimo! Asistencia registrada con éxito.`,
-        student: {
-          studentCode,
-          documentNumber: '72345678',
-          firstName: 'Estudiante',
-          lastName: 'URP',
-          fullName: 'Estudiante URP Lenguas',
-          career: 'Traducción e Interpretación',
-          faculty: 'Humanidades y Lenguas Modernas',
-          email: `${studentCode}@urp.edu.pe`,
-          phone: '987654321',
-          primaryLanguage: languageFocus || 'Inglés',
-          totalVisits: 14
-        },
-        currentOccupancy: 25,
-        maxCapacity: 60,
-        occupancyPercentage: 41.7,
-        quote: FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)]
-      };
+      throw new Error('Error al conectar con el servidor.');
     }
   },
 
@@ -283,35 +229,8 @@ export const api = {
       }
       return json;
     } catch (err: any) {
-      console.warn('[API fallback registerStudent]', err);
-      const student: Student = {
-        studentCode: data.studentCode,
-        documentNumber: data.documentNumber,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        fullName: `${data.firstName} ${data.lastName}`,
-        career: data.career,
-        faculty: data.faculty,
-        email: data.email,
-        phone: data.phone,
-        primaryLanguage: data.primaryLanguage,
-        totalVisits: 1
-      };
-      return {
-        success: true,
-        message: `¡Registro exitoso! Bienvenido a Lenguas Modernas, ${data.firstName}.`,
-        student,
-        checkInResult: {
-          success: true,
-          isNewStudent: false,
-          message: 'Primera visita registrada con éxito.',
-          student,
-          currentOccupancy: 26,
-          maxCapacity: 60,
-          occupancyPercentage: 43.3,
-          quote: FALLBACK_QUOTES[1]
-        }
-      };
+      console.warn('[API error registerStudent]', err);
+      return { success: false, message: err.message || 'Error al conectar con el servidor.' };
     }
   },
 
@@ -321,7 +240,7 @@ export const api = {
       const res = await fetch(`${API_BASE}/attendance/occupancy`);
       if (res.ok) return await res.json();
     } catch (e) {}
-    return { currentOccupancy: 24, maxCapacity: 60, occupancyPercentage: 40.0 };
+    return { currentOccupancy: 0, maxCapacity: 60, occupancyPercentage: 0 };
   },
 
   // Get Recent Attendances
@@ -412,20 +331,24 @@ export const api = {
       }
       return { success: false, message: data.message || 'Credenciales inválidas' };
     } catch (e) {
-      // Offline fallback login for demo if backend is offline
-      if (username === 'admin' && (password === 'admin123' || password === 'admin')) {
-        return {
-          success: true,
-          session: {
-            token: 'mock-jwt-token-demo',
-            username: 'admin',
-            fullName: 'Lic. Bibliotecólogo URP',
-            role: 'Bibliotecario'
-          },
-          message: 'Bienvenido en modo local.'
-        };
-      }
-      return { success: false, message: 'Usuario o contraseña incorrectos.' };
+      return { success: false, message: 'Error al conectar con el servidor.' };
+    }
+  },
+
+  // Update Admin Profile
+  async updateProfile(token: string, data: { username?: string; fullName?: string; password?: string }): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/auth/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: 'Error al conectar con el servidor.' };
     }
   },
 
@@ -440,92 +363,8 @@ export const api = {
       }
       throw new Error('Error al obtener estructura académica');
     } catch (e) {
-      console.warn('[API fallback getAcademicTree]', e);
-      return [
-        {
-          id: 'f-1',
-          name: 'Humanidades y Lenguas Modernas',
-          code: 'FHLM',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-1', name: 'Traducción e Interpretación', code: 'TI', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' },
-            { id: 'c-2', name: 'Humanidades y Lingüística', code: 'HL', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' },
-            { id: 'c-3', name: 'Turismo, Hotelería y Gastronomía', code: 'THG', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' }
-          ]
-        },
-        {
-          id: 'f-2',
-          name: 'Ingeniería',
-          code: 'FING',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-4', name: 'Ingeniería Civil', code: 'ICIV', facultyId: 'f-2', facultyName: 'Ingeniería' },
-            { id: 'c-5', name: 'Ingeniería Industrial', code: 'IIND', facultyId: 'f-2', facultyName: 'Ingeniería' },
-            { id: 'c-6', name: 'Ingeniería Informática', code: 'IINF', facultyId: 'f-2', facultyName: 'Ingeniería' },
-            { id: 'c-7', name: 'Ingeniería Electrónica', code: 'IELEC', facultyId: 'f-2', facultyName: 'Ingeniería' },
-            { id: 'c-8', name: 'Ingeniería Mecatrónica', code: 'IMECA', facultyId: 'f-2', facultyName: 'Ingeniería' }
-          ]
-        },
-        {
-          id: 'f-3',
-          name: 'Medicina Humana',
-          code: 'FMED',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-9', name: 'Medicina Humana', code: 'MED', facultyId: 'f-3', facultyName: 'Medicina Humana' },
-            { id: 'c-10', name: 'Enfermería', code: 'ENF', facultyId: 'f-3', facultyName: 'Medicina Humana' }
-          ]
-        },
-        {
-          id: 'f-4',
-          name: 'Ciencias Biológicas',
-          code: 'FCB',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-11', name: 'Biología', code: 'BIO', facultyId: 'f-4', facultyName: 'Ciencias Biológicas' },
-            { id: 'c-12', name: 'Medicina Veterinaria', code: 'MVET', facultyId: 'f-4', facultyName: 'Ciencias Biológicas' }
-          ]
-        },
-        {
-          id: 'f-5',
-          name: 'Ciencias Económicas y Empresariales',
-          code: 'FCEE',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-13', name: 'Administración y Negocios Internacionales', code: 'ANI', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
-            { id: 'c-14', name: 'Contabilidad y Finanzas', code: 'CF', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
-            { id: 'c-15', name: 'Economía', code: 'ECON', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
-            { id: 'c-16', name: 'Marketing Global y Administración Comercial', code: 'MGAC', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' }
-          ]
-        },
-        {
-          id: 'f-6',
-          name: 'Arquitectura y Urbanismo',
-          code: 'FAU',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-17', name: 'Arquitectura y Urbanismo', code: 'ARQ', facultyId: 'f-6', facultyName: 'Arquitectura y Urbanismo' }
-          ]
-        },
-        {
-          id: 'f-7',
-          name: 'Psicología',
-          code: 'FPSI',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-18', name: 'Psicología', code: 'PSI', facultyId: 'f-7', facultyName: 'Psicología' }
-          ]
-        },
-        {
-          id: 'f-8',
-          name: 'Derecho y Ciencia Política',
-          code: 'FDCP',
-          createdAt: new Date().toISOString(),
-          careers: [
-            { id: 'c-19', name: 'Derecho', code: 'DER', facultyId: 'f-8', facultyName: 'Derecho y Ciencia Política' }
-          ]
-        }
-      ];
+      console.warn('[API error getAcademicTree]', e);
+      return [];
     }
   },
 

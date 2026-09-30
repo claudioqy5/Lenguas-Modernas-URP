@@ -11,6 +11,7 @@ namespace AsistenciaLenguas.Api.Services
     public interface IAuthService
     {
         Task<LoginResponseDto> LoginAsync(LoginDto dto);
+        Task<bool> UpdateAdminAsync(string adminId, UpdateAdminDto dto);
     }
 
     public class AuthService : IAuthService
@@ -82,6 +83,38 @@ namespace AsistenciaLenguas.Api.Services
                 Role = user.Role,
                 Message = $"Bienvenido al panel, {user.FullName}."
             };
+        }
+
+        public async Task<bool> UpdateAdminAsync(string adminId, UpdateAdminDto dto)
+        {
+            var user = await _context.AdminUsers.Find(u => u.Id == adminId).FirstOrDefaultAsync();
+            if (user == null) return false;
+
+            var updateDefinition = Builders<Models.AdminUser>.Update;
+            var updates = new List<UpdateDefinition<Models.AdminUser>>();
+
+            if (!string.IsNullOrWhiteSpace(dto.Username))
+            {
+                updates.Add(updateDefinition.Set(u => u.Username, dto.Username.Trim()));
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                updates.Add(updateDefinition.Set(u => u.FullName, dto.FullName.Trim()));
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                var hash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                updates.Add(updateDefinition.Set(u => u.PasswordHash, hash));
+            }
+
+            if (updates.Count == 0) return true; // Nothing to update
+
+            var combinedUpdate = updateDefinition.Combine(updates);
+            var result = await _context.AdminUsers.UpdateOneAsync(u => u.Id == adminId, combinedUpdate);
+
+            return result.ModifiedCount > 0;
         }
     }
 }
