@@ -4,8 +4,7 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb_lenguas
-    ports:
-      - "27017:27017"
+    # No exponemos el puerto 27017 al exterior para evitar choques con otros proyectos
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
@@ -22,8 +21,7 @@ services:
     depends_on:
       - mongodb
     restart: unless-stopped
-    ports:
-      - "8080:8080" # Exposed optionally if you need to hit the backend directly
+    # No exponemos el puerto 8080 al exterior, el frontend se conectará internamente
 
   frontend:
     build:
@@ -31,7 +29,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend_lenguas
     ports:
-      - "80:80" # Maps the standard HTTP port to Nginx
+      - "8085:80" # El puerto 8085 de tu VPS apuntará al 80 de este frontend
     depends_on:
       - backend
     restart: unless-stopped
