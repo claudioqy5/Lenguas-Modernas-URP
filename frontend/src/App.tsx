@@ -18,36 +18,36 @@ const VISIT_REASONS = [
     id: 'Lectura / Estudio',
     label: 'Sala de Lectura',
     icon: BookOpen,
-    accentColor: '#059669',
-    activeBg: 'linear-gradient(135deg, rgba(5, 150, 105, 0.12) 0%, rgba(16, 185, 129, 0.05) 100%)',
-    activeBorder: '#10b981',
-    activeText: '#064e3b',
-    activeGlow: '0 4px 14px rgba(16, 185, 129, 0.22)',
-    iconBgActive: '#059669',
+    accentColor: '#0f5142',
+    activeBg: 'rgba(15, 81, 66, 0.07)',
+    activeBorder: '#0f5142',
+    activeText: '#0f5142',
+    activeGlow: '0 4px 12px rgba(15, 81, 66, 0.15)',
+    iconBgActive: '#0f5142',
     iconColorActive: '#ffffff'
   },
   {
     id: 'Computadoras',
     label: 'Uso de Computadoras',
     icon: Laptop,
-    accentColor: '#2563eb',
-    activeBg: 'linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(2, 132, 199, 0.05) 100%)',
-    activeBorder: '#3b82f6',
-    activeText: '#1e3a8a',
-    activeGlow: '0 4px 14px rgba(37, 99, 235, 0.22)',
-    iconBgActive: '#2563eb',
+    accentColor: '#0284c7',
+    activeBg: 'rgba(2, 132, 199, 0.07)',
+    activeBorder: '#0284c7',
+    activeText: '#0369a1',
+    activeGlow: '0 4px 12px rgba(2, 132, 199, 0.15)',
+    iconBgActive: '#0284c7',
     iconColorActive: '#ffffff'
   },
   {
     id: 'Préstamo de Libros',
     label: 'Préstamo / Devolución',
     icon: Library,
-    accentColor: '#d97706',
-    activeBg: 'linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(245, 158, 11, 0.05) 100%)',
-    activeBorder: '#f59e0b',
-    activeText: '#78350f',
-    activeGlow: '0 4px 14px rgba(217, 119, 6, 0.22)',
-    iconBgActive: '#d97706',
+    accentColor: '#b45309',
+    activeBg: 'rgba(180, 83, 9, 0.07)',
+    activeBorder: '#b45309',
+    activeText: '#92400e',
+    activeGlow: '0 4px 12px rgba(180, 83, 9, 0.15)',
+    iconBgActive: '#b45309',
     iconColorActive: '#ffffff'
   },
 ];
@@ -147,6 +147,8 @@ export function App() {
 
   const handleStudentRegistered = (student: Student, checkInRes?: CheckInResponse) => {
     setShowNewStudentModal(false);
+    setUnregisteredCode('');
+    setStudentCodeInput('');
     if (checkInRes && checkInRes.success) {
       setCheckInResult(checkInRes);
       setShowSuccessModal(true);
@@ -156,6 +158,11 @@ export function App() {
       handleCheckIn(student.studentCode, 'Manual');
     }
   };
+
+  const handleCloseSuccessModal = React.useCallback(() => {
+    setShowSuccessModal(false);
+    setCheckInResult(null);
+  }, []);
 
   // Switch to admin view if authenticated
   if (isAdminView && authSession) {
@@ -400,10 +407,15 @@ export function App() {
 
             {/* Visit Reason Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
-                Motivo de Visita
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Motivo de Visita
+                </label>
+                <span style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 500 }}>
+                  Selecciona una opción
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                 {VISIT_REASONS.map((reason) => {
                   const Icon = reason.icon;
                   const isSelected = selectedReason === reason.id;
@@ -413,20 +425,18 @@ export function App() {
                       type="button"
                       onClick={() => setSelectedReason(reason.id)}
                       style={{
-                        padding: '12px 10px',
+                        padding: '12px 6px',
                         borderRadius: '12px',
                         border: isSelected ? `2px solid ${reason.activeBorder}` : '1.5px solid #e2e8f0',
                         background: isSelected ? reason.activeBg : '#ffffff',
                         color: isSelected ? reason.activeText : '#475569',
-                        fontSize: '0.82rem',
-                        fontWeight: isSelected ? 800 : 600,
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '8px',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: isSelected ? reason.activeGlow : '0 1px 3px rgba(0, 0, 0, 0.02)',
+                        boxShadow: isSelected ? reason.activeGlow : 'none',
                         transform: isSelected ? 'translateY(-1px)' : 'none'
                       }}
                       onMouseEnter={(e) => {
@@ -446,20 +456,28 @@ export function App() {
                     >
                       <div
                         style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '8px',
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           background: isSelected ? reason.iconBgActive : '#f1f5f9',
                           color: isSelected ? reason.iconColorActive : '#64748b',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.1)' : 'none'
                         }}
                       >
-                        <Icon size={17} />
+                        <Icon size={18} />
                       </div>
-                      <span style={{ textAlign: 'center', lineHeight: 1.25 }}>{reason.label}</span>
+                      <span style={{ 
+                        textAlign: 'center', 
+                        lineHeight: 1.25, 
+                        fontSize: '0.78rem',
+                        fontWeight: isSelected ? 700 : 600
+                      }}>
+                        {reason.label}
+                      </span>
                     </button>
                   );
                 })}
@@ -470,32 +488,61 @@ export function App() {
             <button
               type="submit"
               disabled={loading || !studentCodeInput.trim()}
-              className="btn-primary-gradient"
               style={{
                 width: '100%',
-                padding: '16px 20px',
-                fontSize: '1.02rem',
+                padding: '14px 20px',
+                fontSize: '0.96rem',
+                fontWeight: 700,
                 borderRadius: '12px',
                 marginTop: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px'
+                gap: '10px',
+                border: studentCodeInput.trim() ? '1px solid #0f5142' : '1px solid #e2e8f0',
+                background: studentCodeInput.trim()
+                  ? 'linear-gradient(135deg, #0f5142 0%, #059669 100%)'
+                  : '#f8fafc',
+                color: studentCodeInput.trim() ? '#ffffff' : '#94a3b8',
+                cursor: studentCodeInput.trim() && !loading ? 'pointer' : 'not-allowed',
+                boxShadow: studentCodeInput.trim()
+                  ? '0 4px 14px rgba(15, 81, 66, 0.25), 0 2px 4px rgba(15, 81, 66, 0.15)'
+                  : 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: studentCodeInput.trim() && !loading ? 'translateY(0)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (studentCodeInput.trim() && !loading) {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #0b3d32 0%, #047857 100%)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(15, 81, 66, 0.35)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (studentCodeInput.trim() && !loading) {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #0f5142 0%, #059669 100%)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(15, 81, 66, 0.25), 0 2px 4px rgba(15, 81, 66, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
               }}
             >
-              {loading ? 'Verificando...' : (
+              {loading ? (
+                <span>Verificando ingreso...</span>
+              ) : (
                 <>
                   <div
                     style={{
-                      background: 'rgba(255, 255, 255, 0.2)',
+                      background: studentCodeInput.trim() ? 'rgba(255, 255, 255, 0.2)' : '#e2e8f0',
                       borderRadius: '50%',
-                      padding: '3px',
+                      padding: '4px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      color: studentCodeInput.trim() ? '#ffffff' : '#94a3b8',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    <CheckCircle2 size={18} />
+                    <CheckCircle2 size={17} />
                   </div>
                   <span>Marcar Ingreso a la Biblioteca San Jerónimo</span>
                 </>
@@ -504,7 +551,7 @@ export function App() {
           </form>
 
           {/* Registration link / pill */}
-          <div style={{ marginTop: '22px', textAlign: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ marginTop: '18px', textAlign: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
             <button
               type="button"
               onClick={() => {
@@ -512,33 +559,43 @@ export function App() {
                 setShowNewStudentModal(true);
               }}
               style={{
-                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)',
-                border: '1.5px solid rgba(2, 132, 199, 0.2)',
-                borderRadius: '9999px',
-                padding: '8px 18px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '30px',
+                padding: '8px 20px',
                 fontSize: '0.84rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.06)'
+                color: '#475569'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#0284c7';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(124, 58, 237, 0.08) 100%)';
+                e.currentTarget.style.borderColor = 'var(--urp-green-primary)';
+                e.currentTarget.style.background = 'var(--urp-green-light)';
+                e.currentTarget.style.color = 'var(--urp-green-primary)';
                 e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 81, 66, 0.1)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(2, 132, 199, 0.2)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.color = '#475569';
                 e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <span style={{ color: '#475569' }}>¿Estudiante nuevo?</span>
-              <span style={{ color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                Regístrate aquí por primera vez <ArrowRight size={14} />
+              <span>¿Eres estudiante nuevo?</span>
+              <span style={{ 
+                color: 'var(--urp-green-primary)', 
+                fontWeight: 700, 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '4px' 
+              }}>
+                Regístrate aquí <ArrowRight size={14} />
               </span>
             </button>
           </div>
@@ -575,16 +632,17 @@ export function App() {
       <NewStudentModal
         isOpen={showNewStudentModal}
         prefilledCode={unregisteredCode}
-        onClose={() => setShowNewStudentModal(false)}
+        onClose={() => {
+          setShowNewStudentModal(false);
+          setUnregisteredCode('');
+          setStudentCodeInput('');
+        }}
         onSuccess={handleStudentRegistered}
       />
 
       <CheckInSuccessModal
-        data={checkInResult}
-        onClose={() => {
-          setShowSuccessModal(false);
-          setCheckInResult(null);
-        }}
+        data={showSuccessModal ? checkInResult : null}
+        onClose={handleCloseSuccessModal}
       />
 
       <LibrarianLoginModal

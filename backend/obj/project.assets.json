@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "targets": {
     "net9.0": {
       "BCrypt.Net-Next/4.2.0": {
@@ -1000,26 +1000,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ADMIN\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {},
-    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
+    "C:\\Users\\FAMHURP\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\AsistenciaLenguas.Api.csproj",
+      "projectUniqueName": "C:\\Users\\FAMHURP\\Desktop\\CFQY\\LENGUAS\\lenguas-modernas-urp\\backend\\AsistenciaLenguas.Api.csproj",
       "projectName": "AsistenciaLenguas.Api",
-      "projectPath": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\AsistenciaLenguas.Api.csproj",
-      "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\obj\\",
+      "projectPath": "C:\\Users\\FAMHURP\\Desktop\\CFQY\\LENGUAS\\lenguas-modernas-urp\\backend\\AsistenciaLenguas.Api.csproj",
+      "packagesPath": "C:\\Users\\FAMHURP\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\FAMHURP\\Desktop\\CFQY\\LENGUAS\\lenguas-modernas-urp\\backend\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
-        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-      ],
       "configFilePaths": [
-        "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Users\\FAMHURP\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -1031,6 +1024,7 @@
       },
       "frameworks": {
         "net9.0": {
+          "framework": "net9.0",
           "targetAlias": "net9.0",
           "projectReferences": {}
         }
@@ -1045,10 +1039,11 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.300"
+      "SdkAnalysisLevel": "10.0.400"
     },
     "frameworks": {
       "net9.0": {
+        "framework": "net9.0",
         "targetAlias": "net9.0",
         "dependencies": {
           "BCrypt.Net-Next": {
@@ -1087,7 +1082,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

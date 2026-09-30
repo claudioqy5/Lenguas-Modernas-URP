@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Sparkles, Check } from 'lucide-react';
-import { api, Student, CheckInResponse } from '../services/api';
+import { X, UserPlus, Check } from 'lucide-react';
+import { api, Student, CheckInResponse, AcademicTreeFaculty } from '../services/api';
 
 interface NewStudentModalProps {
   isOpen: boolean;
@@ -11,33 +11,6 @@ interface NewStudentModalProps {
   initialStudent?: Student;
 }
 
-const CAREERS = [
-  "Traducción e Interpretación",
-  "Humanidades y Lingüística",
-  "Turismo, Hotelería y Lenguas",
-  "Biología",
-  "Ingeniería Civil",
-  "Medicina Humana",
-  "Arquitectura",
-  "Psicología",
-  "Administración y Negocios Internacionales",
-  "Otras Carreras URP"
-];
-
-const FACULTIES = [
-  "Humanidades y Lenguas Modernas",
-  "Ingeniería",
-  "Medicina Humana",
-  "Ciencias Biológicas",
-  "Ciencias Económicas y Empresariales",
-  "Arquitectura y Urbanismo",
-  "Psicología",
-  "Derecho y Ciencia Política",
-  "Otras Facultades"
-];
-
-
-
 export const NewStudentModal: React.FC<NewStudentModalProps> = ({
   isOpen,
   prefilledCode,
@@ -46,13 +19,14 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
   initialStudent
 }) => {
   const isEdit = !!initialStudent;
+  const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
   const [formData, setFormData] = useState({
     studentCode: prefilledCode,
     documentNumber: '',
     firstName: '',
     lastName: '',
-    career: CAREERS[0],
-    faculty: FACULTIES[0],
+    career: 'Traducción e Interpretación',
+    faculty: 'Humanidades y Lenguas Modernas',
     email: prefilledCode ? `${prefilledCode}@urp.edu.pe` : '',
     phone: '',
     primaryLanguage: 'N/A',
@@ -64,30 +38,127 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  // Load dynamic academic tree
+  useEffect(() => {
+    let isMounted = true;
+    api.getAcademicTree().then(tree => {
+      if (isMounted && tree && tree.length > 0) {
+        setAcademicTree(tree);
+      }
+    }).catch(err => {
+      console.warn('Could not load academic tree:', err);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Compute active faculty object
+  const currentFacultyObj = useMemo(() => {
+    if (!academicTree.length) return null;
+    const currentName = (formData.faculty || '').toLowerCase().trim();
+    return academicTree.find(f => {
+      const fName = f.name.toLowerCase().trim();
+      return fName === currentName || fName.includes(currentName) || currentName.includes(fName);
+    }) || academicTree[0];
+  }, [academicTree, formData.faculty]);
+
+  // Compute available careers for current faculty
+  const availableCareers = useMemo(() => {
+    if (!currentFacultyObj || !currentFacultyObj.careers) return [];
+    return currentFacultyObj.careers.map(c => c.name);
+  }, [currentFacultyObj]);
+
+  // Handle Faculty change with cascading career update
+  const handleFacultyChange = (newFaculty: string) => {
+    const fObj = academicTree.find(f => {
+      const fName = f.name.toLowerCase().trim();
+      const nName = newFaculty.toLowerCase().trim();
+      return fName === nName || fName.includes(nName) || nName.includes(fName);
+    });
+    const careers = fObj && fObj.careers ? fObj.careers.map(c => c.name) : [];
+    const newCareer = careers.length > 0 ? careers[0] : '';
+    setFormData(prev => ({
+      ...prev,
+      faculty: newFaculty,
+      career: newCareer
+    }));
+  };
+
+  // Automatically sync institutional email with student code
+  const handleStudentCodeChange = (newCode: string) => {
+    setFormData(prev => {
+      const prevCode = prev.studentCode.trim();
+      const prevAutoEmail = prevCode ? `${prevCode}@urp.edu.pe` : '';
+      // Update email if empty, matches the previous auto-generated email, or has @urp.edu.pe
+      const isAutoEmail = !prev.email || prev.email === prevAutoEmail || prev.email.endsWith('@urp.edu.pe');
+
+      const newEmail = isAutoEmail
+        ? (newCode.trim() ? `${newCode.trim()}@urp.edu.pe` : '')
+        : prev.email;
+
+      return {
+        ...prev,
+        studentCode: newCode,
+        email: newEmail
+      };
+    });
+  };
+
+  const handleClose = () => {
+    setFormData({
+      studentCode: '',
+      documentNumber: '',
+      firstName: '',
+      lastName: '',
+      career: 'Traducción e Interpretación',
+      faculty: 'Humanidades y Lenguas Modernas',
+      email: '',
+      phone: '',
+      primaryLanguage: 'N/A',
+      checkInNow: true,
+      visitReason: 'Lectura / Estudio',
+      languageFocus: 'General'
+    });
+    setError(null);
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
     if (initialStudent) {
       setFormData({
         studentCode: initialStudent.studentCode,
-        documentNumber: initialStudent.documentNumber,
+        documentNumber: initialStudent.documentNumber || '',
         firstName: initialStudent.firstName,
         lastName: initialStudent.lastName,
         career: initialStudent.career,
         faculty: initialStudent.faculty,
-        email: initialStudent.email,
-        phone: initialStudent.phone,
+        email: initialStudent.email || '',
+        phone: initialStudent.phone || '',
         primaryLanguage: initialStudent.primaryLanguage || 'N/A',
         checkInNow: false,
         visitReason: 'Lectura / Estudio',
         languageFocus: 'General'
       });
-    } else if (prefilledCode) {
-      setFormData(prev => ({
-        ...prev,
-        studentCode: prefilledCode,
-        email: prev.email || `${prefilledCode}@urp.edu.pe`
-      }));
+    } else {
+      const code = prefilledCode ? prefilledCode.trim() : '';
+      setFormData({
+        studentCode: code,
+        documentNumber: '',
+        firstName: '',
+        lastName: '',
+        career: 'Traducción e Interpretación',
+        faculty: 'Humanidades y Lenguas Modernas',
+        email: code ? `${code}@urp.edu.pe` : '',
+        phone: '',
+        primaryLanguage: 'N/A',
+        checkInNow: true,
+        visitReason: 'Lectura / Estudio',
+        languageFocus: 'General'
+      });
     }
-  }, [prefilledCode, initialStudent]);
+    setError(null);
+  }, [isOpen, prefilledCode, initialStudent]);
 
   if (!isOpen) return null;
 
@@ -159,7 +230,7 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
         >
           {/* Close button */}
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               position: 'absolute',
               top: '20px',
@@ -201,11 +272,6 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)' }}>
                   {isEdit ? 'Editar Estudiante' : 'Registro de Nuevo Estudiante'}
                 </h2>
-                {!isEdit && (
-                  <span className="badge-tag" style={{ background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)', border: '1px solid rgba(180, 83, 9, 0.25)' }}>
-                    <Sparkles size={12} /> Primera Visita
-                  </span>
-                )}
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 {isEdit ? 'Modifica los datos del estudiante en la base de datos.' : 'Completa tus datos por única vez para el acceso libre a la biblioteca San Jerónimo.'}
@@ -230,7 +296,7 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                   required
                   disabled={isEdit}
                   value={formData.studentCode}
-                  onChange={(e) => setFormData({ ...formData, studentCode: e.target.value })}
+                  onChange={(e) => handleStudentCodeChange(e.target.value)}
                   className="input-futuristic"
                   placeholder="Ej: 202410345"
                   style={{ fontSize: '0.95rem', padding: '10px 14px' }}
@@ -291,11 +357,11 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                 </label>
                 <select
                   value={formData.faculty}
-                  onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
+                  onChange={(e) => handleFacultyChange(e.target.value)}
                   className="input-futuristic"
                   style={{ fontSize: '0.92rem', padding: '10px 14px' }}
                 >
-                  {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                  {academicTree.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
 
@@ -309,7 +375,11 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
                   className="input-futuristic"
                   style={{ fontSize: '0.92rem', padding: '10px 14px' }}
                 >
-                  {CAREERS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {availableCareers.length === 0 ? (
+                    <option value="">Sin carreras disponibles</option>
+                  ) : (
+                    availableCareers.map(c => <option key={c} value={c}>{c}</option>)
+                  )}
                 </select>
               </div>
             </div>
@@ -370,33 +440,69 @@ export const NewStudentModal: React.FC<NewStudentModalProps> = ({
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 style={{
-                  flex: 1,
-                  background: '#f1f5f9',
-                  color: '#475569',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '9px 20px',
+                  borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '0.86rem',
                   fontWeight: 600,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
                 }}
               >
-                Cancelar
+                <span>Cancelar</span>
               </button>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary-gradient"
-                style={{ flex: 2 }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '9px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #0f5142',
+                  background: 'var(--urp-green-primary)',
+                  color: '#ffffff',
+                  fontSize: '0.86rem',
+                  fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 2px 4px rgba(15, 81, 66, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.background = '#0b3d32';
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.background = 'var(--urp-green-primary)';
+                }}
               >
-                {loading ? 'Guardando...' : (
+                {loading ? (
+                  <span>Guardando...</span>
+                ) : (
                   <>
-                    <Check size={18} /> {isEdit ? 'Guardar Cambios' : 'Guardar y Continuar'}
+                    <Check size={16} /> 
+                    <span>{isEdit ? 'Guardar Cambios' : 'Guardar y Continuar'}</span>
                   </>
                 )}
               </button>

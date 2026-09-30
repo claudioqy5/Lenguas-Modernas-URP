@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace AsistenciaLenguas.Api.Models
 {
+    [BsonIgnoreExtraElements]
     public class AttendanceRecord
     {
         [BsonId]
@@ -20,6 +21,9 @@ namespace AsistenciaLenguas.Api.Models
 
         [BsonElement("career")]
         public string Career { get; set; } = string.Empty;
+
+        [BsonElement("faculty")]
+        public string Faculty { get; set; } = string.Empty;
 
         [BsonElement("timestamp")]
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;

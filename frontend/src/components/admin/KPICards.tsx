@@ -7,13 +7,22 @@ interface KPICardsProps {
   studentsCount: number;
   selectedDate?: string;
   selectedDateVisitsCount?: number;
+  // Historical period props
+  periodType?: 'week' | 'month' | 'year' | 'all';
+  periodLabel?: string;
+  periodVisitsCount?: number;
+  periodUniqueStudentsCount?: number;
 }
 
 export const KPICards: React.FC<KPICardsProps> = ({ 
   summary, 
   studentsCount,
   selectedDate,
-  selectedDateVisitsCount 
+  selectedDateVisitsCount,
+  periodType,
+  periodLabel,
+  periodVisitsCount,
+  periodUniqueStudentsCount
 }) => {
   // Format selected date YYYY-MM-DD -> DD/MM/YYYY
   const formattedDateLabel = selectedDate ? (() => {
@@ -23,6 +32,38 @@ export const KPICards: React.FC<KPICardsProps> = ({
     }
     return selectedDate;
   })() : null;
+
+  // Determine Card 2 Title & Subtitle based on mode
+  let card2Title = 'Asistencias de Hoy';
+  let card2Value = summary?.totalVisitsToday ?? 0;
+  let card2Subtitle = 'Permite múltiples reingresos al día';
+
+  if (periodType) {
+    if (periodType === 'week') {
+      card2Title = 'Asistencias de la Semana';
+      card2Subtitle = periodLabel ? `${periodLabel}` : 'Total de la semana';
+    } else if (periodType === 'month') {
+      card2Title = 'Asistencias del Mes';
+      card2Subtitle = periodLabel ? `${periodLabel}` : 'Total del mes';
+    } else if (periodType === 'year') {
+      card2Title = 'Asistencias del Año';
+      card2Subtitle = periodLabel ? `Año ${periodLabel}` : 'Total del año';
+    } else {
+      card2Title = 'Total Asistencias Históricas';
+      card2Subtitle = 'Historial completo acumulado';
+    }
+    card2Value = periodVisitsCount ?? 0;
+  } else if (formattedDateLabel) {
+    card2Title = 'Asistencias del Día';
+    card2Value = selectedDateVisitsCount ?? summary?.totalVisitsToday ?? 0;
+    card2Subtitle = `Reporte Diario (${formattedDateLabel})`;
+  }
+
+  // Determine Card 3 Title & Subtitle based on mode
+  const isPeriodMode = Boolean(periodType);
+  const card3Title = isPeriodMode ? 'Alumnos en el Período' : 'Asistencias del Mes';
+  const card3Value = isPeriodMode ? (periodUniqueStudentsCount ?? 0) : (summary?.totalVisitsThisMonth ?? 0);
+  const card3Subtitle = isPeriodMode ? 'Estudiantes únicos que asistieron' : 'Afluencia total acumulada';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '28px' }}>
@@ -41,7 +82,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
           </div>
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '8px' }}>
-          Facultad de Humanidades y Lenguas Modernas
+          Comunidad Universitaria URP
         </div>
       </div>
 
@@ -49,10 +90,10 @@ export const KPICards: React.FC<KPICardsProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-              {formattedDateLabel ? `Asistencias del Día (${formattedDateLabel})` : 'Asistencias de Hoy'}
+              {card2Title}
             </div>
             <div style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--urp-green-primary)', marginTop: '4px' }}>
-              {selectedDateVisitsCount ?? summary?.totalVisitsToday ?? 0}
+              {card2Value}
             </div>
           </div>
           <div style={{ padding: '10px', borderRadius: '12px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
@@ -60,7 +101,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
           </div>
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--urp-green-primary)', fontWeight: 600, marginTop: '8px' }}>
-          {formattedDateLabel ? `Reporte Diario (${formattedDateLabel})` : 'Permite múltiples reingresos al día'}
+          {card2Subtitle}
         </div>
       </div>
 
@@ -68,10 +109,10 @@ export const KPICards: React.FC<KPICardsProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-              Asistencias del Mes
+              {card3Title}
             </div>
             <div style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--urp-gold-primary)', marginTop: '4px' }}>
-              {summary?.totalVisitsThisMonth ?? 0}
+              {card3Value}
             </div>
           </div>
           <div style={{ padding: '10px', borderRadius: '12px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
@@ -79,7 +120,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
           </div>
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--urp-gold-primary)', fontWeight: 600, marginTop: '8px' }}>
-          Afluencia total acumulada
+          {card3Subtitle}
         </div>
       </div>
     </div>

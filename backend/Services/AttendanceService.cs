@@ -85,6 +85,7 @@ namespace AsistenciaLenguas.Api.Services
                 StudentCode = student.StudentCode,
                 StudentName = student.FullName,
                 Career = student.Career,
+                Faculty = student.Faculty,
                 Timestamp = now,
                 DateString = peruTime.ToString("yyyy-MM-dd"),
                 TimeString = peruTime.ToString("HH:mm:ss"),

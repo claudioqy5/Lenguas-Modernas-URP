@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
-  TrendingUp, Landmark
+  TrendingUp, Landmark, RotateCcw, Send, GraduationCap
 } from 'lucide-react';
 import { 
   api, AnalyticsSummary, AttendanceRecord, Student, AuthSession 
@@ -12,6 +12,12 @@ import { TabInicio } from './admin/TabInicio';
 import { TabHistorico } from './admin/TabHistorico';
 import { TabReportes } from './admin/TabReportes';
 import { TabAlumnos } from './admin/TabAlumnos';
+import { TabDifusion } from './admin/TabDifusion';
+import { TabAcademic } from './admin/TabAcademic';
+import { 
+  getISOWeekFromDateStr, getCurrentWeek, getCurrentMonth, 
+  formatWeekLabel, formatMonthLabel, getTodayDateStr
+} from '../utils/dateUtils';
 
 interface AdminDashboardProps {
   session: AuthSession;
@@ -19,26 +25,12 @@ interface AdminDashboardProps {
   onBackToKiosk: () => void;
 }
 
-const getCurrentWeek = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-  return `${d.getFullYear()}-W${week.toString().padStart(2, '0')}`;
-};
-
-const getCurrentMonth = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-};
-
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   session,
   onLogout,
   onBackToKiosk
 }) => {
-  const [activeTab, setActiveTab] = useState<'inicio' | 'historico' | 'records' | 'students'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'historico' | 'records' | 'students' | 'academic' | 'difusion'>('inicio');
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -48,22 +40,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCareer, setFilterCareer] = useState('ALL');
   const [filterFaculty, setFilterFaculty] = useState('ALL');
-  const [inicioDate, setInicioDate] = useState(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
-  });
+  const [inicioDate, setInicioDate] = useState(() => getTodayDateStr());
 
-  const [recordsStartDate, setRecordsStartDate] = useState(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
-  });
-  const [recordsEndDate, setRecordsEndDate] = useState(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
-  });
+  const [recordsStartDate, setRecordsStartDate] = useState(() => getTodayDateStr());
+  const [recordsEndDate, setRecordsEndDate] = useState(() => getTodayDateStr());
   const [historyFilter, setHistoryFilter] = useState('week');
   const [historyWeek, setHistoryWeek] = useState(getCurrentWeek());
   const [historyMonth, setHistoryMonth] = useState(getCurrentMonth());
@@ -71,6 +51,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
+
+  // Available years dynamically derived from records
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    const currentY = new Date().getFullYear().toString();
+    yearsSet.add(currentY);
+    records.forEach(r => {
+      const dStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      if (dStr && dStr.length >= 4) {
+        yearsSet.add(dStr.slice(0, 4));
+      }
+    });
+    return Array.from(yearsSet).sort().reverse();
+  }, [records]);
+
+  // Compute records filtered by historical period
+  const historicoFilteredRecords = useMemo(() => {
+    if (!records) return [];
+    if (historyFilter === 'all') return records;
+
+    return records.filter(r => {
+      const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      if (!dateStr) return false;
+
+      if (historyFilter === 'year') {
+        return dateStr.slice(0, 4) === historyYear.toString();
+      }
+      if (historyFilter === 'month') {
+        return dateStr.slice(0, 7) === historyMonth;
+      }
+      if (historyFilter === 'week') {
+        return getISOWeekFromDateStr(dateStr) === historyWeek;
+      }
+      return true;
+    });
+  }, [records, historyFilter, historyWeek, historyMonth, historyYear]);
+
+  // Dynamic label for historical period
+  const historicoPeriodLabel = useMemo(() => {
+    if (historyFilter === 'week') return formatWeekLabel(historyWeek);
+    if (historyFilter === 'month') return formatMonthLabel(historyMonth);
+    if (historyFilter === 'year') return `Año ${historyYear}`;
+    return 'Histórico Completo';
+  }, [historyFilter, historyWeek, historyMonth, historyYear]);
+
+  // Unique students count in the historical period
+  const historicoUniqueStudentsCount = useMemo(() => {
+    return new Set(historicoFilteredRecords.map(r => r.studentCode)).size;
+  }, [historicoFilteredRecords]);
 
   const loadData = async () => {
     setLoading(true);
@@ -102,8 +131,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Ensure the whole page and body background is pure white exclusively for the admin section
+  useEffect(() => {
+    const prevBgColor = document.body.style.backgroundColor;
+    const prevBgImage = document.body.style.backgroundImage;
+
+    document.body.style.backgroundColor = '#ffffff';
+    document.body.style.backgroundImage = 'none';
+
+    return () => {
+      document.body.style.backgroundColor = prevBgColor;
+      document.body.style.backgroundImage = prevBgImage;
+    };
+  }, []);
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--text-main)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: '#ffffff', color: 'var(--text-main)' }}>
       {/* Sidebar Navigation */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
@@ -151,7 +194,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               border: 'none',
               background: activeTab === 'inicio' ? 'var(--urp-green-light)' : 'transparent',
               color: activeTab === 'inicio' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'inicio' ? 700 : 600,
+              fontWeight: activeTab === 'inicio' ? 500 : 400,
               fontSize: '0.9rem',
               cursor: 'pointer',
               display: 'flex',
@@ -173,7 +216,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               border: 'none',
               background: activeTab === 'historico' ? 'var(--urp-green-light)' : 'transparent',
               color: activeTab === 'historico' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'historico' ? 700 : 600,
+              fontWeight: activeTab === 'historico' ? 500 : 400,
               fontSize: '0.9rem',
               cursor: 'pointer',
               display: 'flex',
@@ -195,7 +238,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               border: 'none',
               background: activeTab === 'records' ? 'var(--urp-green-light)' : 'transparent',
               color: activeTab === 'records' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'records' ? 700 : 600,
+              fontWeight: activeTab === 'records' ? 500 : 400,
               fontSize: '0.9rem',
               cursor: 'pointer',
               display: 'flex',
@@ -229,7 +272,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               border: 'none',
               background: activeTab === 'students' ? 'var(--urp-green-light)' : 'transparent',
               color: activeTab === 'students' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'students' ? 700 : 600,
+              fontWeight: activeTab === 'students' ? 500 : 400,
               fontSize: '0.9rem',
               cursor: 'pointer',
               display: 'flex',
@@ -252,6 +295,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease'
             }}>
               {students.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('academic')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'academic' ? 'var(--urp-green-light)' : 'transparent',
+              color: activeTab === 'academic' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
+              fontWeight: activeTab === 'academic' ? 600 : 400,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              transition: 'all 0.2s ease',
+              width: '100%'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <GraduationCap size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Facultades y Carreras</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('difusion')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'difusion' ? 'var(--urp-green-light)' : 'transparent',
+              color: activeTab === 'difusion' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
+              fontWeight: activeTab === 'difusion' ? 600 : 400,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              transition: 'all 0.2s ease',
+              width: '100%'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Send size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Difusión</span>
+            </div>
+            <span style={{ 
+              background: activeTab === 'difusion' ? 'rgba(15,81,66,0.15)' : '#f1f5f9', 
+              padding: '2px 8px', 
+              borderRadius: '12px', 
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease'
+            }}>
+              {students.filter(s => s.email && s.email.trim()).length}
             </span>
           </button>
         </nav>
@@ -292,7 +393,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#ffffff', minHeight: '100vh' }}>
         {/* Top Header */}
         <header 
           style={{ 
@@ -315,41 +416,109 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'historico' && 'Estadísticas Históricas'}
               {activeTab === 'records' && 'Reporte de Asistencias'}
               {activeTab === 'students' && 'Alumnos'}
+              {activeTab === 'academic' && 'Gestión de Facultades y Carreras'}
+              {activeTab === 'difusion' && 'Difusión Institucional'}
             </h2>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {activeTab === 'inicio' && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Fecha:</span>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Fecha:</span>
                 <input 
                   type="date" 
                   className="input-futuristic" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', width: 'auto' }} 
                   value={inicioDate}
                   onChange={(e) => setInicioDate(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setInicioDate(getTodayDateStr())}
+                  title="Restablecer al día de hoy"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '7px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #0f5142',
+                    background: 'var(--urp-green-light)',
+                    color: 'var(--urp-green-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-primary)';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-light)';
+                    e.currentTarget.style.color = 'var(--urp-green-primary)';
+                  }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Hoy</span>
+                </button>
               </div>
             )}
             
             {activeTab === 'records' && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Desde:</span>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Desde:</span>
                 <input 
                   type="date" 
                   className="input-futuristic" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', width: 'auto' }} 
                   value={recordsStartDate}
                   onChange={(e) => setRecordsStartDate(e.target.value)}
                 />
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Hasta:</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Hasta:</span>
                 <input 
                   type="date" 
                   className="input-futuristic" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', width: 'auto' }} 
                   value={recordsEndDate}
                   onChange={(e) => setRecordsEndDate(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = getTodayDateStr();
+                    setRecordsStartDate(today);
+                    setRecordsEndDate(today);
+                  }}
+                  title="Restablecer fechas a hoy"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '7px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #0f5142',
+                    background: 'var(--urp-green-light)',
+                    color: 'var(--urp-green-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-primary)';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-light)';
+                    e.currentTarget.style.color = 'var(--urp-green-primary)';
+                  }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Hoy</span>
+                </button>
               </div>
             )}
             
@@ -369,20 +538,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </select>
                 
                 {historyFilter === 'week' && (
-                  <input type="week" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} value={historyWeek} onChange={(e) => setHistoryWeek(e.target.value)} />
+                  <input 
+                    type="week" 
+                    className="input-futuristic" 
+                    style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                    value={historyWeek} 
+                    onChange={(e) => setHistoryWeek(e.target.value)} 
+                  />
                 )}
                 {historyFilter === 'month' && (
-                  <input type="month" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} value={historyMonth} onChange={(e) => setHistoryMonth(e.target.value)} />
+                  <input 
+                    type="month" 
+                    className="input-futuristic" 
+                    style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                    value={historyMonth} 
+                    onChange={(e) => setHistoryMonth(e.target.value)} 
+                  />
                 )}
                 {historyFilter === 'year' && (
-                  <input type="number" min="2020" max="2100" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem', width: '100px' }} value={historyYear} onChange={(e) => setHistoryYear(parseInt(e.target.value))} />
+                  <select 
+                    className="input-futuristic" 
+                    style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
+                    value={historyYear} 
+                    onChange={(e) => setHistoryYear(parseInt(e.target.value, 10))}
+                  >
+                    {availableYears.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                )}
+                {historyFilter === 'all' && (
+                  <span style={{ 
+                    fontSize: '0.82rem', 
+                    color: 'var(--urp-green-primary)', 
+                    fontWeight: 600, 
+                    background: 'var(--urp-green-light)', 
+                    padding: '6px 12px', 
+                    borderRadius: '20px',
+                    border: '1px solid rgba(15, 81, 66, 0.15)' 
+                  }}>
+                    Todos los registros
+                  </span>
                 )}
               </div>
             )}
           </div>
         </header>
 
-        <main style={{ padding: '32px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1 }}>
+        <main style={{ padding: '32px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1, background: '#ffffff' }}>
           {/* KPI Cards */}
           {(activeTab === 'inicio' || activeTab === 'historico') && (
             <KPICards 
@@ -398,6 +601,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     }).length
                   : undefined
               }
+              periodType={activeTab === 'historico' ? (historyFilter as any) : undefined}
+              periodLabel={activeTab === 'historico' ? historicoPeriodLabel : undefined}
+              periodVisitsCount={activeTab === 'historico' ? historicoFilteredRecords.length : undefined}
+              periodUniqueStudentsCount={activeTab === 'historico' ? historicoUniqueStudentsCount : undefined}
             />
           )}
 
@@ -417,6 +624,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 historyFilter === 'month' ? historyMonth :
                 historyFilter === 'year' ? historyYear.toString() : ''
               }
+              filteredRecords={historicoFilteredRecords}
             />
           )}
 
@@ -428,8 +636,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               setSearchTerm={setSearchTerm}
               filterCareer={filterCareer}
               setFilterCareer={setFilterCareer}
+              filterFaculty={filterFaculty}
+              setFilterFaculty={setFilterFaculty}
               filterStartDate={recordsStartDate}
               filterEndDate={recordsEndDate}
+              students={students}
             />
           )}
 
@@ -452,6 +663,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 setShowNewStudentModal(true);
               }}
               onDeleteStudent={handleDeleteStudent}
+              onNavigateToDifusion={() => setActiveTab('difusion')}
+            />
+          )}
+
+          {/* TAB 5: DIFUSIÓN INSTITUCIONAL */}
+          {activeTab === 'difusion' && (
+            <TabDifusion students={students} />
+          )}
+
+          {/* TAB 6: GESTIÓN DE FACULTADES Y CARRERAS */}
+          {activeTab === 'academic' && (
+            <TabAcademic 
+              students={students}
+              onTreeUpdated={() => {
+                api.getAllStudents().then(res => {
+                  if (res) setStudents(res);
+                }).catch(() => {});
+              }}
             />
           )}
         </main>

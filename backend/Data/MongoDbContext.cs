@@ -23,6 +23,8 @@ namespace AsistenciaLenguas.Api.Data
         public IMongoCollection<Student> Students => _database.GetCollection<Student>("Students");
         public IMongoCollection<AttendanceRecord> AttendanceRecords => _database.GetCollection<AttendanceRecord>("AttendanceRecords");
         public IMongoCollection<AdminUser> AdminUsers => _database.GetCollection<AdminUser>("AdminUsers");
+        public IMongoCollection<Faculty> Faculties => _database.GetCollection<Faculty>("Faculties");
+        public IMongoCollection<Career> Careers => _database.GetCollection<Career>("Careers");
 
         private void InitIndexesAndSeed()
         {
@@ -40,6 +42,13 @@ namespace AsistenciaLenguas.Api.Data
                 var attendanceStudentKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.StudentCode);
                 AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceStudentKeys));
 
+                // Index on Faculty and Career
+                var facultyIndexKeys = Builders<Faculty>.IndexKeys.Ascending(f => f.Name);
+                Faculties.Indexes.CreateOne(new CreateIndexModel<Faculty>(facultyIndexKeys));
+
+                var careerFacultyIndexKeys = Builders<Career>.IndexKeys.Ascending(c => c.FacultyId);
+                Careers.Indexes.CreateOne(new CreateIndexModel<Career>(careerFacultyIndexKeys));
+
                 // Seed Admin if not exists
                 var adminExists = AdminUsers.Find(u => u.Username == "admin").Any();
                 if (!adminExists)
@@ -53,6 +62,12 @@ namespace AsistenciaLenguas.Api.Data
                         CreatedAt = DateTime.UtcNow
                     };
                     AdminUsers.InsertOne(defaultAdmin);
+                }
+
+                // Seed Faculties and Careers if empty
+                if (Faculties.CountDocuments(FilterDefinition<Faculty>.Empty) == 0)
+                {
+                    SeedFacultiesAndCareers();
                 }
 
                 // Seed Initial Students and Attendance history if empty
@@ -161,6 +176,81 @@ namespace AsistenciaLenguas.Api.Data
             if (records.Count > 0)
             {
                 AttendanceRecords.InsertMany(records);
+            }
+        }
+
+        private void SeedFacultiesAndCareers()
+        {
+            var facultiesSeed = new List<(string Name, string Code, List<(string Name, string Code)> Careers)>
+            {
+                ("Humanidades y Lenguas Modernas", "FHLM", new List<(string, string)>
+                {
+                    ("Traducción e Interpretación", "TI"),
+                    ("Humanidades y Lingüística", "HL"),
+                    ("Turismo, Hotelería y Gastronomía", "THG")
+                }),
+                ("Ingeniería", "FING", new List<(string, string)>
+                {
+                    ("Ingeniería Civil", "ICIV"),
+                    ("Ingeniería Industrial", "IIND"),
+                    ("Ingeniería Informática", "IINF"),
+                    ("Ingeniería Electrónica", "IELEC"),
+                    ("Ingeniería Mecatrónica", "IMECA")
+                }),
+                ("Medicina Humana", "FMED", new List<(string, string)>
+                {
+                    ("Medicina Humana", "MED"),
+                    ("Enfermería", "ENF")
+                }),
+                ("Ciencias Biológicas", "FCB", new List<(string, string)>
+                {
+                    ("Biología", "BIO"),
+                    ("Medicina Veterinaria", "MVET")
+                }),
+                ("Ciencias Económicas y Empresariales", "FCEE", new List<(string, string)>
+                {
+                    ("Administración y Negocios Internacionales", "ANI"),
+                    ("Contabilidad y Finanzas", "CF"),
+                    ("Economía", "ECON"),
+                    ("Marketing Global y Administración Comercial", "MGAC")
+                }),
+                ("Arquitectura y Urbanismo", "FAU", new List<(string, string)>
+                {
+                    ("Arquitectura y Urbanismo", "ARQ")
+                }),
+                ("Psicología", "FPSI", new List<(string, string)>
+                {
+                    ("Psicología", "PSI")
+                }),
+                ("Derecho y Ciencia Política", "FDCP", new List<(string, string)>
+                {
+                    ("Derecho", "DER")
+                })
+            };
+
+            foreach (var fSeed in facultiesSeed)
+            {
+                var faculty = new Faculty
+                {
+                    Name = fSeed.Name,
+                    Code = fSeed.Code,
+                    CreatedAt = DateTime.UtcNow
+                };
+                Faculties.InsertOne(faculty);
+
+                var careersToInsert = fSeed.Careers.Select(c => new Career
+                {
+                    Name = c.Item1,
+                    Code = c.Item2,
+                    FacultyId = faculty.Id!,
+                    FacultyName = faculty.Name,
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+
+                if (careersToInsert.Count > 0)
+                {
+                    Careers.InsertMany(careersToInsert);
+                }
             }
         }
     }

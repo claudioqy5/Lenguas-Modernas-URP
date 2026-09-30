@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, Award, Quote, Trophy, ArrowRight, BookOpen } from 'lucide-react';
+import { CheckCircle2, Award, Quote, Trophy, ArrowRight, BookOpen, X } from 'lucide-react';
 import { CheckInResponse } from '../services/api';
 
 interface CheckInSuccessModalProps {
@@ -10,52 +10,48 @@ interface CheckInSuccessModalProps {
 }
 
 export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, onClose }) => {
-  const hasRun = React.useRef(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [greetingWord, setGreetingWord] = React.useState("¡Bienvenido/a");
 
   useEffect(() => {
-    if (!data?.success) {
-      hasRun.current = false;
-      return;
+    if (!data?.success) return;
+
+    confetti({
+      particleCount: 60,
+      spread: 60,
+      origin: { y: 0.65 },
+      colors: ['#0f5142', '#b45309', '#0284c7', '#059669']
+    });
+
+    // TTS Random Greeting
+    if (data.student?.firstName) {
+      const greetings = [
+        { text: "Bienvenido", display: "¡Bienvenido/a", lang: "es-ES" },
+        { text: "Welcome", display: "Welcome", lang: "en-US" },
+        { text: "Bienvenue", display: "Bienvenue", lang: "fr-FR" },
+        { text: "Willkommen", display: "Willkommen", lang: "de-DE" },
+        { text: "Bem-vindo", display: "Bem-vindo", lang: "pt-BR" },
+        { text: "欢迎", display: "欢迎", lang: "zh-CN" }
+      ];
+      const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+      
+      setGreetingWord(randomGreeting.display);
+      
+      const textToSpeak = `${randomGreeting.text}, ${data.student.firstName}`;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = randomGreeting.lang;
+      utterance.rate = 1.15;
+      window.speechSynthesis.speak(utterance);
     }
 
-    if (!hasRun.current) {
-      hasRun.current = true;
-      confetti({
-        particleCount: 60,
-        spread: 60,
-        origin: { y: 0.65 },
-        colors: ['#0f5142', '#b45309', '#0284c7', '#059669']
-      });
+    // Auto-dismiss in exactly 2 seconds
+    const timer = setTimeout(() => {
+      onCloseRef.current();
+    }, 2000);
 
-      // TTS Random Greeting
-      if (data.student?.firstName) {
-        const greetings = [
-          { text: "Bienvenido", display: "¡Bienvenido/a", lang: "es-ES" },
-          { text: "Welcome", display: "Welcome", lang: "en-US" },
-          { text: "Bienvenue", display: "Bienvenue", lang: "fr-FR" },
-          { text: "Willkommen", display: "Willkommen", lang: "de-DE" },
-          { text: "Bem-vindo", display: "Bem-vindo", lang: "pt-BR" },
-          { text: "欢迎", display: "欢迎", lang: "zh-CN" }
-        ];
-        const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-        
-        setGreetingWord(randomGreeting.display);
-        
-        const textToSpeak = `${randomGreeting.text}, ${data.student.firstName}`;
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = randomGreeting.lang;
-        utterance.rate = 1.15; // Increased speed
-        window.speechSynthesis.speak(utterance);
-      }
-
-      const timer = setTimeout(() => {
-        onClose();
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [data, onClose]);
+    return () => clearTimeout(timer);
+  }, [data]);
 
   if (!data || !data.success) return null;
 
@@ -73,6 +69,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
   return (
     <AnimatePresence>
       <div
+        onClick={onClose}
         style={{
           position: 'fixed',
           inset: 0,
@@ -86,6 +83,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
         }}
       >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -98,9 +96,50 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
             background: '#ffffff',
             borderRadius: '20px',
             border: '1.5px solid #cbd5e1',
-            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)'
+            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+            overflow: 'hidden'
           }}
         >
+          {/* Close button X */}
+          <button
+            onClick={onClose}
+            title="Cerrar (o esperar 2 segundos)"
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#64748b',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
+            onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+          >
+            <X size={16} />
+          </button>
+
+          {/* 2-second countdown indicator */}
+          <motion.div
+            initial={{ width: '100%' }}
+            animate={{ width: '0%' }}
+            transition={{ duration: 2, ease: 'linear' }}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              height: '3.5px',
+              background: 'linear-gradient(90deg, var(--urp-green-primary) 0%, #059669 100%)'
+            }}
+          />
+
           {/* Animated Success SVG Icon */}
           <motion.div
             initial={{ scale: 0 }}

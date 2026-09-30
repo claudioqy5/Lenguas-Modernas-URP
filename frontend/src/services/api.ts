@@ -25,6 +25,7 @@ export interface AttendanceRecord {
   studentCode: string;
   studentName: string;
   career: string;
+  faculty?: string;
   timestamp: string;
   dateString: string;
   timeString: string;
@@ -41,6 +42,31 @@ export interface LiteraryQuote {
   translation: string;
   author: string;
   language: string;
+}
+
+export interface Career {
+  id?: string;
+  name: string;
+  code?: string;
+  facultyId: string;
+  facultyName?: string;
+  createdAt?: string;
+}
+
+export interface Faculty {
+  id?: string;
+  name: string;
+  code?: string;
+  createdAt?: string;
+  careers?: Career[];
+}
+
+export interface AcademicTreeFaculty {
+  id: string;
+  name: string;
+  code: string;
+  createdAt: string;
+  careers: Career[];
 }
 
 export interface CheckInResponse {
@@ -400,6 +426,203 @@ export const api = {
         };
       }
       return { success: false, message: 'Usuario o contraseña incorrectos.' };
+    }
+  },
+
+  // ==================== ACADEMIC STRUCTURE (FACULTIES & CAREERS) ====================
+
+  // Get full academic tree (faculties with nested careers)
+  async getAcademicTree(): Promise<AcademicTreeFaculty[]> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/tree`);
+      if (res.ok) {
+        return await res.json();
+      }
+      throw new Error('Error al obtener estructura académica');
+    } catch (e) {
+      console.warn('[API fallback getAcademicTree]', e);
+      return [
+        {
+          id: 'f-1',
+          name: 'Humanidades y Lenguas Modernas',
+          code: 'FHLM',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-1', name: 'Traducción e Interpretación', code: 'TI', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' },
+            { id: 'c-2', name: 'Humanidades y Lingüística', code: 'HL', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' },
+            { id: 'c-3', name: 'Turismo, Hotelería y Gastronomía', code: 'THG', facultyId: 'f-1', facultyName: 'Humanidades y Lenguas Modernas' }
+          ]
+        },
+        {
+          id: 'f-2',
+          name: 'Ingeniería',
+          code: 'FING',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-4', name: 'Ingeniería Civil', code: 'ICIV', facultyId: 'f-2', facultyName: 'Ingeniería' },
+            { id: 'c-5', name: 'Ingeniería Industrial', code: 'IIND', facultyId: 'f-2', facultyName: 'Ingeniería' },
+            { id: 'c-6', name: 'Ingeniería Informática', code: 'IINF', facultyId: 'f-2', facultyName: 'Ingeniería' },
+            { id: 'c-7', name: 'Ingeniería Electrónica', code: 'IELEC', facultyId: 'f-2', facultyName: 'Ingeniería' },
+            { id: 'c-8', name: 'Ingeniería Mecatrónica', code: 'IMECA', facultyId: 'f-2', facultyName: 'Ingeniería' }
+          ]
+        },
+        {
+          id: 'f-3',
+          name: 'Medicina Humana',
+          code: 'FMED',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-9', name: 'Medicina Humana', code: 'MED', facultyId: 'f-3', facultyName: 'Medicina Humana' },
+            { id: 'c-10', name: 'Enfermería', code: 'ENF', facultyId: 'f-3', facultyName: 'Medicina Humana' }
+          ]
+        },
+        {
+          id: 'f-4',
+          name: 'Ciencias Biológicas',
+          code: 'FCB',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-11', name: 'Biología', code: 'BIO', facultyId: 'f-4', facultyName: 'Ciencias Biológicas' },
+            { id: 'c-12', name: 'Medicina Veterinaria', code: 'MVET', facultyId: 'f-4', facultyName: 'Ciencias Biológicas' }
+          ]
+        },
+        {
+          id: 'f-5',
+          name: 'Ciencias Económicas y Empresariales',
+          code: 'FCEE',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-13', name: 'Administración y Negocios Internacionales', code: 'ANI', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
+            { id: 'c-14', name: 'Contabilidad y Finanzas', code: 'CF', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
+            { id: 'c-15', name: 'Economía', code: 'ECON', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' },
+            { id: 'c-16', name: 'Marketing Global y Administración Comercial', code: 'MGAC', facultyId: 'f-5', facultyName: 'Ciencias Económicas y Empresariales' }
+          ]
+        },
+        {
+          id: 'f-6',
+          name: 'Arquitectura y Urbanismo',
+          code: 'FAU',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-17', name: 'Arquitectura y Urbanismo', code: 'ARQ', facultyId: 'f-6', facultyName: 'Arquitectura y Urbanismo' }
+          ]
+        },
+        {
+          id: 'f-7',
+          name: 'Psicología',
+          code: 'FPSI',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-18', name: 'Psicología', code: 'PSI', facultyId: 'f-7', facultyName: 'Psicología' }
+          ]
+        },
+        {
+          id: 'f-8',
+          name: 'Derecho y Ciencia Política',
+          code: 'FDCP',
+          createdAt: new Date().toISOString(),
+          careers: [
+            { id: 'c-19', name: 'Derecho', code: 'DER', facultyId: 'f-8', facultyName: 'Derecho y Ciencia Política' }
+          ]
+        }
+      ];
+    }
+  },
+
+  // Faculties CRUD
+  async getFaculties(): Promise<Faculty[]> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/faculties`);
+      if (res.ok) return await res.json();
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  async createFaculty(data: { name: string; code?: string }): Promise<{ success: boolean; data?: Faculty; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/faculties`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async updateFaculty(id: string, data: { name: string; code?: string }): Promise<{ success: boolean; data?: Faculty; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/faculties/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async deleteFaculty(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/faculties/${id}`, {
+        method: 'DELETE'
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  // Careers CRUD
+  async getCareers(facultyId?: string): Promise<Career[]> {
+    try {
+      const url = facultyId ? `${API_BASE}/academic/careers?facultyId=${encodeURIComponent(facultyId)}` : `${API_BASE}/academic/careers`;
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  async createCareer(data: { name: string; code?: string; facultyId: string }): Promise<{ success: boolean; data?: Career; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/careers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async updateCareer(id: string, data: { name: string; code?: string; facultyId?: string }): Promise<{ success: boolean; data?: Career; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/careers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async deleteCareer(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/careers/${id}`, {
+        method: 'DELETE'
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
     }
   }
 };

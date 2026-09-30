@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Legend, Cell } from 'recharts';
-import { Clock, Building2, Activity, User } from 'lucide-react';
+import { Clock, Building2, Activity, User, FileSpreadsheet, FileText } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
+import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 
 interface TabInicioProps {
   summary: AnalyticsSummary;
@@ -11,7 +12,87 @@ interface TabInicioProps {
 
 const BAR_COLORS = ['#0f5142', '#0284c7', '#b45309', '#7c3aed', '#e11d48', '#059669'];
 
+// Helper to format dynamic relative time
+const getRelativeTimeString = (timestamp?: string, dateString?: string, timeString?: string): string => {
+  if (!timestamp && (!dateString || !timeString)) return '';
+
+  let recordDate: Date;
+  if (timestamp) {
+    recordDate = new Date(timestamp);
+  } else {
+    recordDate = new Date(`${dateString}T${timeString}`);
+  }
+
+  if (isNaN(recordDate.getTime())) return '';
+
+  const now = new Date();
+  const diffMs = now.getTime() - recordDate.getTime();
+
+  // If timestamp is slightly in future due to clock sync
+  if (diffMs < 0 && diffMs > -60000) {
+    return 'hace unos segundos';
+  }
+  if (diffMs < 0) {
+    return 'recién registrado';
+  }
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 45) {
+    return 'hace unos segundos';
+  }
+  if (diffMin === 1) {
+    return 'hace 1 min';
+  }
+  if (diffMin < 60) {
+    return `hace ${diffMin} min`;
+  }
+  if (diffHour === 1) {
+    return 'hace 1 hora';
+  }
+  if (diffHour < 24) {
+    return `hace ${diffHour} horas`;
+  }
+  if (diffDay === 1) {
+    return 'hace 1 día';
+  }
+  if (diffDay < 7) {
+    return `hace ${diffDay} días`;
+  }
+  const diffWeeks = Math.floor(diffDay / 7);
+  if (diffWeeks === 1) {
+    return 'hace 1 semana';
+  }
+  if (diffDay < 30) {
+    return `hace ${diffWeeks} semanas`;
+  }
+  const diffMonths = Math.floor(diffDay / 30);
+  if (diffMonths === 1) {
+    return 'hace 1 mes';
+  }
+  if (diffMonths < 12) {
+    return `hace ${diffMonths} meses`;
+  }
+  const diffYears = Math.floor(diffDay / 365);
+  if (diffYears === 1) {
+    return 'hace 1 año';
+  }
+  return `hace ${diffYears} años`;
+};
+
 export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, records }) => {
+  // Tick state to re-evaluate relative time every 30 seconds
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(t => t + 1);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
   // Format selected date YYYY-MM-DD -> DD/MM/YYYY
   const formattedDateLabel = selectedDate ? (() => {
     const parts = selectedDate.split('-');
@@ -86,24 +167,119 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
     }));
   }, [filteredRecords]);
 
+  const sortedCareerData = [...careerDistributionData].sort((a, b) => b.count - a.count);
+
+  const handleExportPDF = () => {
+    exportDailyReportPDF(
+      formattedDateLabel || selectedDate || new Date().toLocaleDateString('es-PE'),
+      filteredRecords || [],
+      peakHoursData,
+      sortedCareerData,
+      summary
+    );
+  };
+
+  const handleExportExcel = () => {
+    exportDailyReportExcel(
+      formattedDateLabel || selectedDate || new Date().toLocaleDateString('es-PE'),
+      filteredRecords || [],
+      peakHoursData,
+      sortedCareerData
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
         {/* Peak Hours Chart */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-              <Clock size={18} />
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '12px', 
+            marginBottom: '18px' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+                <Clock size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Horarios de Mayor Ingreso (Horas Pico)
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  {formattedDateLabel 
+                    ? `Distribución por franja horaria para el ${formattedDateLabel}` 
+                    : 'Distribución de estudiantes por franja horaria (8am a 9pm)'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Horarios de Mayor Ingreso (Horas Pico)
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {formattedDateLabel 
-                  ? `Distribución por franja horaria para el ${formattedDateLabel}` 
-                  : 'Distribución de estudiantes por franja horaria (8am a 9pm)'}
-              </p>
+
+            {/* Export Buttons in Top-Right Corner */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleExportExcel}
+                title="Descargar reporte del día en formato Excel (.xlsx)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 13px',
+                  borderRadius: '8px',
+                  border: '1px solid #16a34a',
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#15803d';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f0fdf4';
+                  e.currentTarget.style.color = '#15803d';
+                }}
+              >
+                <FileSpreadsheet size={15} />
+                <span>Excel</span>
+              </button>
+
+              <button
+                onClick={handleExportPDF}
+                title="Descargar reporte del día en formato PDF (.pdf)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 13px',
+                  borderRadius: '8px',
+                  border: '1px solid #dc2626',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#dc2626';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+              >
+                <FileText size={15} />
+                <span>PDF</span>
+              </button>
             </div>
           </div>
 
@@ -143,31 +319,51 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             </div>
           </div>
 
-          <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={careerDistributionData}
-                  dataKey="count"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  innerRadius={50}
-                  paddingAngle={3}
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {careerDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#64748b' }} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+            {/* Pie Chart */}
+            <div style={{ flex: '0 0 55%', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={sortedCareerData}
+                    dataKey="count"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={50}
+                    paddingAngle={3}
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {sortedCareerData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Custom Legend - sorted descending */}
+            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+              {sortedCareerData.map((item, index) => (
+                <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: BAR_COLORS[index % BAR_COLORS.length]
+                  }} />
+                  <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                    {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -248,9 +444,31 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontWeight: 700, fontSize: '0.9rem', background: '#ffffff', padding: '6px 14px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                  <Clock size={14} style={{ color: 'var(--urp-green-primary)' }} />
-                  {record.timeString}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    color: 'var(--text-main)', 
+                    fontWeight: 700, 
+                    fontSize: '0.88rem', 
+                    background: '#ffffff', 
+                    padding: '5px 12px', 
+                    borderRadius: '20px', 
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                  }}>
+                    <Clock size={13} style={{ color: 'var(--urp-green-primary)' }} />
+                    {record.timeString}
+                  </div>
+                  <span style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#64748b', 
+                    fontWeight: 500,
+                    paddingRight: '4px' 
+                  }}>
+                    {getRelativeTimeString(record.timestamp, record.dateString, record.timeString)}
+                  </span>
                 </div>
               </div>
             ))}

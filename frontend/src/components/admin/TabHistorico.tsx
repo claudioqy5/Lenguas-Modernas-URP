@@ -1,61 +1,90 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import { Calendar, Trophy, BookOpen, Inbox } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
+import { Calendar, Trophy, BookOpen, Inbox, Building2, FileSpreadsheet, FileText } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
+import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel } from '../../utils/dateUtils';
+import { exportHistoricoReportPDF, exportHistoricoReportExcel } from '../../utils/exportReports';
 
 interface TabHistoricoProps {
   summary: AnalyticsSummary;
   records?: AttendanceRecord[];
   filterType?: string; // 'week', 'month', 'year', 'all'
-  filterValue?: string; // e.g. "2026-W40" or "2026-09" or "2026"
+  filterValue?: string; // e.g. "2026-W38" or "2026-09" or "2026"
+  filteredRecords?: AttendanceRecord[];
 }
 
 const BAR_COLORS = ['#0f5142', '#0284c7', '#b45309', '#7c3aed', '#e11d48', '#059669'];
 
-export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, filterType, filterValue }) => {
-  // Filter records based on the selected period
-  const filteredRecords = useMemo(() => {
+export const TabHistorico: React.FC<TabHistoricoProps> = ({ 
+  summary, 
+  records, 
+  filterType = 'week', 
+  filterValue = '',
+  filteredRecords: propFilteredRecords 
+}) => {
+  // Use passed filteredRecords or compute them cleanly using string-based date parsing
+  const effectiveRecords = useMemo(() => {
+    if (propFilteredRecords !== undefined) return propFilteredRecords;
     if (!records || filterType === 'all') return records || [];
+
     return records.filter(r => {
-      if (!r.timestamp && !r.dateString) return false;
-      const recDate = new Date(r.timestamp || r.dateString);
-      
+      const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      if (!dateStr) return false;
+
       if (filterType === 'year') {
-        return recDate.getFullYear().toString() === filterValue;
+        return dateStr.slice(0, 4) === filterValue;
       }
-      if (filterType === 'month') { 
-        const recMonth = `${recDate.getFullYear()}-${(recDate.getMonth() + 1).toString().padStart(2, '0')}`;
-        return recMonth === filterValue;
+      if (filterType === 'month') {
+        return dateStr.slice(0, 7) === filterValue;
       }
-      if (filterType === 'week') { 
-        const d = new Date(recDate);
-        d.setHours(0, 0, 0, 0);
-        d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-        const week1 = new Date(d.getFullYear(), 0, 4);
-        const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-        const recWeek = `${d.getFullYear()}-W${week.toString().padStart(2, '0')}`;
-        return recWeek === filterValue;
+      if (filterType === 'week') {
+        return getISOWeekFromDateStr(dateStr) === filterValue;
       }
       return true;
     });
-  }, [records, filterType, filterValue]);
+  }, [records, filterType, filterValue, propFilteredRecords]);
+
+  // Dynamic period text for chart subtitles
+  const periodDescription = useMemo(() => {
+    if (filterType === 'week') {
+      return `la ${formatWeekLabel(filterValue || '')}`;
+    }
+    if (filterType === 'month') {
+      return `el mes de ${formatMonthLabel(filterValue || '')}`;
+    }
+    if (filterType === 'year') {
+      return `el año ${filterValue || ''}`;
+    }
+    return 'todo el histórico registrado';
+  }, [filterType, filterValue]);
 
   // Compute Peak Days
   const peakDaysData = useMemo(() => {
-    if (!filteredRecords || filteredRecords.length === 0) {
-      if (!records || records.length === 0) return summary.peakDays;
+    if (!effectiveRecords || effectiveRecords.length === 0) {
       return [
         { day: 'Lunes', count: 0 }, { day: 'Martes', count: 0 }, { day: 'Miércoles', count: 0 },
         { day: 'Jueves', count: 0 }, { day: 'Viernes', count: 0 }, { day: 'Sábado', count: 0 }
       ];
     }
     const daysMap: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-    filteredRecords.forEach(r => {
+    effectiveRecords.forEach(r => {
       let dayNr = r.dayOfWeekNumber;
-      if (dayNr === undefined && r.timestamp) {
-        dayNr = new Date(r.timestamp).getDay(); 
+      if (!dayNr && r.dayOfWeek) {
+        const nameMap: Record<string, number> = {
+          'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6
+        };
+        dayNr = nameMap[r.dayOfWeek];
       }
-      if (dayNr >= 1 && dayNr <= 6) {
+      if (!dayNr) {
+        const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+        if (dateStr) {
+          const parts = dateStr.split('-').map(Number);
+          if (parts.length === 3) {
+            dayNr = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0).getDay();
+          }
+        }
+      }
+      if (dayNr !== undefined && dayNr >= 1 && dayNr <= 6) {
         daysMap[dayNr]++;
       }
     });
@@ -67,16 +96,15 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
       { day: 'Viernes', count: daysMap[5] },
       { day: 'Sábado', count: daysMap[6] }
     ];
-  }, [filteredRecords, records, summary.peakDays]);
+  }, [effectiveRecords]);
 
   // Compute Top Students
   const topStudentsData = useMemo(() => {
-    if (!filteredRecords || filteredRecords.length === 0) {
-      if (!records || records.length === 0) return summary.topStudents.slice(0, 5);
+    if (!effectiveRecords || effectiveRecords.length === 0) {
       return [];
     }
     const studentsMap: Record<string, any> = {};
-    filteredRecords.forEach(r => {
+    effectiveRecords.forEach(r => {
       if (!studentsMap[r.studentCode]) {
         studentsMap[r.studentCode] = { fullName: r.studentName, visitCount: 0 };
       }
@@ -85,28 +113,71 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
     return Object.values(studentsMap)
       .sort((a, b) => b.visitCount - a.visitCount)
       .slice(0, 5);
-  }, [filteredRecords, records, summary.topStudents]);
+  }, [effectiveRecords]);
 
   // Compute Reason Distribution
   const reasonDistributionData = useMemo(() => {
-    if (!filteredRecords || filteredRecords.length === 0) {
-      if (!records || records.length === 0) return summary.reasonDistribution;
+    if (!effectiveRecords || effectiveRecords.length === 0) {
       return [];
     }
     const reasonMap: Record<string, number> = {};
-    filteredRecords.forEach(r => {
+    effectiveRecords.forEach(r => {
       const reason = r.visitReason || 'Lectura / Estudio';
       reasonMap[reason] = (reasonMap[reason] || 0) + 1;
     });
-    const total = filteredRecords.length;
+    const total = effectiveRecords.length;
     return Object.entries(reasonMap).map(([name, count]) => ({
       name,
       count,
-      percentage: Math.round((count / total) * 100)
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
     })).sort((a, b) => b.count - a.count);
-  }, [filteredRecords, records, summary.reasonDistribution]);
+  }, [effectiveRecords]);
 
-  const isEmpty = filteredRecords && filteredRecords.length === 0 && records && records.length > 0;
+  // Compute Career Distribution dynamically based on effectiveRecords
+  const careerDistributionData = useMemo(() => {
+    if (!effectiveRecords || effectiveRecords.length === 0) {
+      return [];
+    }
+    const careerMap: Record<string, number> = {};
+    effectiveRecords.forEach(r => {
+      const c = r.career || 'Sin Carrera';
+      careerMap[c] = (careerMap[c] || 0) + 1;
+    });
+
+    const total = effectiveRecords.length;
+    return Object.entries(careerMap).map(([name, count]) => ({
+      name,
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    }));
+  }, [effectiveRecords]);
+
+  const sortedCareerData = [...careerDistributionData].sort((a, b) => b.count - a.count);
+
+  const handleExportPDF = () => {
+    exportHistoricoReportPDF(
+      periodDescription,
+      effectiveRecords,
+      peakDaysData,
+      topStudentsData,
+      sortedCareerData,
+      reasonDistributionData,
+      summary
+    );
+  };
+
+  const handleExportExcel = () => {
+    exportHistoricoReportExcel(
+      periodDescription,
+      effectiveRecords,
+      peakDaysData,
+      topStudentsData,
+      sortedCareerData,
+      reasonDistributionData
+    );
+  };
+
+  const isEmpty = effectiveRecords && effectiveRecords.length === 0 && records && records.length > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
@@ -122,48 +193,113 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
         {/* Peak Days Chart */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-              <Calendar size={18} />
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '12px', 
+            marginBottom: '18px' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+                <Calendar size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Días de la Semana con Más Visitas
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  Comparativa de concurrencia de Lunes a Sábado en {periodDescription}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Días de la Semana con Más Visitas
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Comparativa de concurrencia de Lunes a Sábado en este período</p>
+
+            {/* Export Buttons in Top-Right Corner */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleExportExcel}
+                title={`Descargar reporte histórico (${periodDescription}) en formato Excel (.xlsx)`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 13px',
+                  borderRadius: '8px',
+                  border: '1px solid #16a34a',
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#15803d';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f0fdf4';
+                  e.currentTarget.style.color = '#15803d';
+                }}
+              >
+                <FileSpreadsheet size={15} />
+                <span>Excel</span>
+              </button>
+
+              <button
+                onClick={handleExportPDF}
+                title={`Descargar reporte histórico (${periodDescription}) en formato PDF (.pdf)`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 13px',
+                  borderRadius: '8px',
+                  border: '1px solid #dc2626',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#dc2626';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+              >
+                <FileText size={15} />
+                <span>PDF</span>
+              </button>
             </div>
           </div>
 
           <div style={{ height: '270px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={peakDaysData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="barGradGold" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#b45309" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#b45309" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="barGradGreen" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0f5142" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#0f5142" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="day" stroke="#64748b" fontSize={11} />
                 <YAxis stroke="#64748b" fontSize={11} />
                 <Tooltip 
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'rgba(15, 81, 66, 0.04)' }}
                   contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
                   formatter={(val: any) => [`${val} visitas`, 'Total']}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                  {peakDaysData.map((_, index) => {
-                    const isTop = index === 1 || index === 2;
+                  {peakDaysData.map((entry, index) => {
+                    const maxVal = Math.max(...peakDaysData.map(d => d.count), 0);
+                    const isPeak = maxVal > 0 && entry.count === maxVal;
                     return (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={isTop ? 'url(#barGradGold)' : 'url(#barGradGreen)'} 
-                        stroke={isTop ? '#b45309' : '#0f5142'} 
-                        strokeWidth={2}
+                        fill={isPeak ? '#b45309' : '#0f5142'} 
                       />
                     );
                   })}
@@ -173,6 +309,79 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
           </div>
         </div>
         
+        {/* Career Distribution Donut Chart (Gráfico circular de alumnos por carrera) */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+              <Building2 size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                Afluencia por Carrera
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Distribución de estudiantes según facultad/carrera en {periodDescription}
+              </p>
+            </div>
+          </div>
+
+          {sortedCareerData.length === 0 ? (
+            <div style={{ height: '270px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
+              No hay registros de carreras en este período.
+            </div>
+          ) : (
+            <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: '0 0 55%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sortedCareerData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={50}
+                      paddingAngle={3}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {sortedCareerData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Custom Legend - sorted descending */}
+              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                {sortedCareerData.map((item, index) => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: BAR_COLORS[index % BAR_COLORS.length]
+                    }} />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Top Students Ranking (Bajado aquí) & Reason Distribution */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
         {/* Top Students Leaderboard */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
@@ -183,7 +392,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
                 Ranking de Estudiantes Asiduos
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Alumnos con mayor cantidad de ingresos en este período</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Alumnos con mayor cantidad de ingresos en {periodDescription}</p>
             </div>
           </div>
 
@@ -194,46 +403,21 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
                 layout="vertical"
                 margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
               >
-                <defs>
-                  <linearGradient id="barHorizGradGold" x1="1" y1="0" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#b45309" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#b45309" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="barHorizGradSlate" x1="1" y1="0" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#475569" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#475569" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="barHorizGradGreen" x1="1" y1="0" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#0f5142" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#0f5142" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="barHorizGradGray" x1="1" y1="0" x2="0" y2="0">
-                    <stop offset="0%" stopColor="#64748b" stopOpacity={0.7} />
-                    <stop offset="100%" stopColor="#64748b" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" stroke="#64748b" fontSize={11} />
                 <YAxis type="category" dataKey="fullName" stroke="#64748b" fontSize={11} width={100} tickFormatter={(val) => val.split(' ')[0] + ' ' + (val.split(' ')[1] ? val.split(' ')[1].charAt(0) + '.' : '')} />
                 <Tooltip 
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
                   contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
                   formatter={(val: any) => [`${val} visitas`, 'Total']}
                 />
                 <Bar dataKey="visitCount" radius={[0, 6, 6, 0]} barSize={24}>
                   {topStudentsData.map((_, index) => {
-                    let fillUrl = 'url(#barHorizGradGray)';
-                    let strokeColor = '#64748b';
-                    if (index === 0) { fillUrl = 'url(#barHorizGradGold)'; strokeColor = '#b45309'; }
-                    else if (index === 1) { fillUrl = 'url(#barHorizGradSlate)'; strokeColor = '#475569'; }
-                    else if (index === 2) { fillUrl = 'url(#barHorizGradGreen)'; strokeColor = '#0f5142'; }
-                    
+                    const solidColors = ['#b45309', '#475569', '#0f5142', '#64748b', '#94a3b8'];
                     return (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={fillUrl} 
-                        stroke={strokeColor} 
-                        strokeWidth={1.5}
+                        fill={solidColors[index] || '#94a3b8'} 
                       />
                     );
                   })}
@@ -242,10 +426,6 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      {/* Row 2: Top Students Ranking & Reason Distribution */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
 
         {/* Reasons Distribution */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
@@ -257,7 +437,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({ summary, records, fi
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
                 Motivos de Visita a las Instalaciones
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Servicios más solicitados por los estudiantes en este período</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Servicios más solicitados por los estudiantes en {periodDescription}</p>
             </div>
           </div>
 

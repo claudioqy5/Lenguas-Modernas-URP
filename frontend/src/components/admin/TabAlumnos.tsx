@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, Plus, Edit3, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet } from 'lucide-react';
 import { Student } from '../../services/api';
+import { exportStudentsToExcel } from '../../utils/exportReports';
 
 interface TabAlumnosProps {
   students: Student[];
@@ -13,6 +14,7 @@ interface TabAlumnosProps {
   onNewStudent: () => void;
   onEditStudent: (student: Student) => void;
   onDeleteStudent: (id?: string) => void;
+  onNavigateToDifusion?: () => void;
 }
 
 export const TabAlumnos: React.FC<TabAlumnosProps> = ({
@@ -25,7 +27,8 @@ export const TabAlumnos: React.FC<TabAlumnosProps> = ({
   setFilterFaculty,
   onNewStudent,
   onEditStudent,
-  onDeleteStudent
+  onDeleteStudent,
+  onNavigateToDifusion
 }) => {
   const filteredStudents = students.filter(s => {
     const matchSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,8 +77,24 @@ export const TabAlumnos: React.FC<TabAlumnosProps> = ({
     lastVisitAt: 'Última Visita'
   };
 
-  const careers = Array.from(new Set(students.map(s => s.career))).filter(Boolean);
   const faculties = Array.from(new Set(students.map(s => s.faculty))).filter(Boolean);
+
+  const availableCareers = React.useMemo(() => {
+    if (filterFaculty === 'ALL') {
+      return Array.from(new Set(students.map(s => s.career))).filter(Boolean);
+    }
+    return Array.from(new Set(students.filter(s => s.faculty === filterFaculty).map(s => s.career))).filter(Boolean);
+  }, [students, filterFaculty]);
+
+  const handleFacultyFilterChange = (newFac: string) => {
+    setFilterFaculty(newFac);
+    if (newFac !== 'ALL') {
+      const allowed = students.filter(s => s.faculty === newFac).map(s => s.career);
+      if (filterCareer !== 'ALL' && !allowed.includes(filterCareer)) {
+        setFilterCareer('ALL');
+      }
+    }
+  };
 
   return (
     <div style={{ padding: '0' }}>
@@ -94,40 +113,118 @@ export const TabAlumnos: React.FC<TabAlumnosProps> = ({
         
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <select
-            value={filterCareer}
-            onChange={(e) => setFilterCareer(e.target.value)}
-            className="input-futuristic"
-            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
-          >
-            <option value="ALL">Todas las Carreras</option>
-            {careers.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select
             value={filterFaculty}
-            onChange={(e) => setFilterFaculty(e.target.value)}
+            onChange={(e) => handleFacultyFilterChange(e.target.value)}
             className="input-futuristic"
             style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
           >
             <option value="ALL">Todas las Facultades</option>
             {faculties.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 8px' }}>
+          <select
+            value={filterCareer}
+            onChange={(e) => setFilterCareer(e.target.value)}
+            className="input-futuristic"
+            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
+          >
+            <option value="ALL">{filterFaculty === 'ALL' ? 'Todas las Carreras' : `Carreras de ${filterFaculty}`}</option>
+            {availableCareers.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px' }}>
             Total: <span style={{ color: 'var(--urp-green-primary)' }}>{filteredStudents.length}</span> estudiantes
           </div>
+
           <button
-            onClick={onNewStudent}
-            className="btn-primary-gradient"
+            onClick={() => exportStudentsToExcel(filteredStudents)}
+            title="Exportar directorio de estudiantes a Excel (.xlsx)"
             style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '6px',
+              padding: '7px 13px',
+              borderRadius: '8px',
+              border: '1px solid #16a34a',
+              background: '#f0fdf4',
+              color: '#15803d',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#15803d';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f0fdf4';
+              e.currentTarget.style.color = '#15803d';
             }}
           >
-            <Plus size={16} /> Nuevo Alumno
+            <FileSpreadsheet size={15} />
+            <span>Excel</span>
+          </button>
+
+          {onNavigateToDifusion && (
+            <button
+              onClick={onNavigateToDifusion}
+              title="Ir a la sección de Difusión para redactar y enviar comunicados"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 13px',
+                borderRadius: '8px',
+                border: '1px solid #0284c7',
+                background: '#f0f9ff',
+                color: '#0284c7',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 2px rgba(2, 132, 199, 0.08)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#0284c7';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f0f9ff';
+                e.currentTarget.style.color = '#0284c7';
+              }}
+            >
+              <Mail size={15} />
+              <span>Difundir Correo</span>
+            </button>
+          )}
+
+          <button
+            onClick={onNewStudent}
+            title="Registrar nuevo alumno"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              border: '1px solid #0f5142',
+              background: 'var(--urp-green-primary)',
+              color: '#ffffff',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 2px rgba(15, 81, 66, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#0b3d32';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--urp-green-primary)';
+            }}
+          >
+            <UserPlus size={15} />
+            <span>Nuevo Alumno</span>
           </button>
         </div>
       </div>
