@@ -20,7 +20,7 @@ jobs:
         username: ${{ secrets.VPS_USERNAME }}
         password: ${{ secrets.VPS_PASSWORD }}
         source: "."
-        target: "~/asistencia-lenguas-modernas"
+        target: "/var/www/asistencia-lenguas-modernas"
         rm: true
 
     - name: Execute Docker Compose on VPS
@@ -30,7 +30,7 @@ jobs:
         username: ${{ secrets.VPS_USERNAME }}
         password: ${{ secrets.VPS_PASSWORD }}
         script: |
-          cd ~/asistencia-lenguas-modernas
+          cd /var/www/asistencia-lenguas-modernas
           # Detener contenedores antiguos si existen
           docker compose down || docker-compose down
           # Levantar con la nueva versión
