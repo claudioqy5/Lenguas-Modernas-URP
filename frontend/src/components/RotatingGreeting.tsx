@@ -112,7 +112,6 @@ export const RotatingGreeting: React.FC = () => {
     let timer: ReturnType<typeof setTimeout>;
 
     if (isFading) {
-      // Fade out duration: 650ms, then advance to next language and restart typing
       timer = setTimeout(() => {
         setIndex((prev) => (prev + 1) % GREETINGS.length);
         setCharIndex(0);
@@ -120,7 +119,6 @@ export const RotatingGreeting: React.FC = () => {
       }, 650);
     } else {
       if (charIndex < current.phrase.length) {
-        // Typing phase: type next character with human cadence
         const nextChar = current.phrase[charIndex];
         const isCJK = /[\u4e00-\u9fa5]/.test(nextChar);
         const speed = isCJK ? 130 : 52 + Math.random() * 18;
@@ -129,7 +127,6 @@ export const RotatingGreeting: React.FC = () => {
           setCharIndex((prev) => prev + 1);
         }, speed);
       } else {
-        // Completed typing: hold for 4200ms so visitors can comfortably read and appreciate the colors
         timer = setTimeout(() => {
           setIsFading(true);
         }, 4200);
@@ -146,17 +143,21 @@ export const RotatingGreeting: React.FC = () => {
   const isLine2 = line2 !== undefined;
 
   return (
-    <div style={{ minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <div style={{ minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', textAlign: 'right' }}>
       <div 
         style={{ 
           opacity: isFading ? 0 : 1,
           filter: isFading ? 'blur(4px)' : 'blur(0px)',
           transform: isFading ? 'translateY(-6px)' : 'translateY(0)',
-          transition: 'opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1), filter 0.65s ease, transform 0.65s ease'
+          transition: 'opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1), filter 0.65s ease, transform 0.65s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          width: '100%'
         }}
       >
-        {/* Language Badge */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        {/* Language Badge (Right-aligned next to card) */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '14px' }}>
           <span 
             style={{ 
               fontSize: '0.75rem', 
@@ -189,7 +190,7 @@ export const RotatingGreeting: React.FC = () => {
           </span>
         </div>
 
-        {/* Typewritten Title with Two-Tone Vibrant Contrast */}
+        {/* Typewritten Title (Right-aligned next to card) */}
         <h1 
           className="font-display" 
           style={{ 
@@ -201,13 +202,14 @@ export const RotatingGreeting: React.FC = () => {
             filter: 'drop-shadow(0 2px 10px rgba(255, 255, 255, 0.95))',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'flex-start',
+            alignItems: 'flex-end',
+            textAlign: 'right',
             letterSpacing: '-0.5px'
           }}
         >
           {/* Line 1: Clear Charcoal Slate */}
-          <span style={{ color: '#0f172a', display: 'inline-flex', alignItems: 'baseline' }}>
-            {line1}
+          <div style={{ color: '#0f172a', textAlign: 'right', width: '100%' }}>
+            <span>{line1}</span>
             {!isLine2 && (
               <span 
                 className="typewriter-cursor"
@@ -224,17 +226,16 @@ export const RotatingGreeting: React.FC = () => {
                 }}
               />
             )}
-          </span>
+          </div>
 
           {/* Line 2: Luminous Signature Gradient */}
           {isLine2 && (
-            <span style={{ display: 'inline-flex', alignItems: 'baseline', marginTop: '2px' }}>
+            <div style={{ marginTop: '2px', textAlign: 'right', width: '100%', whiteSpace: 'nowrap' }}>
               <span 
                 style={{ 
                   background: current.gradient,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  display: 'inline-block',
                   fontWeight: 850
                 }}
               >
@@ -254,11 +255,11 @@ export const RotatingGreeting: React.FC = () => {
                   transition: 'background-color 0.3s ease'
                 }}
               />
-            </span>
+            </div>
           )}
         </h1>
 
-        {/* Subtitle with accent marker */}
+        {/* Subtitle with accent marker (Right-aligned next to card) */}
         <p 
           style={{ 
             color: '#475569', 
@@ -268,6 +269,7 @@ export const RotatingGreeting: React.FC = () => {
             transition: 'opacity 0.4s ease',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'flex-end',
             gap: '10px'
           }}
         >

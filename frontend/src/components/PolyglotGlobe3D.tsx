@@ -31,11 +31,36 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
     renderer.domElement.style.left = '0';
     mountRef.current.appendChild(renderer.domElement);
 
-    // Helper to create a planet with wireframe, core, orbital rings, and satellites
+    // =========================================================================
+    // 2. LEFT SIDE BACKGROUND: SAN JERÓNIMO RAW PNG (DIRECT UNFILTERED IMAGE)
+    // =========================================================================
+    const sanJeronimoLeftGroup = new THREE.Group();
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('/sanjeronimo.png', (texture) => {
+      const sjAspect = texture.image.width / texture.image.height;
+      const sjHeight = 5.5; // Background size
+      const sjWidth = sjHeight * sjAspect;
+
+      const sjGeom = new THREE.PlaneGeometry(sjWidth, sjHeight);
+      const sjMat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+      });
+
+      const sjMesh = new THREE.Mesh(sjGeom, sjMat);
+      sanJeronimoLeftGroup.add(sjMesh);
+    });
+
+    scene.add(sanJeronimoLeftGroup);
+
+    // =========================================================================
+    // 3. RIGHT SIDE BACKGROUND: ORIGINAL RIGHT PLANET SYSTEM
+    // =========================================================================
     const createPlanetSystem = (wireColor: number, ringColors: { radius: number; color: number; tiltX: number; tiltY: number; speed: number }[]) => {
       const group = new THREE.Group();
 
-      // Outer Wireframe Sphere (Soft & delicate)
       const globeGeometry = new THREE.SphereGeometry(2.3, 30, 30);
       const wireframeMaterial = new THREE.MeshBasicMaterial({
         color: wireColor,
@@ -46,7 +71,6 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
       const wireframeGlobe = new THREE.Mesh(globeGeometry, wireframeMaterial);
       group.add(wireframeGlobe);
 
-      // Inner Glowing Core (Soft translucent ambient sphere)
       const coreGeometry = new THREE.SphereGeometry(1.85, 32, 32);
       const coreMaterial = new THREE.MeshPhongMaterial({
         color: 0xf0fdf4,
@@ -59,7 +83,6 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
       const coreGlobe = new THREE.Mesh(coreGeometry, coreMaterial);
       group.add(coreGlobe);
 
-      // Orbital Rings (Thin & subtle opacity to not obstruct text)
       const rings: { mesh: THREE.Mesh; speed: number }[] = [];
       ringColors.forEach((cfg) => {
         const ringGeom = new THREE.TorusGeometry(cfg.radius, 0.012, 16, 140);
@@ -75,7 +98,6 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
         rings.push({ mesh: ringMesh, speed: cfg.speed });
       });
 
-      // Orbiting Satellites along the rings
       const sat1Geom = new THREE.SphereGeometry(0.18, 16, 16);
       const sat1Mat = new THREE.MeshPhongMaterial({ color: 0xb45309, transparent: true, opacity: 0.5, shininess: 80 });
       const sat1 = new THREE.Mesh(sat1Geom, sat1Mat);
@@ -94,19 +116,9 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
         rings,
         sat1,
         sat2,
-        ringConfigs: ringColors,
       };
     };
 
-    // 2. LEFT PLANET SYSTEM (half-tucked on the left screen edge)
-    const leftPlanet = createPlanetSystem(0x0f5142, [
-      { radius: 3.3, color: 0xb45309, tiltX: 0.35, tiltY: 0.25, speed: 0.25 },
-      { radius: 4.4, color: 0x0f5142, tiltX: 0.65, tiltY: -0.28, speed: -0.2 },
-      { radius: 5.6, color: 0x0284c7, tiltX: -0.4, tiltY: 0.42, speed: 0.18 },
-    ]);
-    scene.add(leftPlanet.group);
-
-    // 3. RIGHT PLANET SYSTEM (half-tucked on the right screen edge)
     const rightPlanet = createPlanetSystem(0x0f5142, [
       { radius: 3.4, color: 0x0284c7, tiltX: -0.32, tiltY: 0.3, speed: -0.22 },
       { radius: 4.5, color: 0x0f5142, tiltX: 0.58, tiltY: -0.22, speed: 0.26 },
@@ -114,24 +126,30 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
     ]);
     scene.add(rightPlanet.group);
 
-    // 4. Update positions so both planets are partially hidden/tucked at the screen borders
-    const updatePlanetEdgePositions = () => {
+    // 4. Update Edge Positions
+    const updateEdgePositions = () => {
       const vFov = (camera.fov * Math.PI) / 180;
       const visibleHeight = 2 * Math.tan(vFov / 2) * camera.position.z;
       const visibleWidth = visibleHeight * camera.aspect;
 
-      // Position Left Planet: half-hidden on the left edge
-      leftPlanet.group.position.x = -visibleWidth / 2 + 0.3;
-      leftPlanet.group.position.y = 0.1;
+      // San Jerónimo on Left Edge
+      if (window.innerWidth < 768) {
+        sanJeronimoLeftGroup.position.x = -visibleWidth / 2 + 1.2;
+        sanJeronimoLeftGroup.scale.set(0.75, 0.75, 0.75);
+      } else {
+        sanJeronimoLeftGroup.position.x = -visibleWidth / 2 + 2.2;
+        sanJeronimoLeftGroup.scale.set(1.1, 1.1, 1.1);
+      }
+      sanJeronimoLeftGroup.position.y = 0.1;
 
-      // Position Right Planet: half-hidden on the right edge
+      // Right Planet on Right Edge
       rightPlanet.group.position.x = visibleWidth / 2 - 0.3;
       rightPlanet.group.position.y = -0.1;
     };
 
-    updatePlanetEdgePositions();
+    updateEdgePositions();
 
-    // 5. Cosmic Particles floating throughout the entire space
+    // 5. Cosmic Star Particles
     const particleCount = 260;
     const particleGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
@@ -142,9 +160,9 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
     const cBlue = new THREE.Color(0x0284c7);
 
     for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 32; // X: wide span
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 16; // Y: height span
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 8; // Z: depth span
+      positions[i * 3] = (Math.random() - 0.5) * 32;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 16;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
 
       const chosenColor = i % 3 === 0 ? cAmber : i % 3 === 1 ? cEmerald : cBlue;
       colors[i * 3] = chosenColor.r;
@@ -165,8 +183,8 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particles);
 
-    // 6. Lighting (Soft ambient illumination)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+    // 6. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.25);
     scene.add(ambientLight);
 
     const lightLeft = new THREE.PointLight(0x0f5142, 1.5, 30);
@@ -202,25 +220,9 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
       targetX += (mouseX - targetX) * 0.04;
       targetY += (mouseY - targetY) * 0.04;
 
-      // Animate Left Planet
-      leftPlanet.group.rotation.y = targetX * 0.2 + elapsedTime * 0.08;
-      leftPlanet.group.rotation.x = -targetY * 0.15;
-      leftPlanet.wireframeGlobe.rotation.y += delta * 0.15;
-      leftPlanet.coreGlobe.rotation.y += delta * 0.08;
-      leftPlanet.rings.forEach((r) => (r.mesh.rotation.z += delta * r.speed * 0.4));
-
-      const la1 = elapsedTime * 0.65;
-      leftPlanet.sat1.position.set(
-        Math.cos(la1) * 3.3,
-        Math.sin(la1) * Math.sin(Math.PI * 0.35) * 3.3,
-        Math.sin(la1) * Math.cos(Math.PI * 0.35) * 3.3
-      );
-      const la2 = -elapsedTime * 0.45;
-      leftPlanet.sat2.position.set(
-        Math.cos(la2) * 4.4,
-        Math.sin(la2) * Math.sin(Math.PI * 0.65) * 4.4,
-        Math.sin(la2) * Math.cos(Math.PI * 0.65) * 4.4
-      );
+      // Left San Jerónimo: Completely static, fixed, zero movement or hover effect
+      sanJeronimoLeftGroup.rotation.y = 0;
+      sanJeronimoLeftGroup.rotation.x = 0;
 
       // Animate Right Planet
       rightPlanet.group.rotation.y = targetX * 0.2 - elapsedTime * 0.08;
@@ -250,14 +252,10 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
       if (pulseIntensityRef.current > 0.01) {
         pulseIntensityRef.current -= delta * 1.5;
         const scale = 1 + pulseIntensityRef.current * 0.18;
-        leftPlanet.wireframeGlobe.scale.set(scale, scale, scale);
         rightPlanet.wireframeGlobe.scale.set(scale, scale, scale);
-        leftPlanet.coreMaterial.emissiveIntensity = 0.24 + pulseIntensityRef.current * 0.8;
         rightPlanet.coreMaterial.emissiveIntensity = 0.24 + pulseIntensityRef.current * 0.8;
       } else {
-        leftPlanet.wireframeGlobe.scale.set(1, 1, 1);
         rightPlanet.wireframeGlobe.scale.set(1, 1, 1);
-        leftPlanet.coreMaterial.emissiveIntensity = 0.24;
         rightPlanet.coreMaterial.emissiveIntensity = 0.24;
       }
 
@@ -274,7 +272,7 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
       camera.position.z = w < 768 ? 10.5 : 8.5;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
-      updatePlanetEdgePositions();
+      updateEdgePositions();
     };
 
     window.addEventListener('resize', handleResize);
@@ -297,18 +295,18 @@ export const PolyglotGlobe3D: React.FC<PolyglotGlobe3DProps> = ({ pulseTrigger =
   }, [pulseTrigger]);
 
   return (
-    <div 
-      ref={mountRef} 
-      style={{ 
+    <div
+      ref={mountRef}
+      style={{
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100vw', 
-        height: '100vh', 
+        width: '100vw',
+        height: '100vh',
         pointerEvents: 'none',
         zIndex: 0,
         overflow: 'hidden'
-      }} 
+      }}
     />
   );
 };

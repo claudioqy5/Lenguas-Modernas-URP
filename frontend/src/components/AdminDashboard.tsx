@@ -19,6 +19,20 @@ interface AdminDashboardProps {
   onBackToKiosk: () => void;
 }
 
+const getCurrentWeek = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${d.getFullYear()}-W${week.toString().padStart(2, '0')}`;
+};
+
+const getCurrentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+};
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   session,
   onLogout,
@@ -34,12 +48,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCareer, setFilterCareer] = useState('ALL');
   const [filterFaculty, setFilterFaculty] = useState('ALL');
-  const [inicioStartDate, setInicioStartDate] = useState(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
-  });
-  const [inicioEndDate, setInicioEndDate] = useState(() => {
+  const [inicioDate, setInicioDate] = useState(() => {
     const d = new Date();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
@@ -55,7 +64,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0];
   });
-  const [historyFilter, setHistoryFilter] = useState('month');
+  const [historyFilter, setHistoryFilter] = useState('week');
+  const [historyWeek, setHistoryWeek] = useState(getCurrentWeek());
+  const [historyMonth, setHistoryMonth] = useState(getCurrentMonth());
+  const [historyYear, setHistoryYear] = useState(new Date().getFullYear());
 
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
@@ -65,7 +77,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const [sumData, recData, stuData] = await Promise.all([
         api.getAnalyticsSummary(),
-        api.getRecentAttendances(100),
+        api.getRecentAttendances(10000),
         api.getAllStudents()
       ]);
       setSummary(sumData);
@@ -118,14 +130,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <div style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease', whiteSpace: 'normal' }}>
             <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--urp-green-primary)', lineHeight: 1.3, marginBottom: '6px' }}>
-              URP
+              FHLM-URP
             </h1>
             <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
               Panel Administrador
-            </h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              Facultad de Humanidades y Lenguas Modernas
-            </p>
+            </h2>            
           </div>
         </div>
 
@@ -312,21 +321,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {activeTab === 'inicio' && (
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Desde:</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Fecha:</span>
                 <input 
                   type="date" 
                   className="input-futuristic" 
                   style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
-                  value={inicioStartDate}
-                  onChange={(e) => setInicioStartDate(e.target.value)}
-                />
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Hasta:</span>
-                <input 
-                  type="date" 
-                  className="input-futuristic" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem' }} 
-                  value={inicioEndDate}
-                  onChange={(e) => setInicioEndDate(e.target.value)}
+                  value={inicioDate}
+                  onChange={(e) => setInicioDate(e.target.value)}
                 />
               </div>
             )}
@@ -368,13 +369,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </select>
                 
                 {historyFilter === 'week' && (
-                  <input type="week" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} />
+                  <input type="week" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} value={historyWeek} onChange={(e) => setHistoryWeek(e.target.value)} />
                 )}
                 {historyFilter === 'month' && (
-                  <input type="month" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} />
+                  <input type="month" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem' }} value={historyMonth} onChange={(e) => setHistoryMonth(e.target.value)} />
                 )}
                 {historyFilter === 'year' && (
-                  <input type="number" min="2020" max="2100" defaultValue={new Date().getFullYear()} className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem', width: '100px' }} />
+                  <input type="number" min="2020" max="2100" className="input-futuristic" style={{ padding: '8px 14px', fontSize: '0.85rem', width: '100px' }} value={historyYear} onChange={(e) => setHistoryYear(parseInt(e.target.value))} />
                 )}
               </div>
             )}
@@ -384,17 +385,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <main style={{ padding: '32px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1 }}>
           {/* KPI Cards */}
           {(activeTab === 'inicio' || activeTab === 'historico') && (
-            <KPICards summary={summary} studentsCount={students.length} />
+            <KPICards 
+              summary={summary} 
+              studentsCount={students.length}
+              selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
+              selectedDateVisitsCount={
+                activeTab === 'inicio' 
+                  ? records.filter(r => {
+                      if (!r.timestamp && !r.dateString) return false;
+                      const recDate = r.timestamp ? r.timestamp.split('T')[0] : r.dateString;
+                      return recDate === inicioDate;
+                    }).length
+                  : undefined
+              }
+            />
           )}
 
           {/* TAB 1: INICIO (Daily Stats) */}
           {activeTab === 'inicio' && summary && (
-            <TabInicio summary={summary} />
+            <TabInicio summary={summary} selectedDate={inicioDate} records={records} />
           )}
 
           {/* TAB 1B: HISTORICO */}
           {activeTab === 'historico' && summary && (
-            <TabHistorico summary={summary} />
+            <TabHistorico 
+              summary={summary}
+              records={records}
+              filterType={historyFilter}
+              filterValue={
+                historyFilter === 'week' ? historyWeek :
+                historyFilter === 'month' ? historyMonth :
+                historyFilter === 'year' ? historyYear.toString() : ''
+              }
+            />
           )}
 
           {/* TAB 2: ATTENDANCE RECORDS */}

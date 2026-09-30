@@ -12,13 +12,13 @@
   --urp-gold-light: #fef3c7;
   --urp-gold-dark: #78350f;
   
-  --bg-page: #f8fafc;
+  --bg-page: #FDFBF7;
   --bg-card: #ffffff;
-  --bg-card-subtle: #f1f5f9;
-  --bg-card-hover: #f8fafc;
+  --bg-card-subtle: #FAF8F5;
+  --bg-card-hover: #FDFBF7;
   
-  --border-card: #e2e8f0;
-  --border-subtle: #edf2f7;
+  --border-card: #e8e4dc;
+  --border-subtle: #f0ece3;
   --border-focus: #0f5142;
   
   --text-main: #0f172a;
@@ -48,14 +48,14 @@
 
 body {
   font-family: var(--font-main);
-  background-color: var(--bg-page);
+  background-color: #FDFBF7;
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 10% 10%, rgba(15, 81, 66, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 90% 85%, rgba(180, 83, 9, 0.04) 0%, transparent 45%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    radial-gradient(circle at 10% 10%, rgba(15, 81, 66, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(180, 83, 9, 0.03) 0%, transparent 45%),
+    linear-gradient(180deg, #FDFBF7 0%, #FAF8F5 100%);
   background-attachment: fixed;
 }
 

@@ -99,7 +99,7 @@ export function App() {
 
     try {
       setLoading(true);
-      
+
       // Check identity to prevent checking in as someone else by mistake
       const checkRes = await api.checkStudent(code);
       if (checkRes.exists && checkRes.student) {
@@ -177,7 +177,7 @@ export function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', background: '#FDFBF7' }}>
       {/* FULL-SCREEN 3D PLANETARY BACKGROUND (EXPANDS ACROSS THE WHOLE SCREEN FROM LEFT TO RIGHT) */}
       <PolyglotGlobe3D pulseTrigger={pulseGlobeTrigger} />
 
@@ -227,7 +227,7 @@ export function App() {
             <Landmark size={23} />
           </div>
           <div>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.9px', color: '#b45309' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.9px', color: 'rgb(33 97 44)' }}>
               UNIVERSIDAD RICARDO PALMA
             </div>
             <div style={{ fontSize: '1.08rem', fontWeight: 800, letterSpacing: '-0.2px' }}>
@@ -320,23 +320,24 @@ export function App() {
           alignItems: 'center'
         }}
       >
-        {/* Left Side: Floating Elements (Directly over the full-screen 3D planets) */}
+        {/* Left Side: Floating Elements (Rotating Greeting aligned right towards card) */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
             gap: '24px',
-            minHeight: '520px'
+            minHeight: '520px',
+            width: '100%'
           }}
         >
-          {/* Top: Rotating Greeting */}
-          <div>
+          {/* Top: Rotating Greeting (Right-aligned) */}
+          <div style={{ width: '100%' }}>
             <RotatingGreeting />
           </div>
 
-          {/* Spacer so the massive 3D planetary system and orbiting rings are unobstructed */}
-          <div style={{ flex: 1, minHeight: '80px' }} />
+          <div style={{ flex: 1, minHeight: '60px' }} />
         </div>
 
         {/* Right Side: Check-In Form (Frosted Glass Panel) */}
@@ -350,64 +351,7 @@ export function App() {
             boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.1)'
           }}
         >
-          {/* Barcode status banner */}
-          <div
-            style={{
-              padding: '10px 16px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(2, 132, 199, 0.06) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '22px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-              <span style={{ position: 'relative', display: 'flex', width: '10px', height: '10px' }}>
-                <span
-                  style={{
-                    animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
-                    position: 'absolute',
-                    display: 'inline-flex',
-                    height: '100%',
-                    width: '100%',
-                    borderRadius: '50%',
-                    backgroundColor: '#10b981',
-                    opacity: 0.75
-                  }}
-                />
-                <span
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    borderRadius: '50%',
-                    height: '10px',
-                    width: '10px',
-                    backgroundColor: '#059669'
-                  }}
-                />
-              </span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#065f46' }}>
-                Lector de Código de Barras / QR Activo
-              </span>
-            </div>
-            <div
-              style={{
-                background: 'rgba(5, 150, 105, 0.12)',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#059669',
-                fontSize: '0.72rem',
-                fontWeight: 800
-              }}
-            >
-              <Scan size={14} /> LISTO
-            </div>
-          </div>
+
 
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px', letterSpacing: '-0.3px' }}>
             Registro de Asistencia
