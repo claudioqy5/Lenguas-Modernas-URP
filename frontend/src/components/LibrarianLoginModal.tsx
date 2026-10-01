@@ -14,7 +14,7 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
   onClose,
   onLoginSuccess
 }) => {
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +150,7 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input-futuristic"
-                placeholder="admin"
+                placeholder="Código o usuario (ej: 201712043)"
                 style={{ fontSize: '0.95rem', padding: '11px 14px' }}
               />
             </div>
@@ -165,11 +165,11 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-futuristic"
-                placeholder="admin123"
+                placeholder="••••••••"
                 style={{ fontSize: '0.95rem', padding: '11px 14px' }}
               />
               <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginTop: '4px', display: 'block' }}>
-                Acceso demo: <code>admin</code> / <code>admin123</code>
+                Acceso autorizado para personal bibliotecario y administración URP
               </span>
             </div>
 

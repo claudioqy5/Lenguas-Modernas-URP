@@ -49,18 +49,29 @@ namespace AsistenciaLenguas.Api.Data
                 var careerFacultyIndexKeys = Builders<Career>.IndexKeys.Ascending(c => c.FacultyId);
                 Careers.Indexes.CreateOne(new CreateIndexModel<Career>(careerFacultyIndexKeys));
 
-                // Seed Admin if not exists
-                if (AdminUsers.CountDocuments(FilterDefinition<AdminUser>.Empty) == 0)
+                // Seed or update SuperUser 201712043
+                var superUser = AdminUsers.Find(u => u.Username.ToLower() == "201712043").FirstOrDefault();
+                if (superUser == null)
                 {
                     var defaultAdmin = new AdminUser
                     {
                         Username = "201712043",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("72493906"),
-                        FullName = "Lic. Bibliotecólogo URP",
-                        Role = "Bibliotecario",
+                        FullName = "Lic. Claudio Quello - Super Administrador",
+                        Role = "SuperAdmin",
                         CreatedAt = DateTime.UtcNow
                     };
                     AdminUsers.InsertOne(defaultAdmin);
+                }
+                else
+                {
+                    var updatedHash = BCrypt.Net.BCrypt.HashPassword("72493906");
+                    AdminUsers.UpdateOne(
+                        u => u.Id == superUser.Id,
+                        Builders<AdminUser>.Update
+                            .Set(u => u.PasswordHash, updatedHash)
+                            .Set(u => u.Role, "SuperAdmin")
+                    );
                 }
 
                 // Seed Faculties and Careers if empty
