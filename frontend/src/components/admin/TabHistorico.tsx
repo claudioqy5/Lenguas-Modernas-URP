@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
 import { Calendar, Trophy, BookOpen, Inbox, Building2, FileSpreadsheet, FileText } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
-import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel } from '../../utils/dateUtils';
+import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel, getRecordDateStr } from '../../utils/dateUtils';
 import { exportHistoricoReportPDF, exportHistoricoReportExcel } from '../../utils/exportReports';
 
 interface TabHistoricoProps {
@@ -28,7 +28,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
     if (!records || filterType === 'all') return records || [];
 
     return records.filter(r => {
-      const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      const dateStr = getRecordDateStr(r);
       if (!dateStr) return false;
 
       if (filterType === 'year') {
@@ -76,7 +76,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
         dayNr = nameMap[r.dayOfWeek];
       }
       if (!dayNr) {
-        const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+        const dateStr = getRecordDateStr(r);
         if (dateStr) {
           const parts = dateStr.split('-').map(Number);
           if (parts.length === 3) {

@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Clock, Building2, Activity, User, FileSpreadsheet, FileText } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
+import { getRecordDateStr, getRecordHour } from '../../utils/dateUtils';
 
 interface TabInicioProps {
   summary: AnalyticsSummary;
@@ -106,7 +107,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   const filteredRecords = useMemo(() => {
     if (!records || !selectedDate) return null;
     return records.filter(r => {
-      const recDate = r.timestamp ? r.timestamp.split('T')[0] : r.dateString;
+      const recDate = getRecordDateStr(r);
       return recDate === selectedDate;
     });
   }, [records, selectedDate]);
@@ -131,11 +132,8 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
     
     if (filteredRecords && filteredRecords.length > 0) {
       filteredRecords.forEach(r => {
-        let hour = r.hourOfDay;
-        if (hour === undefined && r.timestamp) {
-          hour = new Date(r.timestamp).getHours();
-        }
-        if (hour !== undefined && hour >= 8 && hour <= 21) {
+        const hour = getRecordHour(r);
+        if (hour >= 8 && hour <= 21) {
           hoursMap[hour] = (hoursMap[hour] || 0) + 1;
         }
       });

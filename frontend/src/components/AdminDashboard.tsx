@@ -17,7 +17,7 @@ import { TabAcademic } from './admin/TabAcademic';
 import { TabSettings } from './admin/TabSettings';
 import { 
   getISOWeekFromDateStr, getCurrentWeek, getCurrentMonth, 
-  formatWeekLabel, formatMonthLabel, getTodayDateStr
+  formatWeekLabel, formatMonthLabel, getTodayDateStr, getRecordDateStr
 } from '../utils/dateUtils';
 
 interface AdminDashboardProps {
@@ -59,7 +59,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const currentY = new Date().getFullYear().toString();
     yearsSet.add(currentY);
     records.forEach(r => {
-      const dStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      const dStr = getRecordDateStr(r);
       if (dStr && dStr.length >= 4) {
         yearsSet.add(dStr.slice(0, 4));
       }
@@ -73,7 +73,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (historyFilter === 'all') return records;
 
     return records.filter(r => {
-      const dateStr = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '');
+      const dateStr = getRecordDateStr(r);
       if (!dateStr) return false;
 
       if (historyFilter === 'year') {
@@ -610,8 +610,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               selectedDateVisitsCount={
                 activeTab === 'inicio' 
                   ? records.filter(r => {
-                      if (!r.timestamp && !r.dateString) return false;
-                      const recDate = r.timestamp ? r.timestamp.split('T')[0] : r.dateString;
+                      const recDate = getRecordDateStr(r);
                       return recDate === inicioDate;
                     }).length
                   : undefined

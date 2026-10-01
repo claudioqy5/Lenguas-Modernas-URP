@@ -18,11 +18,7 @@ export const getISOWeekFromDateStr = (dateStr: string): string => {
 };
 
 export const getTodayDateStr = (): string => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = (d.getMonth() + 1).toString().padStart(2, '0');
-  const day = d.getDate().toString().padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date());
 };
 
 export const getCurrentWeek = (): string => {
@@ -31,8 +27,53 @@ export const getCurrentWeek = (): string => {
 };
 
 export const getCurrentMonth = (): string => {
-  const d = new Date();
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+  return getTodayDateStr().slice(0, 7);
+};
+
+/**
+ * Safely extracts the official Peru date string (YYYY-MM-DD) from an AttendanceRecord.
+ * Prioritizes r.dateString (generated on VPS in Peru time).
+ * Fallback to r.timestamp properly converted to America/Lima.
+ */
+export const getRecordDateStr = (r: { dateString?: string; timestamp?: string }): string => {
+  if (r.dateString && r.dateString.trim()) {
+    return r.dateString.trim();
+  }
+  if (r.timestamp) {
+    try {
+      const date = new Date(r.timestamp);
+      if (!isNaN(date.getTime())) {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(date);
+      }
+    } catch {
+      return r.timestamp.split('T')[0] || '';
+    }
+  }
+  return '';
+};
+
+/**
+ * Safely extracts the Peru hour of the day (0-23) from an AttendanceRecord.
+ */
+export const getRecordHour = (r: { hourOfDay?: number; timeString?: string; timestamp?: string }): number => {
+  if (r.hourOfDay !== undefined && r.hourOfDay !== null && !isNaN(r.hourOfDay)) {
+    return r.hourOfDay;
+  }
+  if (r.timeString && r.timeString.includes(':')) {
+    const h = parseInt(r.timeString.split(':')[0], 10);
+    if (!isNaN(h)) return h;
+  }
+  if (r.timestamp) {
+    try {
+      const date = new Date(r.timestamp);
+      if (!isNaN(date.getTime())) {
+        const hourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', hour: 'numeric', hour12: false }).format(date);
+        const parsed = parseInt(hourStr, 10);
+        return parsed === 24 ? 0 : parsed;
+      }
+    } catch {}
+  }
+  return 0;
 };
 
 export const formatMonthLabel = (monthStr: string): string => {

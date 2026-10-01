@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, FileSpreadsheet, FileText } from 'lucide-react';
 import { AttendanceRecord, Student, AcademicTreeFaculty, api } from '../../services/api';
 import { exportAttendanceToPDF, exportAttendanceToExcel } from '../../utils/exportReports';
+import { getRecordDateStr } from '../../utils/dateUtils';
 
 interface TabReportesProps {
   records: AttendanceRecord[];
@@ -133,7 +134,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         
         let matchDate = true;
         try {
-          const recordDate = r.timestamp ? r.timestamp.split('T')[0] : r.dateString;
+          const recordDate = getRecordDateStr(r);
           if (filterStartDate && recordDate < filterStartDate) matchDate = false;
           if (filterEndDate && recordDate > filterEndDate) matchDate = false;
         } catch (e) {
