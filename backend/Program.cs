@@ -1,6 +1,5 @@
 using System.Text;
 using AsistenciaLenguas.Api.Data;
-using AsistenciaLenguas.Api.Hubs;
 using AsistenciaLenguas.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -14,9 +13,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// SignalR for real-time attendance dashboard updates
-builder.Services.AddSignalR();
-
 // MongoDB Context Singleton
 builder.Services.AddSingleton<MongoDbContext>();
 
@@ -28,29 +24,13 @@ builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // CORS Configuration - Allow Vite dev server and production clients
-// Note: SignalR requires AllowCredentials, so we can't use AllowAnyOrigin together.
-// We allow specific origins plus a wildcard fallback policy.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:3000",
-                "https://bibliotecafhlm.vercel.app",
-                "https://lenguas-modernas-urp.vercel.app"
-              )
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials(); // Required for SignalR WebSockets
-    });
-
-    // Fallback open policy for any other non-SignalR API calls
-    options.AddPolicy("OpenApi", policy =>
-    {
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+              .AllowAnyHeader();
     });
 });
 
@@ -95,9 +75,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Map SignalR hub endpoint
-app.MapHub<AttendanceHub>("/hubs/attendance");
 
 // Health check endpoint
 app.MapGet("/", () => new

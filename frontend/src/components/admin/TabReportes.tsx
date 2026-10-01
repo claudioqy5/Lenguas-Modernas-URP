@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, FileSpreadsheet, FileText } from 'lucide-react';
 import { AttendanceRecord, Student, AcademicTreeFaculty, api } from '../../services/api';
 import { exportAttendanceToPDF, exportAttendanceToExcel } from '../../utils/exportReports';
-import { getRecordDateStr, formatDateDisplay } from '../../utils/dateUtils';
+import { getRecordDateStr } from '../../utils/dateUtils';
 
 interface TabReportesProps {
   records: AttendanceRecord[];
@@ -304,7 +304,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                   }}
                 >
                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{formatDateDisplay(r.dateString)}</span>
+                    <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{r.dateString}</span>
                   </td>
                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                     <span style={{ color: 'var(--text-subtle)', fontWeight: 500 }}>{r.timeString}</span>

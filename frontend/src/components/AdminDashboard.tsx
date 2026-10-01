@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
   TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User
@@ -6,7 +6,6 @@ import {
 import { 
   api, AnalyticsSummary, AttendanceRecord, Student, AuthSession 
 } from '../services/api';
-import { useAttendanceHub } from '../hooks/useAttendanceHub';
 import { NewStudentModal } from './NewStudentModal';
 import { KPICards } from './admin/KPICards';
 import { TabInicio } from './admin/TabInicio';
@@ -103,8 +102,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return new Set(historicoFilteredRecords.map(r => r.studentCode)).size;
   }, [historicoFilteredRecords]);
 
-  const loadData = async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
     try {
       const [sumData, recData, stuData] = await Promise.all([
         api.getAnalyticsSummary(),
@@ -117,17 +116,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } catch (e) {
       console.error(e);
     } finally {
-      if (!isSilent) setLoading(false);
+      setLoading(false);
     }
   };
-
-  // Stable callback reference for SignalR — refreshes data silently on check-in event
-  const handleAttendanceEvent = useCallback(() => {
-    loadData(true);
-  }, []);
-
-  // Connect to SignalR hub for real-time updates
-  useAttendanceHub(handleAttendanceEvent);
 
   useEffect(() => {
     loadData();
