@@ -304,7 +304,14 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                   }}
                 >
                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{r.dateString}</span>
+                    <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
+                      {(() => {
+                        const ds = getRecordDateStr(r);
+                        if (!ds) return r.dateString || '';
+                        const parts = ds.split('-');
+                        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : ds;
+                      })()}
+                    </span>
                   </td>
                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                     <span style={{ color: 'var(--text-subtle)', fontWeight: 500 }}>{r.timeString}</span>

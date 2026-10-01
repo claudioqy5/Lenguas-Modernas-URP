@@ -55,8 +55,8 @@ namespace AsistenciaLenguas.Api.Services
             {
                 StudentCode = cleanCode,
                 DocumentNumber = dto.DocumentNumber.Trim(),
-                FirstName = dto.FirstName.Trim(),
-                LastName = dto.LastName.Trim(),
+                FirstName = dto.FirstName.Trim().ToUpper(),
+                LastName = dto.LastName.Trim().ToUpper(),
                 Career = string.IsNullOrWhiteSpace(dto.Career) ? "Traducción e Interpretación" : dto.Career.Trim(),
                 Faculty = string.IsNullOrWhiteSpace(dto.Faculty) ? "Humanidades y Lenguas Modernas" : dto.Faculty.Trim(),
                 Email = dto.Email.Trim(),
@@ -75,8 +75,8 @@ namespace AsistenciaLenguas.Api.Services
         {
             var update = Builders<Student>.Update
                 .Set(s => s.DocumentNumber, dto.DocumentNumber.Trim())
-                .Set(s => s.FirstName, dto.FirstName.Trim())
-                .Set(s => s.LastName, dto.LastName.Trim())
+                .Set(s => s.FirstName, dto.FirstName.Trim().ToUpper())
+                .Set(s => s.LastName, dto.LastName.Trim().ToUpper())
                 .Set(s => s.Career, dto.Career.Trim())
                 .Set(s => s.Faculty, dto.Faculty.Trim())
                 .Set(s => s.Email, dto.Email.Trim())
