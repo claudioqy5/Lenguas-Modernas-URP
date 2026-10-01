@@ -150,7 +150,7 @@ export const LibrarianLoginModal: React.FC<LibrarianLoginModalProps> = ({
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input-futuristic"
-                placeholder="Código o usuario (ej: 201712043)"
+                placeholder="Código o usuario"
                 style={{ fontSize: '0.95rem', padding: '11px 14px' }}
               />
             </div>
