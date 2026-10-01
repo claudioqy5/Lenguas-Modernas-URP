@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { api, AuthSession } from '../../services/api';
 import { Save, User, Lock, Shield, Check, AlertTriangle, Eye, EyeOff, UserCircle } from 'lucide-react';
 
@@ -213,6 +213,55 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ session }) => {
 
         </form>
       </div>
+      {/* Danger Zone */}
+      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: '#fee2e2', color: '#b91c1c' }}>
+            <AlertTriangle size={18} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: '#b91c1c' }}>Zona de Peligro</h3>
+            <span style={{ fontSize: '0.78rem', color: '#991b1b' }}>Acciones destructivas que no se pueden deshacer</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.88rem', fontWeight: 600, color: '#7f1d1d' }}>Limpiar Asistencias</h4>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b' }}>Elimina todos los registros de asistencia manteniendo los alumnos y carreras intactos. Útil después de una demostración.</p>
+          </div>
+          <button
+            onClick={async () => {
+              if (window.confirm('⚠️ ¿Estás completamente seguro de querer ELIMINAR TODOS los registros de asistencia? Esta acción NO se puede deshacer y pondrá todos los gráficos y reportes a cero.')) {
+                const res = await api.clearAttendance(session.token);
+                if (res.success) {
+                  alert(res.message);
+                  window.location.reload();
+                } else {
+                  alert(res.message);
+                }
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #dc2626',
+              background: '#dc2626',
+              color: '#ffffff',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'background 0.2s ease'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#b91c1c'}
+            onMouseLeave={e => e.currentTarget.style.background = '#dc2626'}
+          >
+            Limpiar Datos
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 };

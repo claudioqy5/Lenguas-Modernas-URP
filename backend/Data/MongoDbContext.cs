@@ -94,6 +94,18 @@ namespace AsistenciaLenguas.Api.Data
             InitIndexesAndSeed();
         }
 
+        public void ClearAttendanceRecords()
+        {
+            _database.DropCollection("AttendanceRecords");
+            
+            // Re-create indexes for AttendanceRecords immediately
+            var attendanceDateKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.DateString);
+            AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceDateKeys));
+
+            var attendanceStudentKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.StudentCode);
+            AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceStudentKeys));
+        }
+
 
 
         private void SeedFacultiesAndCareers()

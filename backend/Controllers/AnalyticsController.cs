@@ -27,5 +27,13 @@ namespace AsistenciaLenguas.Api.Controllers
             dbContext.ReSeedData();
             return Ok(new { success = true, message = "Database seeded." });
         }
+
+        [HttpDelete("clear-attendance")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "SuperAdmin")]
+        public IActionResult ClearAttendance([FromServices] AsistenciaLenguas.Api.Data.MongoDbContext dbContext)
+        {
+            dbContext.ClearAttendanceRecords();
+            return Ok(new { success = true, message = "Todos los registros de asistencia han sido eliminados correctamente." });
+        }
     }
 }

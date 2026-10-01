@@ -280,6 +280,22 @@ export const api = {
     }
   },
 
+  // Clear Attendance Database
+  async clearAttendance(token: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/analytics/clear-attendance`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return { success: false, message: 'Error al limpiar la base de datos de asistencia.' };
+    } catch (e) {
+      return { success: false, message: 'Error al conectar con el servidor.' };
+    }
+  },
+
   // Get All Students
   async getAllStudents(): Promise<Student[]> {
     try {

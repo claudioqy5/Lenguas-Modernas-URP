@@ -94,3 +94,14 @@ export const formatWeekLabel = (weekStr: string): string => {
   if (parts.length !== 2) return weekStr;
   return `Semana ${parseInt(parts[1], 10)}, ${parts[0]}`;
 };
+
+/**
+ * Converts a YYYY-MM-DD date string to DD/MM/YYYY for display.
+ * E.g. "2026-10-01" → "01/10/2026"
+ */
+export const formatDateDisplay = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};

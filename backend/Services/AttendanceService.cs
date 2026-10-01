@@ -1,6 +1,8 @@
 using AsistenciaLenguas.Api.Data;
 using AsistenciaLenguas.Api.DTOs;
+using AsistenciaLenguas.Api.Hubs;
 using AsistenciaLenguas.Api.Models;
+using Microsoft.AspNetCore.SignalR;
 using MongoDB.Driver;
 
 namespace AsistenciaLenguas.Api.Services
@@ -18,17 +20,20 @@ namespace AsistenciaLenguas.Api.Services
         private readonly MongoDbContext _context;
         private readonly IStudentService _studentService;
         private readonly IQuoteService _quoteService;
+        private readonly IHubContext<AttendanceHub> _hubContext;
         private readonly int _maxCapacity;
 
         public AttendanceService(
             MongoDbContext context, 
             IStudentService studentService, 
             IQuoteService quoteService,
+            IHubContext<AttendanceHub> hubContext,
             IConfiguration configuration)
         {
             _context = context;
             _studentService = studentService;
             _quoteService = quoteService;
+            _hubContext = hubContext;
             _maxCapacity = configuration.GetValue<int>("LibrarySettings:MaxCapacity", 60);
         }
 
@@ -96,6 +101,16 @@ namespace AsistenciaLenguas.Api.Services
             };
 
             await _context.AttendanceRecords.InsertOneAsync(record);
+
+            // Broadcast real-time event to all connected admin dashboards
+            await _hubContext.Clients.All.SendAsync("AttendanceRegistered", new
+            {
+                studentCode = record.StudentCode,
+                studentName = record.StudentName,
+                career = record.Career,
+                timeString = record.TimeString,
+                dateString = record.DateString
+            });
 
             // Update student total visits and last visit
             var updateStudent = Builders<Student>.Update
