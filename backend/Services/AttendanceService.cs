@@ -53,9 +53,7 @@ namespace AsistenciaLenguas.Api.Services
             }
 
             var now = DateTime.UtcNow;
-            // Local time Peru (UTC - 5)
-            var peruTime = TimeZoneInfo.ConvertTimeFromUtc(now, 
-                TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time"));
+            var peruTime = AsistenciaLenguas.Api.Utils.DateTimeUtils.NowPeru();
 
             var dayOfWeekSpanish = peruTime.DayOfWeek switch
             {

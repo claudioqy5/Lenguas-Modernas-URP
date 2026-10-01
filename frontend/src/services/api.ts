@@ -243,6 +243,15 @@ export const api = {
     return { currentOccupancy: 0, maxCapacity: 60, occupancyPercentage: 0 };
   },
 
+  // Get Server Time (Peru UTC-5 from VPS)
+  async getServerTime(): Promise<{ timestamp: number; timeString: string; dateString: string } | null> {
+    try {
+      const res = await fetch(`${API_BASE}/attendance/server-time`);
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return null;
+  },
+
   // Get Recent Attendances
   async getRecentAttendances(limit = 50): Promise<AttendanceRecord[]> {
     try {

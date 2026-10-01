@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Scan, BookOpen, Laptop, Users, Library, Shield,
@@ -71,13 +71,33 @@ export function App() {
   const [checkInResult, setCheckInResult] = useState<CheckInResponse | null>(null);
   const [unregisteredCode, setUnregisteredCode] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const serverOffsetRef = useRef<number>(0);
   const [loading, setLoading] = useState(false);
   const [pulseGlobeTrigger, setPulseGlobeTrigger] = useState(0);
   const [scannerNotification, setScannerNotification] = useState<string | null>(null);
 
-  // Live clock
+  // Sync clock with VPS Server Time (Peru UTC-5)
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const syncServerTime = async () => {
+      const data = await api.getServerTime();
+      if (data && data.timestamp) {
+        // Offset between VPS timestamp and local browser Date.now()
+        serverOffsetRef.current = data.timestamp - Date.now();
+        setCurrentTime(new Date(Date.now() + serverOffsetRef.current));
+      }
+    };
+
+    syncServerTime();
+    // Re-synchronize with VPS every 3 minutes
+    const syncTimer = setInterval(syncServerTime, 3 * 60 * 1000);
+    return () => clearInterval(syncTimer);
+  }, []);
+
+  // Live clock ticker aligned to VPS
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date(Date.now() + serverOffsetRef.current));
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -360,7 +380,7 @@ export function App() {
         >
 
 
-          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px', letterSpacing: '-0.3px' }}>
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#0f172a', marginBottom: '4px', letterSpacing: '-0.3px' }}>
             Registro de Asistencia
           </h2>
           <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '22px' }}>

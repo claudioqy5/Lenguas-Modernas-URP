@@ -1,6 +1,6 @@
 :root {
-  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-display: 'Outfit', 'Cinzel', serif;
+  --font-main: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-display: 'Montserrat', system-ui, -apple-system, sans-serif;
   
   /* Brand Colors - Universidad Ricardo Palma & Lenguas Modernas (Light Mode Palette) */
   --urp-green-deep: #064e3b;
@@ -46,8 +46,13 @@
   box-sizing: border-box;
 }
 
-body {
+body, button, input, select, textarea {
   font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
   background-color: #FDFBF7;
   color: var(--text-main);
   min-height: 100vh;

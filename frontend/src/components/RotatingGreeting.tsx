@@ -16,7 +16,7 @@ interface Greeting {
 
 const GREETINGS: Greeting[] = [
   {
-    phrase: "Bienvenido a la\nBiblioteca San Jerónimo",
+    phrase: "Bienvenido a la\nBiblioteca\nSan Jerónimo",
     sub: "Facultad de Humanidades y Lenguas Modernas",
     lang: "Español",
     code: "ES",
@@ -28,7 +28,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(5, 150, 105, 0.15)"
   },
   {
-    phrase: "Welcome to the\nSan Jerónimo Library",
+    phrase: "Welcome to the\nSan Jerónimo\nLibrary",
     sub: "Faculty of Humanities and Modern Languages",
     lang: "English",
     code: "EN",
@@ -40,7 +40,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(37, 99, 235, 0.15)"
   },
   {
-    phrase: "Bienvenue à la\nBibliothèque San Jerónimo",
+    phrase: "Bienvenue à la\nBibliothèque\nSan Jerónimo",
     sub: "Faculté des Sciences Humaines et Langues Modernes",
     lang: "Français",
     code: "FR",
@@ -52,7 +52,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(99, 102, 241, 0.15)"
   },
   {
-    phrase: "Willkommen in der\nBibliothek San Jerónimo",
+    phrase: "Willkommen in der\nBibliothek\nSan Jerónimo",
     sub: "Fakultät für Geisteswissenschaften und Moderne Sprachen",
     lang: "Deutsch",
     code: "DE",
@@ -64,7 +64,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(217, 119, 6, 0.15)"
   },
   {
-    phrase: "Benvenuto nella\nBiblioteca San Jerónimo",
+    phrase: "Benvenuto nella\nBiblioteca\nSan Jerónimo",
     sub: "Facoltà di Scienze Umanistiche e Lingue Moderne",
     lang: "Italiano",
     code: "IT",
@@ -76,7 +76,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(225, 29, 72, 0.15)"
   },
   {
-    phrase: "欢迎来到\n圣赫罗尼莫图书馆",
+    phrase: "欢迎来到\n圣赫罗尼莫\n图书馆",
     sub: "人文与现代语言学院",
     lang: "Chino Mandarín",
     code: "ZH",
@@ -88,7 +88,7 @@ const GREETINGS: Greeting[] = [
     badgeGlow: "rgba(220, 38, 38, 0.15)"
   },
   {
-    phrase: "Bem-vindo à\nBiblioteca San Jerónimo",
+    phrase: "Bem-vindo à\nBiblioteca\nSan Jerónimo",
     sub: "Faculdade de Humanidades e Línguas Modernas",
     lang: "Português",
     code: "PT",
@@ -137,13 +137,11 @@ export const RotatingGreeting: React.FC = () => {
   }, [charIndex, isFading, index, current.phrase]);
 
   const displayedPhrase = current.phrase.slice(0, charIndex);
-  const parts = displayedPhrase.split('\n');
-  const line1 = parts[0] || '';
-  const line2 = parts[1];
-  const isLine2 = line2 !== undefined;
+  const typedLines = displayedPhrase.split('\n');
+  const activeLineIndex = typedLines.length - 1;
 
   return (
-    <div style={{ minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', textAlign: 'right' }}>
+    <div style={{ minHeight: '180px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', textAlign: 'right' }}>
       <div 
         style={{ 
           opacity: isFading ? 0 : 1,
@@ -194,11 +192,11 @@ export const RotatingGreeting: React.FC = () => {
         <h1 
           className="font-display" 
           style={{ 
-            fontSize: 'clamp(2.9rem, 5.4vw, 4.7rem)', 
+            fontSize: 'clamp(2.3rem, 4.1vw, 3.65rem)', 
             fontWeight: 800, 
             lineHeight: 1.15,
             marginBottom: '14px',
-            minHeight: '2.4em',
+            minHeight: '3.55em',
             filter: 'drop-shadow(0 2px 10px rgba(255, 255, 255, 0.95))',
             display: 'flex',
             flexDirection: 'column',
@@ -207,56 +205,54 @@ export const RotatingGreeting: React.FC = () => {
             letterSpacing: '-0.5px'
           }}
         >
-          {/* Line 1: Clear Charcoal Slate */}
-          <div style={{ color: '#0f172a', textAlign: 'right', width: '100%' }}>
-            <span>{line1}</span>
-            {!isLine2 && (
-              <span 
-                className="typewriter-cursor"
-                style={{
-                  display: 'inline-block',
-                  width: '3.5px',
-                  height: '0.82em',
-                  marginLeft: '6px',
-                  backgroundColor: current.accentColor,
-                  borderRadius: '2px',
-                  verticalAlign: 'baseline',
-                  opacity: isFading ? 0 : 1,
-                  transition: 'background-color 0.3s ease'
-                }}
-              />
-            )}
-          </div>
+          {typedLines.map((lineText, idx) => {
+            const isFirst = idx === 0;
+            const isCurrentActive = idx === activeLineIndex;
 
-          {/* Line 2: Luminous Signature Gradient */}
-          {isLine2 && (
-            <div style={{ marginTop: '2px', textAlign: 'right', width: '100%', whiteSpace: 'nowrap' }}>
-              <span 
+            return (
+              <div 
+                key={idx}
                 style={{ 
-                  background: current.gradient,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontWeight: 850
+                  marginTop: isFirst ? '0px' : '2px', 
+                  textAlign: 'right', 
+                  width: '100%',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {line2}
-              </span>
-              <span 
-                className="typewriter-cursor"
-                style={{
-                  display: 'inline-block',
-                  width: '3.5px',
-                  height: '0.82em',
-                  marginLeft: '6px',
-                  backgroundColor: current.accentColor,
-                  borderRadius: '2px',
-                  verticalAlign: 'baseline',
-                  opacity: isFading ? 0 : 1,
-                  transition: 'background-color 0.3s ease'
-                }}
-              />
-            </div>
-          )}
+                <span 
+                  style={
+                    isFirst
+                      ? { color: '#0f172a' }
+                      : { 
+                          background: current.gradient,
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 850
+                        }
+                  }
+                >
+                  {lineText}
+                </span>
+
+                {isCurrentActive && (
+                  <span 
+                    className="typewriter-cursor"
+                    style={{
+                      display: 'inline-block',
+                      width: '3.5px',
+                      height: '0.82em',
+                      marginLeft: '6px',
+                      backgroundColor: current.accentColor,
+                      borderRadius: '2px',
+                      verticalAlign: 'baseline',
+                      opacity: isFading ? 0 : 1,
+                      transition: 'background-color 0.3s ease'
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </h1>
 
         {/* Subtitle with accent marker (Right-aligned next to card) */}

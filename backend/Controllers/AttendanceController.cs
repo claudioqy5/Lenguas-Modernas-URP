@@ -52,5 +52,20 @@ namespace AsistenciaLenguas.Api.Controllers
             var records = await _attendanceService.GetAttendancesByDateRangeAsync(from, to);
             return Ok(records);
         }
+
+        [HttpGet("server-time")]
+        public IActionResult GetServerTime()
+        {
+            var nowUtc = DateTime.UtcNow;
+            var peruTime = AsistenciaLenguas.Api.Utils.DateTimeUtils.NowPeru();
+            return Ok(new
+            {
+                utc = nowUtc,
+                peruTime = peruTime,
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                timeString = peruTime.ToString("HH:mm:ss"),
+                dateString = peruTime.ToString("yyyy-MM-dd")
+            });
+        }
     }
 }

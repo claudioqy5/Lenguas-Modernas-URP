@@ -27,8 +27,7 @@ namespace AsistenciaLenguas.Api.Services
             var totalVisits = (int)await _context.AttendanceRecords.CountDocumentsAsync(_ => true);
 
             var now = DateTime.UtcNow;
-            var peruTime = TimeZoneInfo.ConvertTimeFromUtc(now, 
-                TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time"));
+            var peruTime = AsistenciaLenguas.Api.Utils.DateTimeUtils.NowPeru();
             var todayStr = peruTime.ToString("yyyy-MM-dd");
             var monthPrefix = peruTime.ToString("yyyy-MM");
 
