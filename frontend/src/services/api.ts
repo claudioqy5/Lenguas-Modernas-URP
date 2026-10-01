@@ -336,7 +336,7 @@ export const api = {
   },
 
   // Update Admin Profile
-  async updateProfile(token: string, data: { username?: string; fullName?: string; password?: string }): Promise<{ success: boolean; message?: string }> {
+  async updateProfile(token: string, data: { currentPassword: string; username?: string; fullName?: string; password?: string }): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await fetch(`${API_BASE}/auth/profile`, {
         method: 'PUT',

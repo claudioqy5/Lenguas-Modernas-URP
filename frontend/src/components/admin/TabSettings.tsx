@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { api, AuthSession } from '../../services/api';
-import { Save, User, Lock, Key } from 'lucide-react';
+import { Save, User, Lock, Shield, Check, AlertTriangle, Eye, EyeOff, UserCircle } from 'lucide-react';
 
 interface TabSettingsProps {
   session: AuthSession;
@@ -9,107 +9,210 @@ interface TabSettingsProps {
 export const TabSettings: React.FC<TabSettingsProps> = ({ session }) => {
   const [username, setUsername] = useState(session.username);
   const [fullName, setFullName] = useState(session.fullName);
-  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword.trim()) {
+      setMessage({ type: 'error', text: 'Debes ingresar tu contrasena actual para guardar cualquier cambio.' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
     const res = await api.updateProfile(session.token, {
+      currentPassword,
       username: username !== session.username ? username : undefined,
       fullName: fullName !== session.fullName ? fullName : undefined,
-      password: password ? password : undefined
+      password: newPassword || undefined,
     });
 
     setLoading(false);
     if (res.success) {
-      setMessage({ type: 'success', text: res.message + ' Por favor, cierra sesión y vuelve a ingresar para ver los cambios reflejados.' });
-      setPassword('');
+      setMessage({ type: 'success', text: res.message + ' Cierra sesion y vuelve a ingresar para ver los cambios.' });
+      setCurrentPassword('');
+      setNewPassword('');
     } else {
       setMessage({ type: 'error', text: res.message || 'Error al actualizar el perfil.' });
     }
   };
 
+  const eyeBtnStyle: React.CSSProperties = {
+    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+    background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+    display: 'flex', alignItems: 'center', padding: '4px',
+  };
+
   return (
-    <div style={{ maxWidth: '600px', margin: '40px auto', background: '#fff', borderRadius: '12px', padding: '32px', border: '1px solid var(--border-card)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--urp-green-primary)', marginBottom: '24px' }}>Mi Perfil de Administrador</h2>
-      
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
+
+      {/* Feedback toast */}
       {message && (
-        <div style={{ padding: '16px', borderRadius: '8px', marginBottom: '24px', background: message.type === 'success' ? '#e6f4ea' : '#fce8e6', color: message.type === 'success' ? '#137333' : '#c5221f', fontWeight: 500 }}>
-          {message.text}
+        <div style={{
+          padding: '12px 18px', borderRadius: '10px',
+          background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
+          border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          color: message.type === 'success' ? '#15803d' : '#b91c1c',
+          fontSize: '0.88rem', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: '10px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+        }}>
+          {message.type === 'success' ? <Check size={18} /> : <AlertTriangle size={18} />}
+          <span>{message.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
-            <User size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', color: 'var(--urp-green-primary)' }}/>
-            Usuario de Acceso
-          </label>
-          <input 
-            type="text" 
-            value={username} 
-            onChange={e => setUsername(e.target.value)}
-            required
-            style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)', fontSize: '1rem', outlineColor: 'var(--urp-green-primary)' }}
-          />
+      {/* Current profile info card */}
+      <div style={{
+        background: '#ffffff', border: '1px solid var(--border-card)',
+        borderRadius: '12px', padding: '20px 24px',
+        display: 'flex', alignItems: 'center', gap: '16px',
+      }}>
+        <div style={{ padding: '10px', borderRadius: '10px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)', flexShrink: 0 }}>
+          <UserCircle size={22} />
         </div>
-
         <div>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
-            <Key size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', color: 'var(--urp-green-primary)' }}/>
-            Nombre Completo
-          </label>
-          <input 
-            type="text" 
-            value={fullName} 
-            onChange={e => setFullName(e.target.value)}
-            required
-            style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)', fontSize: '1rem', outlineColor: 'var(--urp-green-primary)' }}
-          />
+          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>{session.fullName}</div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            @{session.username} &mdash; <span style={{ color: 'var(--urp-green-primary)', fontWeight: 600 }}>{session.role}</span>
+          </div>
         </div>
+      </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
-            <Lock size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', color: 'var(--urp-green-primary)' }}/>
-            Nueva Contraseña <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(dejar en blanco para no cambiar)</span>
-          </label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Escribe aquí solo si deseas cambiarla..."
-            style={{ width: '100%', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-card)', fontSize: '1rem', outlineColor: 'var(--urp-green-primary)' }}
-          />
-        </div>
+      {/* Edit form card */}
+      <div style={{ background: '#ffffff', border: '1px solid var(--border-card)', borderRadius: '12px', padding: '24px' }}>
 
-        <button 
-          type="submit" 
-          disabled={loading}
-          style={{ 
-            marginTop: '16px',
-            background: 'var(--urp-green-primary)', 
-            color: '#fff', 
-            border: 'none', 
-            padding: '14px', 
-            borderRadius: '8px', 
-            fontSize: '1rem', 
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'background 0.2s',
-            opacity: loading ? 0.7 : 1
-          }}>
-          <Save size={18} />
-          {loading ? 'Guardando...' : 'Guardar Cambios'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Section: Account data */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+              <User size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-main)' }}>Datos de cuenta</h3>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Modifica tu usuario y nombre visible</span>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
+              Usuario de acceso
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              className="input-futuristic"
+              style={{ fontSize: '0.9rem', padding: '10px 14px' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
+              Nombre completo
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              required
+              className="input-futuristic"
+              style={{ fontSize: '0.9rem', padding: '10px 14px' }}
+            />
+          </div>
+
+          {/* Divider */}
+          <div style={{ borderTop: '1px solid var(--border-card)', margin: '4px 0' }} />
+
+          {/* Section: Password */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+              <Lock size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-main)' }}>Contrasena</h3>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Deja la nueva contrasena en blanco para no cambiarla</span>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
+              Nueva contrasena <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opcional)</span>
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showNewPwd ? 'text' : 'password'}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Nueva contrasena..."
+                className="input-futuristic"
+                style={{ fontSize: '0.9rem', padding: '10px 44px 10px 14px' }}
+              />
+              <button type="button" onClick={() => setShowNewPwd(p => !p)} style={eyeBtnStyle}>
+                {showNewPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Current password — required */}
+          <div style={{ background: '#fffdf0', border: '1px solid #f0d060', borderRadius: '10px', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <Shield size={15} color="#92650a" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92650a' }}>
+                Contrasena actual <span style={{ color: '#b91c1c' }}>*</span>
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#a17c2a', fontWeight: 400 }}>
+                — requerida para confirmar cualquier cambio
+              </span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showCurrentPwd ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                placeholder="Ingresa tu contrasena actual..."
+                required
+                className="input-futuristic"
+                style={{ fontSize: '0.9rem', padding: '10px 44px 10px 14px', borderColor: '#f0d060', background: '#fffff8' }}
+              />
+              <button type="button" onClick={() => setShowCurrentPwd(p => !p)} style={eyeBtnStyle}>
+                {showCurrentPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: '10px 20px', borderRadius: '8px',
+              border: '1px solid #0f5142',
+              background: loading ? '#94a3b8' : 'var(--urp-green-primary)',
+              color: '#ffffff', fontSize: '0.88rem', fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: loading ? 'none' : '0 1px 2px rgba(15, 81, 66, 0.15)',
+              alignSelf: 'flex-start',
+            }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = '#0b3d32'; }}
+            onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--urp-green-primary)'; }}
+          >
+            <Save size={16} />
+            {loading ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+
+        </form>
+      </div>
     </div>
   );
 };

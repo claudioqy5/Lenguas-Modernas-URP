@@ -44,13 +44,13 @@ namespace AsistenciaLenguas.Api.Controllers
                 return Unauthorized();
             }
 
-            var success = await _authService.UpdateAdminAsync(userId, dto);
-            if (success)
+            var result = await _authService.UpdateAdminAsync(userId, dto);
+            if (result.Success)
             {
-                return Ok(new { success = true, message = "Perfil actualizado exitosamente." });
+                return Ok(new { success = true, message = result.Message });
             }
 
-            return BadRequest(new { success = false, message = "No se pudo actualizar el perfil." });
+            return BadRequest(new { success = false, message = result.Message });
         }
     }
 }

@@ -11,7 +11,7 @@ namespace AsistenciaLenguas.Api.Services
     public interface IAuthService
     {
         Task<LoginResponseDto> LoginAsync(LoginDto dto);
-        Task<bool> UpdateAdminAsync(string adminId, UpdateAdminDto dto);
+        Task<(bool Success, string Message)> UpdateAdminAsync(string adminId, UpdateAdminDto dto);
     }
 
     public class AuthService : IAuthService
@@ -85,10 +85,15 @@ namespace AsistenciaLenguas.Api.Services
             };
         }
 
-        public async Task<bool> UpdateAdminAsync(string adminId, UpdateAdminDto dto)
+        public async Task<(bool Success, string Message)> UpdateAdminAsync(string adminId, UpdateAdminDto dto)
         {
             var user = await _context.AdminUsers.Find(u => u.Id == adminId).FirstOrDefaultAsync();
-            if (user == null) return false;
+            if (user == null) return (false, "Usuario no encontrado.");
+
+            if (string.IsNullOrWhiteSpace(dto.CurrentPassword) || !BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            {
+                return (false, "La contraseña actual es incorrecta.");
+            }
 
             var updateDefinition = Builders<Models.AdminUser>.Update;
             var updates = new List<UpdateDefinition<Models.AdminUser>>();
@@ -109,12 +114,15 @@ namespace AsistenciaLenguas.Api.Services
                 updates.Add(updateDefinition.Set(u => u.PasswordHash, hash));
             }
 
-            if (updates.Count == 0) return true; // Nothing to update
+            if (updates.Count == 0) return (true, "No hay cambios para actualizar."); // Nothing to update
 
             var combinedUpdate = updateDefinition.Combine(updates);
             var result = await _context.AdminUsers.UpdateOneAsync(u => u.Id == adminId, combinedUpdate);
 
-            return result.ModifiedCount > 0;
+            if (result.ModifiedCount > 0)
+                return (true, "Perfil actualizado exitosamente.");
+            
+            return (false, "No se pudo actualizar el perfil.");
         }
     }
 }

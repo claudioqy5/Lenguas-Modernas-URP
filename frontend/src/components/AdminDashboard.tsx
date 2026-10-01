@@ -356,33 +356,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {students.filter(s => s.email && s.email.trim()).length}
             </span>
           </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'settings' ? 'var(--urp-green-light)' : 'transparent',
-              color: activeTab === 'settings' ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'settings' ? 600 : 400,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              transition: 'all 0.2s ease',
-              width: '100%'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <User size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Mi Perfil</span>
-            </div>
-          </button>
         </nav>
 
         <div style={{ position: 'relative', zIndex: 1, padding: '20px 16px', borderTop: '1px solid var(--border-card)', minWidth: '280px' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '0 8px' }}>
+           <div 
+             onClick={() => setActiveTab('settings')}
+             style={{ 
+               display: 'flex', 
+               alignItems: 'center', 
+               gap: '12px', 
+               marginBottom: '16px', 
+               padding: '8px', 
+               borderRadius: '8px',
+               cursor: 'pointer',
+               background: activeTab === 'settings' ? 'var(--urp-green-light)' : 'transparent',
+               transition: 'background 0.2s ease'
+             }}
+           >
               <div style={{ minWidth: '36px', height: '36px', borderRadius: '50%', background: 'var(--urp-green-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                 {session.fullName.charAt(0)}
               </div>
@@ -442,6 +432,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'students' && 'Alumnos'}
               {activeTab === 'academic' && 'Gestión de Facultades y Carreras'}
               {activeTab === 'difusion' && 'Difusión Institucional'}
+              {activeTab === 'settings' && 'Mi Perfil'}
             </h2>
           </div>
 
