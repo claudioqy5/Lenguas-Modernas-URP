@@ -22,7 +22,7 @@ services:
       - mongodb
     restart: unless-stopped
     ports:
-      - "8085:8080" # <-- Puerto expuesto. Tu Nginx Proxy apuntará a este puerto 8085
+      - "8095:8080" # <-- Puerto expuesto. Tu Nginx Proxy apuntará a este puerto 8095
 
 volumes:
   mongodb_data:
