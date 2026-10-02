@@ -11,7 +11,7 @@ import { CheckInSuccessModal } from './components/CheckInSuccessModal';
 import { LibrarianLoginModal } from './components/LibrarianLoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { useBarcodeScanner } from './hooks/useBarcodeScanner';
-import { api, OccupancyData, CheckInResponse, Student, AuthSession } from './services/api';
+import { api, OccupancyData, CheckInResponse, Student, AuthSession, LibraryPerson } from './services/api';
 
 const VISIT_REASONS = [
   {
@@ -165,7 +165,7 @@ export function App() {
     }
   });
 
-  const handleStudentRegistered = (student: Student, checkInRes?: CheckInResponse) => {
+  const handleStudentRegistered = (person: LibraryPerson, checkInRes?: CheckInResponse) => {
     setShowNewStudentModal(false);
     setUnregisteredCode('');
     setStudentCodeInput('');
@@ -175,7 +175,11 @@ export function App() {
       setPulseGlobeTrigger(prev => prev + 1);
       refreshOccupancy();
     } else {
-      handleCheckIn(student.studentCode, 'Manual');
+      // If no check-in info provided but successful, force a check-in
+      const key = person.code || person.documentNumber;
+      if (key) {
+        handleCheckIn(key, 'Manual');
+      }
     }
   };
 

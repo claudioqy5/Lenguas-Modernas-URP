@@ -4,7 +4,7 @@ import {
   TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User
 } from 'lucide-react';
 import { 
-  api, AnalyticsSummary, AttendanceRecord, Student, AuthSession 
+  api, AnalyticsSummary, AttendanceRecord, Student, AuthSession, LibraryPerson 
 } from '../services/api';
 import { NewStudentModal } from './NewStudentModal';
 import { KPICards } from './admin/KPICards';
@@ -51,7 +51,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [historyYear, setHistoryYear] = useState(new Date().getFullYear());
 
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
+  const [editingPerson, setEditingPerson] = useState<LibraryPerson | undefined>(undefined);
 
   // Available years dynamically derived from records
   const availableYears = useMemo(() => {
@@ -102,17 +102,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return new Set(historicoFilteredRecords.map(r => r.studentCode)).size;
   }, [historicoFilteredRecords]);
 
+  const [persons, setPersons] = useState<LibraryPerson[]>([]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [sumData, recData, stuData] = await Promise.all([
+      const [sumData, recData, stuData, perData] = await Promise.all([
         api.getAnalyticsSummary(),
         api.getRecentAttendances(10000),
-        api.getAllStudents()
+        api.getAllStudents(),
+        api.getPersons()
       ]);
       setSummary(sumData);
       setRecords(recData);
       setStudents(stuData);
+      setPersons(perData || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -655,6 +659,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               filterStartDate={recordsStartDate}
               filterEndDate={recordsEndDate}
               students={students}
+              persons={persons}
             />
           )}
 
@@ -669,11 +674,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               filterFaculty={filterFaculty}
               setFilterFaculty={setFilterFaculty}
               onNewStudent={() => {
-                setEditingStudent(undefined);
+                setEditingPerson(undefined);
                 setShowNewStudentModal(true);
               }}
               onEditStudent={(s) => {
-                setEditingStudent(s);
+                setEditingPerson(s as any); // TabAlumnos needs to be refactored eventually, casting for now
                 setShowNewStudentModal(true);
               }}
               onDeleteStudent={handleDeleteStudent}
@@ -709,14 +714,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <NewStudentModal
           isOpen={showNewStudentModal}
           prefilledCode=""
-          initialStudent={editingStudent}
+          initialPerson={editingPerson}
           onClose={() => {
             setShowNewStudentModal(false);
-            setEditingStudent(undefined);
+            setEditingPerson(undefined);
           }}
           onSuccess={() => {
             setShowNewStudentModal(false);
-            setEditingStudent(undefined);
+            setEditingPerson(undefined);
             loadData();
           }}
         />
