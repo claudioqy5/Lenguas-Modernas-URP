@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, FileSpreadsheet, FileText, UserCheck, UserX, Clock, AlertTriangle } from 'lucide-react';
 import { AttendanceRecord, Student, AcademicTreeFaculty, api } from '../../services/api';
 import { exportAttendanceToPDF, exportAttendanceToExcel } from '../../utils/exportReports';
 import { getRecordDateStr } from '../../utils/dateUtils';
@@ -30,6 +30,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
   students = []
 }) => {
   const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
+  const [filterAutoClose, setFilterAutoClose] = useState<'ALL' | 'auto' | 'manual' | 'active'>('ALL');
 
   useEffect(() => {
     let isMounted = true;
@@ -131,7 +132,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                             r.visitReason.toLowerCase().includes(searchTerm.toLowerCase());
         const matchFaculty = !filterFaculty || filterFaculty === 'ALL' || r.faculty === filterFaculty;
         const matchCareer = filterCareer === 'ALL' || r.career === filterCareer;
-        
+
         let matchDate = true;
         try {
           const recordDate = getRecordDateStr(r);
@@ -141,7 +142,18 @@ export const TabReportes: React.FC<TabReportesProps> = ({
           matchDate = true;
         }
 
-        return matchSearch && matchFaculty && matchCareer && matchDate;
+        let matchSession = true;
+        if (filterAutoClose === 'auto') {
+          // Auto-closed: has checkout, checkOutTimeString contains "cierre auto"
+          matchSession = !r.isActive && (r.checkOutTimeString?.includes('cierre auto') ?? false);
+        } else if (filterAutoClose === 'manual') {
+          // Manual checkout: has checkout, checkOutTimeString does NOT contain "cierre auto"
+          matchSession = !r.isActive && !(r.checkOutTimeString?.includes('cierre auto') ?? false);
+        } else if (filterAutoClose === 'active') {
+          matchSession = r.isActive === true || r.isActive === undefined;
+        }
+
+        return matchSearch && matchFaculty && matchCareer && matchDate && matchSession;
       });
   }, [records, searchTerm, filterFaculty, filterCareer, filterStartDate, filterEndDate, studentToFaculty, careerToFaculty]);
 
@@ -162,7 +174,37 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Faculty select */}
+          {/* Session status filter chips */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {([
+              { key: 'ALL',    label: 'Todos',           icon: null,          color: '#64748b', bg: '#f1f5f9', activeBg: '#334155', activeColor: '#fff' },
+              { key: 'active', label: 'En sala',         icon: UserCheck,     color: '#059669', bg: '#ecfdf5', activeBg: '#059669', activeColor: '#fff' },
+              { key: 'manual', label: 'Salida manual',   icon: UserX,         color: '#0284c7', bg: '#eff6ff', activeBg: '#0284c7', activeColor: '#fff' },
+              { key: 'auto',   label: 'Cierre auto',     icon: AlertTriangle, color: '#b45309', bg: '#fffbeb', activeBg: '#b45309', activeColor: '#fff' },
+            ] as const).map(chip => {
+              const isActive = filterAutoClose === chip.key;
+              const Icon = chip.icon;
+              return (
+                <button
+                  key={chip.key}
+                  onClick={() => setFilterAutoClose(chip.key as any)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    padding: '6px 12px', borderRadius: '20px', fontSize: '0.78rem',
+                    fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
+                    border: `1px solid ${isActive ? chip.activeBg : '#e2e8f0'}`,
+                    background: isActive ? chip.activeBg : chip.bg,
+                    color: isActive ? chip.activeColor : chip.color,
+                    boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  {Icon && <Icon size={12} />}
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Faculty select */
           <select
             value={filterFaculty || 'ALL'}
             onChange={(e) => handleFacultyFilterChange(e.target.value)}
@@ -336,13 +378,43 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                     )}
                   </td>
                   <td style={{ padding: '12px 14px' }}>
-                    <span style={{
-                      fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
-                      background: r.isActive ? 'rgba(5,150,105,0.1)' : 'rgba(100,116,139,0.1)',
-                      color: r.isActive ? '#059669' : '#64748b'
-                    }}>
-                      {r.isActive ? '🟢 En sala' : '⬜ Salió'}
-                    </span>
+                    {(() => {
+                      const isAutoClose = !r.isActive && (r.checkOutTimeString?.includes('cierre auto') ?? false);
+                      if (r.isActive || r.isActive === undefined) {
+                        return (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                            fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                            background: 'rgba(5,150,105,0.1)', color: '#059669',
+                            border: '1px solid rgba(5,150,105,0.2)'
+                          }}>
+                            <UserCheck size={12} /> En sala
+                          </span>
+                        );
+                      }
+                      if (isAutoClose) {
+                        return (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                            fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                            background: 'rgba(180,83,9,0.08)', color: '#b45309',
+                            border: '1px solid rgba(180,83,9,0.2)'
+                          }}>
+                            <AlertTriangle size={12} /> Cierre auto
+                          </span>
+                        );
+                      }
+                      return (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '5px',
+                          fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                          background: 'rgba(2,132,199,0.08)', color: '#0284c7',
+                          border: '1px solid rgba(2,132,199,0.2)'
+                        }}>
+                          <UserX size={12} /> Salida manual
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: 'var(--urp-green-primary)', fontWeight: 700 }}>
                     {r.studentCode}

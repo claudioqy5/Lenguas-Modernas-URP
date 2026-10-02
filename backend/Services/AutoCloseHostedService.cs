@@ -7,7 +7,8 @@ namespace AsistenciaLenguas.Api.Services
 {
     /// <summary>
     /// Background service that automatically closes all active library sessions at 22:00 Peru time.
-    /// Runs independently of any HTTP request — fires every minute to check if it's time to close.
+    /// Runs every 30 seconds. Once it's 22:00+, it continuously closes ANY active session
+    /// (whether it started before or after 22:00) until the next day resets.
     /// </summary>
     public class AutoCloseHostedService : BackgroundService
     {
@@ -28,28 +29,27 @@ namespace AsistenciaLenguas.Api.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("[AutoClose] Servicio de cierre automático iniciado. Cerrará sesiones activas a las {hour}:00 hora Perú.", CloseHour);
-
-            // Track whether we've already run the close for today to avoid running it multiple times
-            DateOnly? lastClosedDate = null;
+            _logger.LogInformation(
+                "[AutoClose] Servicio de cierre automático iniciado. Cerrará sesiones activas a las {hour}:00 hora Perú.",
+                CloseHour);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     var peruNow = DateTimeUtils.NowPeru();
-                    var today = DateOnly.FromDateTime(peruNow);
 
-                    // Check if it's time to close: hour >= 22 AND we haven't closed today yet
-                    bool isCloseTime = peruNow.Hour >= CloseHour;
-                    bool alreadyClosedToday = lastClosedDate.HasValue && lastClosedDate.Value == today;
-
-                    if (isCloseTime && !alreadyClosedToday)
+                    // If it's past closing time, close ALL active sessions every cycle.
+                    // This handles students who enter AFTER 22:00 (librarians, tests, etc.)
+                    if (peruNow.Hour >= CloseHour)
                     {
-                        _logger.LogInformation("[AutoClose] Son las {time} hora Perú — ejecutando cierre automático de sesiones activas.", peruNow.ToString("HH:mm:ss"));
                         int closed = await CloseAllActiveSessionsAsync(peruNow);
-                        lastClosedDate = today;
-                        _logger.LogInformation("[AutoClose] Cierre completado: {count} sesión(es) cerrada(s) automáticamente.", closed);
+                        if (closed > 0)
+                        {
+                            _logger.LogInformation(
+                                "[AutoClose] {time} hora Perú — {count} sesión(es) cerrada(s) automáticamente.",
+                                peruNow.ToString("HH:mm:ss"), closed);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -57,30 +57,27 @@ namespace AsistenciaLenguas.Api.Services
                     _logger.LogError(ex, "[AutoClose] Error al ejecutar cierre automático de sesiones.");
                 }
 
-                // Check every 30 seconds for responsiveness
+                // Check every 30 seconds
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }
 
         private async Task<int> CloseAllActiveSessionsAsync(DateTime peruNow)
         {
-            // Create a scope to get the scoped MongoDbContext
             using var scope = _serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
 
             var todayStr = peruNow.ToString("yyyy-MM-dd");
 
-            // Compute the UTC equivalent of 22:00:00 Peru today
+            // UTC equivalent of 22:00:00 Peru today (the official close time to record)
             var peruClosingToday = new DateTime(
                 peruNow.Year, peruNow.Month, peruNow.Day,
                 CloseHour, CloseMinute, 0,
                 DateTimeKind.Unspecified);
-
             var utcClosing = TimeZoneInfo.ConvertTimeToUtc(peruClosingToday, DateTimeUtils.PeruTimeZone);
             var nowUtc = DateTime.UtcNow;
 
-            // Find ALL active sessions (today and any forgotten previous days)
-            // Includes records where IsActive == true OR where the isActive field doesn't exist (legacy records)
+            // Find ALL active sessions: IsActive=true OR legacy records without the field
             var filter = Builders<AttendanceRecord>.Filter.Or(
                 Builders<AttendanceRecord>.Filter.Eq(a => a.IsActive, true),
                 Builders<AttendanceRecord>.Filter.Exists("isActive", false)
@@ -95,20 +92,19 @@ namespace AsistenciaLenguas.Api.Services
             int count = 0;
             foreach (var session in activeSessions)
             {
-                // Determine auto-close time:
-                // - Today's sessions → close at 22:00 Peru
-                // - Previous day sessions → close at 22:00 of that day
+                // Determine the official close time for this session's date
                 DateTime closeUtc;
                 string closeTimeStr;
 
                 if (session.DateString == todayStr)
                 {
+                    // Today: close at 22:00 Peru (even if the student entered after 22:00)
                     closeUtc = utcClosing;
                     closeTimeStr = $"{CloseHour:D2}:{CloseMinute:D2}:00 (cierre auto)";
                 }
                 else
                 {
-                    // For previous days: close at 22:00 of the session's own date
+                    // Previous day: close at 22:00 of that day
                     if (DateTime.TryParse(session.DateString, out var sessionDate))
                     {
                         var prevClosing = new DateTime(
@@ -124,7 +120,7 @@ namespace AsistenciaLenguas.Api.Services
                     }
                 }
 
-                // Safety: never close before entry
+                // Safety: never close before entry time
                 if (closeUtc < session.Timestamp)
                     closeUtc = session.Timestamp.AddSeconds(1);
 
