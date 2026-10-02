@@ -174,36 +174,18 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Session status filter chips */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {([
-              { key: 'ALL',    label: 'Todos',           icon: null,          color: '#64748b', bg: '#f1f5f9', activeBg: '#334155', activeColor: '#fff' },
-              { key: 'active', label: 'En sala',         icon: UserCheck,     color: '#059669', bg: '#ecfdf5', activeBg: '#059669', activeColor: '#fff' },
-              { key: 'manual', label: 'Salida manual',   icon: UserX,         color: '#0284c7', bg: '#eff6ff', activeBg: '#0284c7', activeColor: '#fff' },
-              { key: 'auto',   label: 'Cierre auto',     icon: AlertTriangle, color: '#b45309', bg: '#fffbeb', activeBg: '#b45309', activeColor: '#fff' },
-            ] as const).map(chip => {
-              const isActive = filterAutoClose === chip.key;
-              const Icon = chip.icon;
-              return (
-                <button
-                  key={chip.key}
-                  onClick={() => setFilterAutoClose(chip.key as any)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                    padding: '6px 12px', borderRadius: '20px', fontSize: '0.78rem',
-                    fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
-                    border: `1px solid ${isActive ? chip.activeBg : '#e2e8f0'}`,
-                    background: isActive ? chip.activeBg : chip.bg,
-                    color: isActive ? chip.activeColor : chip.color,
-                    boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.1)' : 'none'
-                  }}
-                >
-                  {Icon && <Icon size={12} />}
-                  {chip.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Session status filter */}
+          <select
+            value={filterAutoClose}
+            onChange={(e) => setFilterAutoClose(e.target.value as any)}
+            className="input-futuristic"
+            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
+          >
+            <option value="ALL">Todos los estados</option>
+            <option value="active">En sala</option>
+            <option value="manual">Salida manual</option>
+            <option value="auto">Cierre automático</option>
+          </select>
           {/* Faculty select */}
           <select
             value={filterFaculty || 'ALL'}
