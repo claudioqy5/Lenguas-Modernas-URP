@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
-  TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User
+  TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User,
+  Briefcase, MapPin, Building2
 } from 'lucide-react';
 import { 
-  api, AnalyticsSummary, AttendanceRecord, Student, AuthSession, LibraryPerson 
+  api, AnalyticsSummary, AttendanceRecord, Student, AuthSession, LibraryPerson,
+  PERSON_TYPES, PersonTypeValue
 } from '../services/api';
 import { NewStudentModal } from './NewStudentModal';
 import { KPICards } from './admin/KPICards';
@@ -52,6 +54,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [editingPerson, setEditingPerson] = useState<LibraryPerson | undefined>(undefined);
+  const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Alumno');
+
+  const getPersonTypeIcon = (type: string) => {
+    switch (type) {
+      case 'Alumno': return <Users size={14} />;
+      case 'Docente': return <Briefcase size={14} />;
+      case 'Visitante': return <MapPin size={14} />;
+      case 'Maestrando': return <GraduationCap size={14} />;
+      case 'Doctorando': return <Building2 size={14} />;
+      default: return <Users size={14} />;
+    }
+  };
+
+  const getPersonTypeLabel = (type: string) => {
+    switch (type) {
+      case 'Alumno': return 'Alumnos';
+      case 'Docente': return 'Docentes';
+      case 'Visitante': return 'Visitantes';
+      case 'Maestrando': return 'Maestrandos';
+      case 'Doctorando': return 'Doctorandos';
+      default: return `${type}s`;
+    }
+  };
 
   // Available years dynamically derived from records
   const availableYears = useMemo(() => {
@@ -427,9 +452,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             minHeight: '70px'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, whiteSpace: 'nowrap' }}>
               {activeTab === 'inicio' && 'Inicio y Resumen Diario'}
               {activeTab === 'historico' && 'Estadísticas Históricas'}
               {activeTab === 'records' && 'Reporte de Asistencias'}
@@ -438,6 +462,56 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'difusion' && 'Difusión Institucional'}
               {activeTab === 'settings' && 'Mi Perfil'}
             </h2>
+
+            {/* Sub-pestañas de Roles en la barra superior para Reportes */}
+            {activeTab === 'records' && (
+              <div 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#f8fafc',
+                  padding: '3px 4px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)'
+                }}
+              >
+                {PERSON_TYPES.map(type => {
+                  const isActive = activePersonType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setActivePersonType(type);
+                        setFilterFaculty('ALL');
+                        setFilterCareer('ALL');
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 13px',
+                        borderRadius: '7px',
+                        border: isActive ? '1px solid rgba(15, 81, 66, 0.25)' : '1px solid transparent',
+                        background: isActive ? '#ffffff' : 'transparent',
+                        color: isActive ? 'var(--urp-green-primary)' : '#64748b',
+                        fontSize: '0.84rem',
+                        fontWeight: isActive ? 700 : 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {getPersonTypeIcon(type)}
+                      <span>{getPersonTypeLabel(type)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -660,6 +734,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               filterEndDate={recordsEndDate}
               students={students}
               persons={persons}
+              activePersonType={activePersonType}
+              setActivePersonType={setActivePersonType}
             />
           )}
 

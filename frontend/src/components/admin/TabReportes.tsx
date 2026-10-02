@@ -16,6 +16,8 @@ interface TabReportesProps {
   filterEndDate: string;
   students?: Student[];
   persons?: LibraryPerson[];
+  activePersonType?: PersonTypeValue;
+  setActivePersonType?: (val: PersonTypeValue) => void;
 }
 
 export const TabReportes: React.FC<TabReportesProps> = ({ 
@@ -29,11 +31,15 @@ export const TabReportes: React.FC<TabReportesProps> = ({
   filterStartDate, 
   filterEndDate,
   students = [],
-  persons = []
+  persons = [],
+  activePersonType: controlledActivePersonType,
+  setActivePersonType: controlledSetActivePersonType
 }) => {
+  const [internalActivePersonType, setInternalActivePersonType] = useState<PersonTypeValue>('Alumno');
+  const activePersonType = controlledActivePersonType ?? internalActivePersonType;
+  const setActivePersonType = controlledSetActivePersonType ?? setInternalActivePersonType;
   const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
   const [filterAutoClose, setFilterAutoClose] = useState<'ALL' | 'auto' | 'manual' | 'active'>('ALL');
-  const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Alumno');
 
   useEffect(() => {
     let isMounted = true;
@@ -100,17 +106,6 @@ export const TabReportes: React.FC<TabReportesProps> = ({
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'Alumno': return <Users size={16} />;
-      case 'Docente': return <Briefcase size={16} />;
-      case 'Visitante': return <MapPin size={16} />;
-      case 'Maestrando': return <GraduationCap size={16} />;
-      case 'Doctorando': return <Building2 size={16} />;
-      default: return <Users size={16} />;
-    }
-  };
-
   const filteredRecords = useMemo(() => {
     return records
       .filter(r => {
@@ -154,39 +149,6 @@ export const TabReportes: React.FC<TabReportesProps> = ({
 
   return (
     <div style={{ padding: '0' }}>
-      
-      {/* Master Tabs for Person Types */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '20px', overflowX: 'auto' }}>
-        {PERSON_TYPES.map(type => (
-          <button
-            key={type}
-            onClick={() => {
-              setActivePersonType(type);
-              setFilterFaculty('ALL');
-              setFilterCareer('ALL');
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: `1px solid ${activePersonType === type ? 'var(--urp-green-primary)' : 'transparent'}`,
-              background: activePersonType === type ? 'var(--urp-green-light)' : 'transparent',
-              color: activePersonType === type ? 'var(--urp-green-primary)' : 'var(--text-muted)',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {getTypeIcon(type)}
-            {type}s
-          </button>
-        ))}
-      </div>
-
       {/* Table Filter Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
