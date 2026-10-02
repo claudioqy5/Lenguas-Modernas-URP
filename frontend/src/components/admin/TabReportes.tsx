@@ -155,7 +155,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
 
         return matchSearch && matchFaculty && matchCareer && matchDate && matchSession;
       });
-  }, [records, searchTerm, filterFaculty, filterCareer, filterStartDate, filterEndDate, studentToFaculty, careerToFaculty]);
+  }, [records, searchTerm, filterFaculty, filterCareer, filterStartDate, filterEndDate, studentToFaculty, careerToFaculty, filterAutoClose]);
 
   return (
     <div style={{ padding: '0' }}>
@@ -182,8 +182,8 @@ export const TabReportes: React.FC<TabReportesProps> = ({
             style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
           >
             <option value="ALL">Todos los estados</option>
-            <option value="active">En sala</option>
-            <option value="manual">Salida manual</option>
+            <option value="active">En sala ahora</option>
+            <option value="manual">Ya se retiró</option>
             <option value="auto">Cierre automático</option>
           </select>
           {/* Faculty select */}
@@ -393,7 +393,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                           background: 'rgba(2,132,199,0.08)', color: '#0284c7',
                           border: '1px solid rgba(2,132,199,0.2)'
                         }}>
-                          <UserX size={12} /> Salida manual
+                          <UserX size={12} /> Ya se retiró
                         </span>
                       );
                     })()}
