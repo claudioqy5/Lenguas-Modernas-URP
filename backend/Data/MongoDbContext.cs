@@ -25,6 +25,7 @@ namespace AsistenciaLenguas.Api.Data
         public IMongoCollection<AdminUser> AdminUsers => _database.GetCollection<AdminUser>("AdminUsers");
         public IMongoCollection<Faculty> Faculties => _database.GetCollection<Faculty>("Faculties");
         public IMongoCollection<Career> Careers => _database.GetCollection<Career>("Careers");
+        public IMongoCollection<LibraryPerson> LibraryPersons => _database.GetCollection<LibraryPerson>("LibraryPersons");
 
         private void InitIndexesAndSeed()
         {
@@ -60,6 +61,18 @@ namespace AsistenciaLenguas.Api.Data
 
                 var careerFacultyIndexKeys = Builders<Career>.IndexKeys.Ascending(c => c.FacultyId);
                 Careers.Indexes.CreateOne(new CreateIndexModel<Career>(careerFacultyIndexKeys));
+
+                // LibraryPersons: index on personType + documentNumber for fast lookup
+                var personTypeIdx = Builders<LibraryPerson>.IndexKeys.Ascending(p => p.PersonType);
+                LibraryPersons.Indexes.CreateOne(new CreateIndexModel<LibraryPerson>(personTypeIdx));
+
+                var personDocIdx = Builders<LibraryPerson>.IndexKeys.Ascending(p => p.DocumentNumber);
+                LibraryPersons.Indexes.CreateOne(new CreateIndexModel<LibraryPerson>(personDocIdx));
+
+                var personCodeIdx = Builders<LibraryPerson>.IndexKeys
+                    .Ascending(p => p.PersonType)
+                    .Ascending(p => p.Code);
+                LibraryPersons.Indexes.CreateOne(new CreateIndexModel<LibraryPerson>(personCodeIdx));
 
                 // Seed or update SuperUser 201712043
                 var superUser = AdminUsers.Find(u => u.Username.ToLower() == "201712043").FirstOrDefault();

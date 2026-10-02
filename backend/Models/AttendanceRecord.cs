@@ -16,6 +16,13 @@ namespace AsistenciaLenguas.Api.Models
         [BsonElement("studentCode")]
         public string StudentCode { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Type of person: Alumno, Docente, Visitante, Maestrando, Doctorando.
+        /// Defaults to Alumno for backward compatibility with existing records.
+        /// </summary>
+        [BsonElement("personType")]
+        public string PersonType { get; set; } = Models.PersonType.Alumno;
+
         [BsonElement("studentName")]
         public string StudentName { get; set; } = string.Empty;
 

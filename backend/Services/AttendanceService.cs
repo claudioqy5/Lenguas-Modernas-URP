@@ -43,6 +43,53 @@ namespace AsistenciaLenguas.Api.Services
             _maxCapacity = configuration.GetValue<int>("LibrarySettings:MaxCapacity", 60);
         }
 
+        // Helper: build an attendance record from a LibraryPerson
+        private AttendanceRecord BuildRecord(
+            string lookupKey, string personId, string personName,
+            string career, string faculty, string personType,
+            DateTime nowUtc, DateTime peruNow, string todayStr,
+            string visitReason, string entryMethod)
+        {
+            var dayOfWeekSpanish = peruNow.DayOfWeek switch
+            {
+                DayOfWeek.Monday    => "Lunes",
+                DayOfWeek.Tuesday   => "Martes",
+                DayOfWeek.Wednesday => "Miércoles",
+                DayOfWeek.Thursday  => "Jueves",
+                DayOfWeek.Friday    => "Viernes",
+                DayOfWeek.Saturday  => "Sábado",
+                _                   => "Domingo"
+            };
+            int dayNumber = peruNow.DayOfWeek switch
+            {
+                DayOfWeek.Monday    => 1,
+                DayOfWeek.Tuesday   => 2,
+                DayOfWeek.Wednesday => 3,
+                DayOfWeek.Thursday  => 4,
+                DayOfWeek.Friday    => 5,
+                DayOfWeek.Saturday  => 6,
+                _                   => 7
+            };
+            return new AttendanceRecord
+            {
+                StudentId       = personId,
+                StudentCode     = lookupKey,
+                PersonType      = personType,
+                StudentName     = personName,
+                Career          = career,
+                Faculty         = faculty,
+                Timestamp       = nowUtc,
+                DateString      = todayStr,
+                TimeString      = peruNow.ToString("HH:mm:ss"),
+                DayOfWeek       = dayOfWeekSpanish,
+                DayOfWeekNumber = dayNumber,
+                HourOfDay       = peruNow.Hour,
+                VisitReason     = string.IsNullOrWhiteSpace(visitReason) ? "Lectura / Estudio" : visitReason,
+                EntryMethod     = string.IsNullOrWhiteSpace(entryMethod) ? "Barcode" : entryMethod,
+                IsActive        = true
+            };
+        }
+
         // ─────────────────────────────────────────────────────────────────────────
         // CORE: Smart toggle (check-in / check-out) with auto-close at 22:00 Peru
         // ─────────────────────────────────────────────────────────────────────────
@@ -72,32 +119,58 @@ namespace AsistenciaLenguas.Api.Services
                 };
             }
 
-            // 3. Resolve the student.
+            // 3. Resolve the person: first check Students (Alumnos legacy), then LibraryPersons.
             var student = await _studentService.GetByStudentCodeAsync(request.StudentCode);
-
             var (currentOccupancy, maxCapacity, percentage) = await GetOccupancyAsync();
 
-            if (student == null)
+            // Determine unified person info
+            string personId, personCode, firstName, career, faculty, personType;
+
+            if (student != null)
             {
-                return new CheckInResponseDto
+                personId   = student.Id ?? string.Empty;
+                personCode = student.StudentCode;
+                firstName  = student.FirstName;
+                career     = student.Career;
+                faculty    = student.Faculty;
+                personType = Models.PersonType.Alumno;
+            }
+            else
+            {
+                // Try LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos)
+                var libraryPerson = await _context.LibraryPersons
+                    .Find(p => p.Code == request.StudentCode || p.DocumentNumber == request.StudentCode)
+                    .FirstOrDefaultAsync();
+
+                if (libraryPerson == null)
                 {
-                    Success = false,
-                    IsNewStudent = true,
-                    Message = $"El código '{request.StudentCode}' no está registrado aún. Por favor completa tus datos.",
-                    CurrentOccupancy = currentOccupancy,
-                    MaxCapacity = maxCapacity,
-                    OccupancyPercentage = percentage,
-                    Quote = _quoteService.GetRandomQuote()
-                };
+                    return new CheckInResponseDto
+                    {
+                        Success = false,
+                        IsNewStudent = true,
+                        Message = $"El código/DNI '{request.StudentCode}' no está registrado. Por favor completa tus datos.",
+                        CurrentOccupancy = currentOccupancy,
+                        MaxCapacity = maxCapacity,
+                        OccupancyPercentage = percentage,
+                        Quote = _quoteService.GetRandomQuote()
+                    };
+                }
+
+                personId   = libraryPerson.Id ?? string.Empty;
+                personCode = libraryPerson.LookupKey;
+                firstName  = libraryPerson.FirstName;
+                career     = libraryPerson.Career.Length > 0 ? libraryPerson.Career : libraryPerson.Program;
+                faculty    = libraryPerson.Faculty;
+                personType = libraryPerson.PersonType;
             }
 
             var nowUtc = DateTime.UtcNow;
             var peruNow = DateTimeUtils.NowPeru();
             var todayStr = peruNow.ToString("yyyy-MM-dd");
 
-            // 3. Look for an ACTIVE session for this student today.
+            // Look for an ACTIVE session for this person today.
             var activeSession = await _context.AttendanceRecords
-                .Find(a => a.StudentCode == student.StudentCode
+                .Find(a => a.StudentCode == personCode
                            && a.DateString == todayStr
                            && a.IsActive)
                 .SortByDescending(a => a.Timestamp)
@@ -153,7 +226,7 @@ namespace AsistenciaLenguas.Api.Services
                     Success = true,
                     IsNewStudent = false,
                     IsCheckOut = true,
-                    Message = $"¡Hasta pronto, {student.FirstName}! Estuviste {FormatDuration(durationMinutes)} en la biblioteca.",
+                    Message = $"¡Hasta pronto, {firstName}! Estuviste {FormatDuration(durationMinutes)} en la biblioteca.",
                     Student = student,
                     AttendanceRecord = activeSession,
                     CurrentOccupancy = updatedOccupancy,
@@ -165,62 +238,38 @@ namespace AsistenciaLenguas.Api.Services
             }
 
             // ── CHECK-IN path ─────────────────────────────────────────────────────
-            var dayOfWeekSpanish = peruNow.DayOfWeek switch
-            {
-                DayOfWeek.Monday    => "Lunes",
-                DayOfWeek.Tuesday   => "Martes",
-                DayOfWeek.Wednesday => "Miércoles",
-                DayOfWeek.Thursday  => "Jueves",
-                DayOfWeek.Friday    => "Viernes",
-                DayOfWeek.Saturday  => "Sábado",
-                _                   => "Domingo"
-            };
+            var record = BuildRecord(
+                personCode, personId, 
+                student != null ? student.FullName : $"{firstName}",
+                career, faculty, personType,
+                nowUtc, peruNow, todayStr,
+                request.VisitReason, request.EntryMethod);
 
-            int dayNumber = peruNow.DayOfWeek switch
-            {
-                DayOfWeek.Monday    => 1,
-                DayOfWeek.Tuesday   => 2,
-                DayOfWeek.Wednesday => 3,
-                DayOfWeek.Thursday  => 4,
-                DayOfWeek.Friday    => 5,
-                DayOfWeek.Saturday  => 6,
-                _                   => 7
-            };
-
-            var record = new AttendanceRecord
-            {
-                StudentId       = student.Id ?? string.Empty,
-                StudentCode     = student.StudentCode,
-                StudentName     = student.FullName,
-                Career          = student.Career,
-                Faculty         = student.Faculty,
-                Timestamp       = nowUtc,
-                DateString      = todayStr,
-                TimeString      = peruNow.ToString("HH:mm:ss"),
-                DayOfWeek       = dayOfWeekSpanish,
-                DayOfWeekNumber = dayNumber,
-                HourOfDay       = peruNow.Hour,
-                VisitReason     = string.IsNullOrWhiteSpace(request.VisitReason)
-                                    ? "Lectura / Estudio"
-                                    : request.VisitReason,
-                LanguageFocus   = string.IsNullOrWhiteSpace(request.LanguageFocus)
-                                    ? student.PrimaryLanguage
-                                    : request.LanguageFocus,
-                EntryMethod     = string.IsNullOrWhiteSpace(request.EntryMethod)
-                                    ? "Barcode"
-                                    : request.EntryMethod,
-                IsActive        = true
-            };
+            // Fill languageFocus for students
+            if (student != null)
+                record.LanguageFocus = string.IsNullOrWhiteSpace(request.LanguageFocus)
+                    ? student.PrimaryLanguage
+                    : request.LanguageFocus;
 
             await _context.AttendanceRecords.InsertOneAsync(record);
 
-            // Update student's total visit count and last visit timestamp.
-            var updateStudent = Builders<Student>.Update
-                .Inc(s => s.TotalVisits, 1)
-                .Set(s => s.LastVisitAt, nowUtc);
-            await _context.Students.UpdateOneAsync(s => s.Id == student.Id, updateStudent);
-            student.TotalVisits += 1;
-            student.LastVisitAt = nowUtc;
+            // Update visit stats — Students or LibraryPersons
+            if (student != null)
+            {
+                var updateStudent = Builders<Student>.Update
+                    .Inc(s => s.TotalVisits, 1)
+                    .Set(s => s.LastVisitAt, nowUtc);
+                await _context.Students.UpdateOneAsync(s => s.Id == student.Id, updateStudent);
+                student.TotalVisits += 1;
+                student.LastVisitAt = nowUtc;
+            }
+            else
+            {
+                var updatePerson = Builders<LibraryPerson>.Update
+                    .Inc(p => p.TotalVisits, 1)
+                    .Set(p => p.LastVisitAt, nowUtc);
+                await _context.LibraryPersons.UpdateOneAsync(p => p.Id == personId, updatePerson);
+            }
 
             var newOccupancy = Math.Min(currentOccupancy + 1, maxCapacity);
             var newPercentage = maxCapacity > 0

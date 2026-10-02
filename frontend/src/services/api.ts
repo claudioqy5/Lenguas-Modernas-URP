@@ -23,6 +23,7 @@ export interface AttendanceRecord {
   id?: string;
   studentId: string;
   studentCode: string;
+  personType?: string;
   studentName: string;
   career: string;
   faculty?: string;
@@ -40,6 +41,43 @@ export interface AttendanceRecord {
   checkOutTimestamp?: string;
   checkOutTimeString?: string;
   durationMinutes: number;
+}
+
+export const PERSON_TYPES = ['Alumno', 'Docente', 'Visitante', 'Maestrando', 'Doctorando'] as const;
+export type PersonTypeValue = typeof PERSON_TYPES[number];
+
+export interface LibraryPerson {
+  id?: string;
+  personType: PersonTypeValue;
+  code: string;
+  documentNumber: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  faculty: string;
+  career: string;
+  program: string;
+  email: string;
+  phone: string;
+  totalVisits: number;
+  createdAt?: string;
+  lastVisitAt?: string;
+}
+
+export interface RegisterLibraryPersonDto {
+  personType: PersonTypeValue;
+  code?: string;
+  documentNumber: string;
+  firstName: string;
+  lastName: string;
+  faculty?: string;
+  career?: string;
+  program?: string;
+  email: string;
+  phone: string;
+  checkInNow?: boolean;
+  visitReason?: string;
+  entryMethod?: string;
 }
 
 export interface LiteraryQuote {
@@ -495,6 +533,68 @@ export const api = {
       return await res.json();
     } catch (e: any) {
       return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  // ── Library Persons (Docentes, Visitantes, Maestrandos, Doctorandos) ──────
+
+  async getPersons(type?: string): Promise<LibraryPerson[]> {
+    try {
+      const url = type ? `${API_BASE}/persons?type=${type}` : `${API_BASE}/persons`;
+      const token = localStorage.getItem('token');
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  async registerPerson(data: RegisterLibraryPersonDto): Promise<{ success: boolean; message?: string; person?: LibraryPerson }> {
+    try {
+      const res = await fetch(`${API_BASE}/persons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (!res.ok) return { success: false, message: json.message || 'Error al registrar.' };
+      return { success: true, person: json };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async updatePerson(id: string, data: Partial<LibraryPerson>): Promise<{ success: boolean; person?: LibraryPerson; message?: string }> {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/persons/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (!res.ok) return { success: false, message: json.message };
+      return { success: true, person: json };
+    } catch (e: any) {
+      return { success: false, message: e.message };
+    }
+  },
+
+  async deletePerson(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/persons/${id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (res.status === 204) return { success: true };
+      const json = await res.json();
+      return { success: false, message: json.message };
+    } catch (e: any) {
+      return { success: false, message: e.message };
     }
   }
 };

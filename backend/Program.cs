@@ -22,6 +22,7 @@ builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILibraryPersonService, LibraryPersonService>();
 
 // Background service: auto-closes active sessions at 22:00 Peru time
 builder.Services.AddHostedService<AutoCloseHostedService>();
