@@ -80,8 +80,14 @@ namespace AsistenciaLenguas.Api.Services
             var nowUtc = DateTime.UtcNow;
 
             // Find ALL active sessions (today and any forgotten previous days)
+            // Includes records where IsActive == true OR where the isActive field doesn't exist (legacy records)
+            var filter = Builders<AttendanceRecord>.Filter.Or(
+                Builders<AttendanceRecord>.Filter.Eq(a => a.IsActive, true),
+                Builders<AttendanceRecord>.Filter.Exists("isActive", false)
+            );
+
             var activeSessions = await db.AttendanceRecords
-                .Find(a => a.IsActive)
+                .Find(filter)
                 .ToListAsync();
 
             if (activeSessions.Count == 0) return 0;
