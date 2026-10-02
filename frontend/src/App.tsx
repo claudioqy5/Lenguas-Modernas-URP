@@ -547,7 +547,7 @@ export function App() {
               }}
             >
               {loading ? (
-                <span>Verificando ingreso...</span>
+                <span>Verificando asistencia...</span>
               ) : (
                 <>
                   <div
@@ -564,7 +564,7 @@ export function App() {
                   >
                     <CheckCircle2 size={17} />
                   </div>
-                  <span>Marcar Ingreso a la Biblioteca San Jerónimo</span>
+                  <span>Registrar Asistencia (Entrada / Salida)</span>
                 </>
               )}
             </button>
