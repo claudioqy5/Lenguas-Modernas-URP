@@ -51,7 +51,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
   // Filtered Persons (Docentes, Visitantes, Maestrandos, Doctorandos)
   const filteredPersons = useMemo(() => {
     return persons
-      .filter(p => p.personType === activePersonType)
+      .filter(p => activePersonType === 'Todos' || p.personType === activePersonType)
       .filter(p => {
         const fullName = p.fullName || `${p.lastName} ${p.firstName}`.trim();
         const matchSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -54,11 +54,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [editingPerson, setEditingPerson] = useState<LibraryPerson | undefined>(undefined);
-  const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Alumno');
+  const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Todos');
   const [modalInitialType, setModalInitialType] = useState<PersonTypeValue>('Alumno');
 
   const getPersonTypeIcon = (type: string) => {
     switch (type) {
+      case 'Todos': return <Users size={14} />;
       case 'Alumno': return <Users size={14} />;
       case 'Docente': return <Briefcase size={14} />;
       case 'Visitante': return <MapPin size={14} />;
@@ -70,6 +71,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const getPersonTypeLabel = (type: string) => {
     switch (type) {
+      case 'Todos': return 'Todos';
       case 'Alumno': return 'Alumnos';
       case 'Docente': return 'Docentes';
       case 'Visitante': return 'Visitantes';

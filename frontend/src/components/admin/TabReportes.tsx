@@ -35,7 +35,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
   activePersonType: controlledActivePersonType,
   setActivePersonType: controlledSetActivePersonType
 }) => {
-  const [internalActivePersonType, setInternalActivePersonType] = useState<PersonTypeValue>('Alumno');
+  const [internalActivePersonType, setInternalActivePersonType] = useState<PersonTypeValue>('Todos');
   const activePersonType = controlledActivePersonType ?? internalActivePersonType;
   const setActivePersonType = controlledSetActivePersonType ?? setInternalActivePersonType;
   const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
@@ -109,6 +109,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
   const filteredRecords = useMemo(() => {
     return records
       .filter(r => {
+        if (activePersonType === 'Todos') return true;
         const type = r.personType || 'Alumno';
         return type === activePersonType;
       })
@@ -118,9 +119,11 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         return { ...r, faculty: fac, _personInfo: personInfo };
       })
       .filter(r => {
+        const typeStr = r.personType || 'Alumno';
         const matchSearch = r.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             r.studentCode.includes(searchTerm) ||
-                            r.visitReason.toLowerCase().includes(searchTerm.toLowerCase());
+                            r.visitReason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            typeStr.toLowerCase().includes(searchTerm.toLowerCase());
                             
         let matchFaculty = true;
         let matchCareer = true;
@@ -252,6 +255,14 @@ export const TabReportes: React.FC<TabReportesProps> = ({
               <th style={{ padding: '12px 14px' }}>Duración</th>
               <th style={{ padding: '12px 14px' }}>Estado</th>
               
+              {activePersonType === 'Todos' && (
+                <>
+                  <th style={{ padding: '12px 14px' }}>Tipo</th>
+                  <th style={{ padding: '12px 14px' }}>DNI / Código</th>
+                  <th style={{ padding: '12px 14px' }}>Usuario</th>
+                  <th style={{ padding: '12px 14px' }}>Detalles (Fac. / Prog.)</th>
+                </>
+              )}
               {activePersonType === 'Alumno' && (
                 <>
                   <th style={{ padding: '12px 14px' }}>Código</th>
@@ -372,6 +383,40 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                         );
                       })()}
                     </td>
+                    
+                    {/* Todos Columns */}
+                    {activePersonType === 'Todos' && (
+                      <>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ 
+                            backgroundColor: 'rgba(0, 0, 0, 0.05)', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            color: '#475569'
+                          }}>
+                            {person?.personType || r.personType || 'Alumno'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: 'var(--urp-green-primary)', fontWeight: 700 }}>
+                          {person?.documentNumber || person?.code || r.studentCode || '-'}
+                        </td>
+                        <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>
+                          {person?.fullName || r.studentName || '-'}
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          {(() => {
+                            const pType = person?.personType || r.personType || 'Alumno';
+                            if (pType === 'Alumno') return `${r.faculty || '-'} / ${r.career || '-'}`;
+                            if (pType === 'Maestrando' || pType === 'Doctorando') return person?.program || '-';
+                            if (pType === 'Docente') return person?.email || '-';
+                            if (pType === 'Visitante') return person?.email || person?.phone || '-';
+                            return '-';
+                          })()}
+                        </td>
+                      </>
+                    )}
                     
                     {/* Alumno Columns */}
                     {activePersonType === 'Alumno' && (

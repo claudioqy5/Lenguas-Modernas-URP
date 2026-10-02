@@ -43,7 +43,7 @@ export interface AttendanceRecord {
   durationMinutes: number;
 }
 
-export const PERSON_TYPES = ['Alumno', 'Docente', 'Visitante', 'Maestrando', 'Doctorando'] as const;
+export const PERSON_TYPES = ['Todos', 'Alumno', 'Docente', 'Visitante', 'Maestrando', 'Doctorando'] as const;
 export type PersonTypeValue = typeof PERSON_TYPES[number];
 
 export interface LibraryPerson {
