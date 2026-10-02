@@ -27,6 +27,10 @@ namespace AsistenciaLenguas.Api.Services
         // Library auto-close hour in Peru local time (22 = 10 PM).
         private const int AutoCloseHourPeru = 22;
 
+        // Library operating hours in Peru local time.
+        private const int LibraryOpenHour  = 8;   // 08:00 AM
+        private const int LibraryCloseHour = 22;  // 10:00 PM (exclusive)
+
         public AttendanceService(
             MongoDbContext context,
             IStudentService studentService,
@@ -47,7 +51,28 @@ namespace AsistenciaLenguas.Api.Services
             // 1. Auto-close any stale active sessions from before today or past 22:00 Peru.
             await AutoCloseStaleSessionsAsync();
 
-            // 2. Resolve the student.
+            // 2. Check library operating hours (08:00 – 22:00 Peru).
+            var checkHourPeru = DateTimeUtils.NowPeru();
+            if (checkHourPeru.Hour < LibraryOpenHour || checkHourPeru.Hour >= LibraryCloseHour)
+            {
+                string mensaje = checkHourPeru.Hour < LibraryOpenHour
+                    ? $"La biblioteca aún no ha abierto. El horario de atención es de 08:00 a 22:00. Vuelve a partir de las 8:00 AM."
+                    : $"La biblioteca está cerrada. El horario de atención es de 08:00 a 22:00. ¡Hasta mañana!";
+
+                var (occ, maxCap, pct) = await GetOccupancyAsync();
+                return new CheckInResponseDto
+                {
+                    Success = false,
+                    IsNewStudent = false,
+                    Message = mensaje,
+                    CurrentOccupancy = occ,
+                    MaxCapacity = maxCap,
+                    OccupancyPercentage = pct,
+                    Quote = _quoteService.GetRandomQuote()
+                };
+            }
+
+            // 3. Resolve the student.
             var student = await _studentService.GetByStudentCodeAsync(request.StudentCode);
 
             var (currentOccupancy, maxCapacity, percentage) = await GetOccupancyAsync();
