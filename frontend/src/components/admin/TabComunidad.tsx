@@ -294,8 +294,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
               <th style={{ padding: '12px 14px', width: '40px' }}>#</th>
               <th style={{ padding: '12px 14px' }}>DNI / Documento</th>
               
-              {/* Código visible para Alumnos, Maestrandos, Doctorandos y Docentes */}
-              {activePersonType !== 'Visitante' && (
+              {/* Código visible para Alumnos, Maestrandos, Doctorandos */}
+              {activePersonType !== 'Visitante' && activePersonType !== 'Docente' && (
                 <th style={{ padding: '12px 14px' }}>Código</th>
               )}
 
@@ -309,9 +309,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                 </>
               )}
 
-              {activePersonType === 'Docente' && (
-                <th style={{ padding: '12px 14px' }}>Facultad</th>
-              )}
+
 
               {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando') && (
                 <th style={{ padding: '12px 14px' }}>
@@ -426,7 +424,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                     <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem' }}>{idx + 1}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>{p.documentNumber || '—'}</td>
                     
-                    {activePersonType !== 'Visitante' && (
+                    {activePersonType !== 'Visitante' && activePersonType !== 'Docente' && (
                       <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--urp-green-primary)' }}>
                         {p.code || '—'}
                       </td>
@@ -436,9 +434,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                       {p.fullName || `${p.lastName} ${p.firstName}`.trim()}
                     </td>
 
-                    {activePersonType === 'Docente' && (
-                      <td style={{ padding: '12px 14px', color: '#64748b' }}>{p.faculty || '—'}</td>
-                    )}
+
 
                     {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando') && (
                       <td style={{ padding: '12px 14px', color: '#0f5142', fontWeight: 600, fontSize: '0.84rem' }}>

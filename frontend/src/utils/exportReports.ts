@@ -304,16 +304,14 @@ export function exportAttendanceToPDF(
       r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
     ]);
   } else if (personType === 'Docente') {
-    head = [['#', 'Fecha', 'Hora', 'DNI/Cód', 'Docente', 'Facultad', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Hora', 'DNI/Cód', 'Docente', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
-      const p = codeToPerson?.get(r.studentCode);
       return [
         (i + 1).toString(),
         r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
         r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
         r.studentCode,
         r.studentName,
-        p?.faculty || r.faculty || '—',
         r.visitReason,
         r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
       ];
@@ -422,19 +420,17 @@ export function exportAttendanceToExcel(
     cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 28}, {wch: 28}, {wch: 22}, {wch: 18}];
   } else if (personType === 'Docente') {
     attendanceRows = records.map((r, i) => {
-      const p = codeToPerson?.get(r.studentCode);
       return {
         'N°': i + 1,
         'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
         'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
         'DNI/Cód': r.studentCode,
         'Docente': r.studentName,
-        'Facultad': p?.faculty || r.faculty || '—',
         'Motivo de Visita': r.visitReason,
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 28}, {wch: 22}, {wch: 18}];
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 22}, {wch: 18}];
   } else if (personType === 'Maestrando' || personType === 'Doctorando') {
     attendanceRows = records.map((r, i) => {
       const p = codeToPerson?.get(r.studentCode);
@@ -533,22 +529,26 @@ export function exportPersonsToExcel(persons: LibraryPerson[], personType: strin
     const base: Record<string, any> = {
       'N°': i + 1,
       'DNI / Documento': p.documentNumber,
-      'Código': p.code || '—',
-      'Apellidos y Nombres': p.fullName || `${p.lastName}, ${p.firstName}`.trim(),
-      'Correo Electrónico': p.email || '—',
-      'Teléfono': p.phone || '—',
-      'Total Visitas': p.totalVisits || 0,
-      'Última Visita': p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'
     };
+
+    if (personType !== 'Visitante' && personType !== 'Docente') {
+      base['Código'] = p.code || '—';
+    }
+
+    base['Apellidos y Nombres'] = p.fullName || `${p.lastName}, ${p.firstName}`.trim();
 
     if (personType === 'Alumno') {
       base['Facultad'] = p.faculty || '—';
       base['Carrera'] = p.career || '—';
-    } else if (personType === 'Docente') {
-      base['Facultad'] = p.faculty || '—';
     } else if (personType === 'Maestrando' || personType === 'Doctorando') {
       base['Programa'] = p.program || '—';
     }
+
+    base['Correo Electrónico'] = p.email || '—';
+    base['Teléfono'] = p.phone || '—';
+    base['Total Visitas'] = p.totalVisits || 0;
+    base['Última Visita'] = p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas';
+    
     return base;
   });
 
