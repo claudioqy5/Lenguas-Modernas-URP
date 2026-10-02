@@ -120,9 +120,19 @@ namespace AsistenciaLenguas.Api.Services
                     }
                 }
 
-                // Safety: never close before entry time
-                if (closeUtc < session.Timestamp)
-                    closeUtc = session.Timestamp.AddSeconds(1);
+                // Safety: if the session started AFTER the official close time (e.g. entered at 23:12)
+                // then just close it with the current time + 1 minute minimum.
+                if (closeUtc <= session.Timestamp)
+                {
+                    closeUtc = nowUtc;
+                    closeTimeStr = peruNow.ToString("HH:mm:ss") + " (cierre auto)";
+                    
+                    // If even nowUtc is before or exactly at entry, force 1 minute
+                    if (closeUtc <= session.Timestamp) {
+                        closeUtc = session.Timestamp.AddMinutes(1);
+                        closeTimeStr = DateTimeUtils.ToPeruTime(closeUtc).ToString("HH:mm:ss") + " (cierre auto)";
+                    }
+                }
 
                 int durationMinutes = (int)Math.Round((closeUtc - session.Timestamp).TotalMinutes);
 
