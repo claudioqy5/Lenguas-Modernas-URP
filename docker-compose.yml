@@ -4,7 +4,8 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb_lenguas
-    # No exponemos puerto al exterior, solo se usa internamente
+    ports:
+      - "127.0.0.1:27020:27017" # Expuesto localmente en VPS para tunel SSH / Mongo Compass
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
