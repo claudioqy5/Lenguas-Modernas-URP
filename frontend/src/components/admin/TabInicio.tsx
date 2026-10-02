@@ -317,52 +317,59 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             </div>
           </div>
 
-          <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
-            {/* Pie Chart */}
-            <div style={{ flex: '0 0 55%', height: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sortedCareerData}
-                    dataKey="count"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    innerRadius={50}
-                    paddingAngle={3}
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {sortedCareerData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+          {sortedCareerData.length === 0 ? (
+            <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
+              <Building2 size={32} style={{ opacity: 0.3 }} />
+              <span>No hay registros de carreras para esta fecha.</span>
             </div>
-            {/* Custom Legend - sorted descending */}
-            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
-              {sortedCareerData.map((item, index) => (
-                <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{
-                    display: 'inline-block',
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    background: BAR_COLORS[index % BAR_COLORS.length]
-                  }} />
-                  <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
-                    {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
-                  </span>
-                </div>
-              ))}
+          ) : (
+            <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: '0 0 55%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sortedCareerData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={50}
+                      paddingAngle={3}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {sortedCareerData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Custom Legend - sorted descending */}
+              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                {sortedCareerData.map((item, index) => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: BAR_COLORS[index % BAR_COLORS.length]
+                    }} />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

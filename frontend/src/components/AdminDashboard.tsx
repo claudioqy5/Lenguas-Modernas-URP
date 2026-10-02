@@ -111,11 +111,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         api.getAnalyticsSummary(),
         api.getRecentAttendances(10000),
         api.getAllStudents(),
-        api.getPersons()
+        api.getPersons(undefined, session?.token)
       ]);
       setSummary(sumData);
-      setRecords(recData);
-      setStudents(stuData);
+      setRecords(recData || []);
+      setStudents(stuData || []);
       setPersons(perData || []);
     } catch (e) {
       console.error(e);
@@ -609,11 +609,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {(activeTab === 'inicio' || activeTab === 'historico') && (
             <KPICards 
               summary={summary} 
-              studentsCount={students.length}
+              studentsCount={(students || []).length}
               selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
               selectedDateVisitsCount={
                 activeTab === 'inicio' 
-                  ? records.filter(r => {
+                  ? (records || []).filter(r => {
                       const recDate = getRecordDateStr(r);
                       return recDate === inicioDate;
                     }).length
@@ -621,7 +621,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               }
               periodType={activeTab === 'historico' ? (historyFilter as any) : undefined}
               periodLabel={activeTab === 'historico' ? historicoPeriodLabel : undefined}
-              periodVisitsCount={activeTab === 'historico' ? historicoFilteredRecords.length : undefined}
+              periodVisitsCount={activeTab === 'historico' ? (historicoFilteredRecords || []).length : undefined}
               periodUniqueStudentsCount={activeTab === 'historico' ? historicoUniqueStudentsCount : undefined}
             />
           )}

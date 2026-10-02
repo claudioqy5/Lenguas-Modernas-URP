@@ -211,6 +211,22 @@ const FALLBACK_QUOTES: LiteraryQuote[] = [
   }
 ];
 
+// Helper to get auth token from either 'token' or 'authSession' in localStorage
+export const getAuthToken = (): string | null => {
+  const directToken = localStorage.getItem('token');
+  if (directToken) return directToken;
+  try {
+    const sessionStr = localStorage.getItem('authSession');
+    if (sessionStr) {
+      const parsed = JSON.parse(sessionStr);
+      return parsed.token || null;
+    }
+  } catch {
+    // Ignore JSON parse errors
+  }
+  return null;
+};
+
 export const api = {
   // Check if student exists
   async checkStudent(code: string): Promise<{ exists: boolean; student?: Student }> {
@@ -538,10 +554,10 @@ export const api = {
 
   // ── Library Persons (Docentes, Visitantes, Maestrandos, Doctorandos) ──────
 
-  async getPersons(type?: string): Promise<LibraryPerson[]> {
+  async getPersons(type?: string, tokenOverride?: string): Promise<LibraryPerson[]> {
     try {
       const url = type ? `${API_BASE}/persons?type=${type}` : `${API_BASE}/persons`;
-      const token = localStorage.getItem('token');
+      const token = tokenOverride || getAuthToken();
       const res = await fetch(url, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
@@ -567,9 +583,9 @@ export const api = {
     }
   },
 
-  async updatePerson(id: string, data: Partial<LibraryPerson>): Promise<{ success: boolean; person?: LibraryPerson; message?: string }> {
+  async updatePerson(id: string, data: Partial<LibraryPerson>, tokenOverride?: string): Promise<{ success: boolean; person?: LibraryPerson; message?: string }> {
     try {
-      const token = localStorage.getItem('token');
+      const token = tokenOverride || getAuthToken();
       const res = await fetch(`${API_BASE}/persons/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -583,9 +599,9 @@ export const api = {
     }
   },
 
-  async deletePerson(id: string): Promise<{ success: boolean; message?: string }> {
+  async deletePerson(id: string, tokenOverride?: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const token = localStorage.getItem('token');
+      const token = tokenOverride || getAuthToken();
       const res = await fetch(`${API_BASE}/persons/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -598,3 +614,4 @@ export const api = {
     }
   }
 };
+

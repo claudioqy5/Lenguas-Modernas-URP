@@ -197,6 +197,7 @@ export function App() {
           setAuthSession(null);
           setIsAdminView(false);
           localStorage.removeItem('authSession');
+          localStorage.removeItem('token');
           localStorage.removeItem('isAdminView');
         }}
         onBackToKiosk={() => {
@@ -676,6 +677,7 @@ export function App() {
           setAuthSession(session);
           setIsAdminView(true);
           localStorage.setItem('authSession', JSON.stringify(session));
+          localStorage.setItem('token', session.token);
           localStorage.setItem('isAdminView', 'true');
         }}
       />

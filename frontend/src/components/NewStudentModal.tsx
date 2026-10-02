@@ -263,7 +263,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 15 }}
           style={{
-            maxWidth: '700px',
+            maxWidth: '40%',
             width: '100%',
             maxHeight: '92vh',
             overflowY: 'auto',
