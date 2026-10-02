@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { AttendanceRecord, Student, AnalyticsSummary } from '../services/api';
+import { AttendanceRecord, Student, AnalyticsSummary, LibraryPerson } from '../services/api';
 
 /**
  * Exporta el reporte diario específico (asistencias, horas pico y carreras del día seleccionado) a PDF
@@ -389,6 +389,49 @@ export function exportStudentsToExcel(students: Student[]) {
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Directorio_Estudiantes');
   XLSX.writeFile(wb, `Directorio_Estudiantes_URP_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Exporta el directorio de personas (Docentes, Visitantes, Maestrandos, Doctorandos) a Excel
+ */
+export function exportPersonsToExcel(persons: LibraryPerson[], personType: string) {
+  const wb = XLSX.utils.book_new();
+  const rows = persons.map((p, i) => {
+    const base: Record<string, any> = {
+      'N°': i + 1,
+      'DNI / Documento': p.documentNumber,
+      'Código': p.code || '—',
+      'Apellidos y Nombres': p.fullName || `${p.lastName}, ${p.firstName}`.trim(),
+      'Correo Electrónico': p.email || '—',
+      'Teléfono': p.phone || '—',
+      'Total Visitas': p.totalVisits || 0,
+      'Última Visita': p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'
+    };
+
+    if (personType === 'Alumno') {
+      base['Facultad'] = p.faculty || '—';
+      base['Carrera'] = p.career || '—';
+    } else if (personType === 'Docente') {
+      base['Facultad'] = p.faculty || '—';
+    } else if (personType === 'Maestrando' || personType === 'Doctorando') {
+      base['Programa'] = p.program || '—';
+    }
+    return base;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 6 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 32 },
+    { wch: 30 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 16 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, `Directorio_${personType}s`);
+  XLSX.writeFile(wb, `Directorio_${personType}s_URP_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /**

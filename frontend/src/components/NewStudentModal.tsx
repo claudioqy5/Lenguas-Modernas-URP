@@ -9,6 +9,7 @@ interface NewPersonModalProps {
   onClose: () => void;
   onSuccess: (person: LibraryPerson, checkInRes?: CheckInResponse) => void;
   initialPerson?: LibraryPerson;
+  initialType?: PersonTypeValue;
 }
 
 const MAESTRIA_PROGRAMS = [
@@ -38,7 +39,8 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
   prefilledCode,
   onClose,
   onSuccess,
-  initialPerson
+  initialPerson,
+  initialType
 }) => {
   const isEdit = !!initialPerson;
   const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
@@ -155,7 +157,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
         entryMethod: 'Manual'
       });
     } else {
-      const defaultType = 'Alumno';
+      const defaultType = initialType || 'Alumno';
       setPersonType(defaultType);
       
       const code = prefilledCode ? prefilledCode.trim() : '';
@@ -177,7 +179,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
       });
     }
     setError(null);
-  }, [isOpen, prefilledCode, initialPerson]);
+  }, [isOpen, prefilledCode, initialPerson, initialType]);
 
   if (!isOpen) return null;
 

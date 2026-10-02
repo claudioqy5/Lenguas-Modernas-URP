@@ -13,7 +13,7 @@ import { KPICards } from './admin/KPICards';
 import { TabInicio } from './admin/TabInicio';
 import { TabHistorico } from './admin/TabHistorico';
 import { TabReportes } from './admin/TabReportes';
-import { TabAlumnos } from './admin/TabAlumnos';
+import { TabComunidad } from './admin/TabComunidad';
 import { TabDifusion } from './admin/TabDifusion';
 import { TabAcademic } from './admin/TabAcademic';
 import { TabSettings } from './admin/TabSettings';
@@ -55,6 +55,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showNewStudentModal, setShowNewStudentModal] = useState(false);
   const [editingPerson, setEditingPerson] = useState<LibraryPerson | undefined>(undefined);
   const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Alumno');
+  const [modalInitialType, setModalInitialType] = useState<PersonTypeValue>('Alumno');
 
   const getPersonTypeIcon = (type: string) => {
     switch (type) {
@@ -157,6 +158,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!id) return;
     if (window.confirm('¿Seguro que deseas eliminar este estudiante?')) {
       await api.deleteStudent(id);
+      loadData();
+    }
+  };
+
+  const handleDeleteCommunityMember = async (id?: string, type?: PersonTypeValue) => {
+    if (!id) return;
+    const label = type ? type.toLowerCase() : 'este registro';
+    if (window.confirm(`¿Seguro que deseas eliminar a este ${label}?`)) {
+      if (type === 'Alumno') {
+        const deleted = await api.deleteStudent(id);
+        if (!deleted) {
+          await api.deletePerson(id, session?.token);
+        }
+      } else {
+        await api.deletePerson(id, session?.token);
+      }
       loadData();
     }
   };
@@ -314,7 +331,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Users size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Alumnos</span>
+              <Users size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Comunidad</span>
             </div>
             <span style={{ 
               background: activeTab === 'students' ? 'rgba(15,81,66,0.15)' : '#f1f5f9', 
@@ -324,7 +341,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               fontWeight: 700,
               opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease'
             }}>
-              {students.length}
+              {students.length + persons.length}
             </span>
           </button>
 
@@ -457,14 +474,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'inicio' && 'Inicio y Resumen Diario'}
               {activeTab === 'historico' && 'Estadísticas Históricas'}
               {activeTab === 'records' && 'Reporte de Asistencias'}
-              {activeTab === 'students' && 'Alumnos'}
+              {activeTab === 'students' && 'Comunidad'}
               {activeTab === 'academic' && 'Gestión de Facultades y Carreras'}
               {activeTab === 'difusion' && 'Difusión Institucional'}
               {activeTab === 'settings' && 'Mi Perfil'}
             </h2>
 
-            {/* Sub-pestañas de Roles en la barra superior para Reportes */}
-            {activeTab === 'records' && (
+            {/* Sub-pestañas de Roles en la barra superior para Reportes y Comunidad */}
+            {(activeTab === 'records' || activeTab === 'students') && (
               <div 
                 style={{
                   display: 'inline-flex',
@@ -739,25 +756,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             />
           )}
 
-          {/* TAB 3: STUDENT DATABASE */}
+          {/* TAB 3: COMUNIDAD URP (Directorio de Personas) */}
           {activeTab === 'students' && (
-            <TabAlumnos
+            <TabComunidad
               students={students}
+              persons={persons}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               filterCareer={filterCareer}
               setFilterCareer={setFilterCareer}
               filterFaculty={filterFaculty}
               setFilterFaculty={setFilterFaculty}
-              onNewStudent={() => {
+              activePersonType={activePersonType}
+              onNewPerson={(type) => {
                 setEditingPerson(undefined);
+                setModalInitialType(type);
                 setShowNewStudentModal(true);
               }}
-              onEditStudent={(s) => {
-                setEditingPerson(s as any); // TabAlumnos needs to be refactored eventually, casting for now
+              onEditPerson={(person) => {
+                const libPerson: LibraryPerson = 'personType' in person ? (person as LibraryPerson) : {
+                  id: person.id,
+                  personType: 'Alumno',
+                  code: (person as Student).studentCode,
+                  documentNumber: (person as Student).documentNumber,
+                  firstName: (person as Student).firstName,
+                  lastName: (person as Student).lastName,
+                  fullName: (person as Student).fullName,
+                  faculty: (person as Student).faculty,
+                  career: (person as Student).career,
+                  program: '',
+                  email: (person as Student).email,
+                  phone: (person as Student).phone,
+                  totalVisits: (person as Student).totalVisits,
+                  lastVisitAt: (person as Student).lastVisitAt
+                };
+                setEditingPerson(libPerson);
+                setModalInitialType(libPerson.personType);
                 setShowNewStudentModal(true);
               }}
-              onDeleteStudent={handleDeleteStudent}
+              onDeletePerson={handleDeleteCommunityMember}
               onNavigateToDifusion={() => setActiveTab('difusion')}
             />
           )}
@@ -791,6 +828,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           isOpen={showNewStudentModal}
           prefilledCode=""
           initialPerson={editingPerson}
+          initialType={modalInitialType}
           onClose={() => {
             setShowNewStudentModal(false);
             setEditingPerson(undefined);
