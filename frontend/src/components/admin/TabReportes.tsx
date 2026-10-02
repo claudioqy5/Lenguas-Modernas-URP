@@ -204,7 +204,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
               );
             })}
           </div>
-          {/* Faculty select */
+          {/* Faculty select */}
           <select
             value={filterFaculty || 'ALL'}
             onChange={(e) => handleFacultyFilterChange(e.target.value)}
