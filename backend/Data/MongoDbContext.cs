@@ -25,6 +25,7 @@ namespace AsistenciaLenguas.Api.Data
         public IMongoCollection<AdminUser> AdminUsers => _database.GetCollection<AdminUser>("AdminUsers");
         public IMongoCollection<Faculty> Faculties => _database.GetCollection<Faculty>("Faculties");
         public IMongoCollection<Career> Careers => _database.GetCollection<Career>("Careers");
+        public IMongoCollection<PostgraduateProgram> PostgraduatePrograms => _database.GetCollection<PostgraduateProgram>("PostgraduatePrograms");
         public IMongoCollection<LibraryPerson> LibraryPersons => _database.GetCollection<LibraryPerson>("LibraryPersons");
 
         private void InitIndexesAndSeed()
@@ -105,6 +106,11 @@ namespace AsistenciaLenguas.Api.Data
                     SeedFacultiesAndCareers();
                 }
 
+                // Seed Postgraduate Programs if empty
+                if (PostgraduatePrograms.CountDocuments(FilterDefinition<PostgraduateProgram>.Empty) == 0)
+                {
+                    SeedPostgraduatePrograms();
+                }
             }
             catch (Exception ex)
             {
@@ -206,6 +212,43 @@ namespace AsistenciaLenguas.Api.Data
                     Careers.InsertMany(careersToInsert);
                 }
             }
+        }
+
+        private void SeedPostgraduatePrograms()
+        {
+            var seedList = new List<(string Name, string Code, string DegreeType)>
+            {
+                // Maestrías
+                ("Maestría en Administración y Crecimiento Empresarial", "MACE", "Maestría"),
+                ("Arquitectura con Mención en Gestión Empresarial", "AMGE", "Maestría"),
+                ("Arquitectura y Sostenibilidad", "MAS", "Maestría"),
+                ("Ciencia de Datos e Inteligencia Artificial", "MCDIA", "Maestría"),
+                ("Ciencia Política", "MCP", "Maestría"),
+                ("Comportamiento Organizacional y Recursos Humanos", "MCORH", "Maestría"),
+                ("Docencia Superior e Innovación Educativa", "MDSIE", "Maestría"),
+                ("Ecología y Gestión Ambiental", "MEGA", "Maestría"),
+                ("Ingeniería Informática con Mención en Ingeniería de Software", "MIIS", "Maestría"),
+                ("Ingeniería Vial con Mención en Carreteras, Puentes y Túneles", "MIVCPT", "Maestría"),
+                ("Museología y Gestión Cultural", "MMGC", "Maestría"),
+                ("Psicología Clínica y de la Salud", "MPCS", "Maestría"),
+                ("Salud Pública con Mención en Administración Hospitalaria y de Servicios de Salud", "MSPAH", "Maestría"),
+                ("Supply Chain Management", "MSCM", "Maestría"),
+
+                // Doctorados
+                ("Administración de Negocios Globales", "DANG", "Doctorado"),
+                ("Ciencia Política y Relaciones Internacionales", "DCPRI", "Doctorado"),
+                ("Doctorado en Humanidades y Educación", "DHE", "Doctorado")
+            };
+
+            var programs = seedList.Select(s => new PostgraduateProgram
+            {
+                Name = s.Name,
+                Code = s.Code,
+                DegreeType = s.DegreeType,
+                CreatedAt = DateTime.UtcNow
+            }).ToList();
+
+            PostgraduatePrograms.InsertMany(programs);
         }
     }
 }

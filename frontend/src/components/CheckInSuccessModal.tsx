@@ -69,7 +69,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
     }
 
     // Auto-dismiss after 3s (checkout gives a bit more time to read)
-    const delay = isCheckOut ? 3000 : 2000;
+    const delay = isCheckOut ? 3000 : 2500;
     const timer = setTimeout(() => { onCloseRef.current(); }, delay);
     return () => clearTimeout(timer);
   }, [data, isCheckOut]);
@@ -96,7 +96,7 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
   const barGradient = isCheckOut
     ? 'linear-gradient(90deg, #b45309 0%, #d97706 100%)'
     : 'linear-gradient(90deg, var(--urp-green-primary) 0%, #059669 100%)';
-  const dismissDelay = isCheckOut ? 3 : 2;
+  const dismissDelay = isCheckOut ? 3 : 2.5;
 
   return (
     <AnimatePresence>

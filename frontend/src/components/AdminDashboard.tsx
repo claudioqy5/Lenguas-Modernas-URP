@@ -804,10 +804,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <TabDifusion students={students} />
           )}
 
-          {/* TAB 6: GESTIÓN DE FACULTADES Y CARRERAS */}
+          {/* TAB 6: GESTIÓN DE FACULTADES, CARRERAS Y POSGRADO */}
           {activeTab === 'academic' && (
             <TabAcademic 
               students={students}
+              persons={persons}
               onTreeUpdated={() => {
                 api.getAllStudents().then(res => {
                   if (res) setStudents(res);

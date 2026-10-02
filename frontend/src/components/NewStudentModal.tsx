@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, Check, UserCircle2, GraduationCap, Briefcase, Building2, MapPin } from 'lucide-react';
-import { api, LibraryPerson, CheckInResponse, AcademicTreeFaculty, PersonTypeValue, PERSON_TYPES } from '../services/api';
+import { api, LibraryPerson, CheckInResponse, AcademicTreeFaculty, PersonTypeValue, PERSON_TYPES, PostgraduateProgram } from '../services/api';
 
 interface NewPersonModalProps {
   isOpen: boolean;
@@ -44,8 +44,20 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
 }) => {
   const isEdit = !!initialPerson;
   const [academicTree, setAcademicTree] = useState<AcademicTreeFaculty[]>([]);
+  const [dbPrograms, setDbPrograms] = useState<PostgraduateProgram[]>([]);
   
   const [personType, setPersonType] = useState<PersonTypeValue>(initialPerson?.personType || 'Alumno');
+
+  // Dynamic Programs list from DB (with fallback to default constant list)
+  const maestriaProgramsList = useMemo(() => {
+    const fromDb = dbPrograms.filter(p => p.degreeType === 'Maestría').map(p => p.name);
+    return fromDb.length > 0 ? fromDb : MAESTRIA_PROGRAMS;
+  }, [dbPrograms]);
+
+  const doctoradoProgramsList = useMemo(() => {
+    const fromDb = dbPrograms.filter(p => p.degreeType === 'Doctorado').map(p => p.name);
+    return fromDb.length > 0 ? fromDb : DOCTORADO_PROGRAMS;
+  }, [dbPrograms]);
   
   const [formData, setFormData] = useState({
     code: prefilledCode,
@@ -65,15 +77,19 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load dynamic academic tree for Alumnos
+  // Load dynamic academic tree and postgraduate programs
   useEffect(() => {
     let isMounted = true;
-    api.getAcademicTree().then(tree => {
-      if (isMounted && tree && tree.length > 0) {
-        setAcademicTree(tree);
+    Promise.all([
+      api.getAcademicTree(),
+      api.getPostgraduatePrograms()
+    ]).then(([tree, progs]) => {
+      if (isMounted) {
+        if (tree && tree.length > 0) setAcademicTree(tree);
+        if (progs && progs.length > 0) setDbPrograms(progs);
       }
     }).catch(err => {
-      console.warn('Could not load academic tree:', err);
+      console.warn('Could not load academic tree or programs:', err);
     });
     return () => { isMounted = false; };
   }, []);
@@ -163,14 +179,20 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
       const code = prefilledCode ? prefilledCode.trim() : '';
       const isDniLikely = code.length === 8 && /^\d+$/.test(code);
       
+      const defaultFaculty = academicTree.length > 0 ? academicTree[0].name : 'Humanidades y Lenguas Modernas';
+      const defaultCareer = (academicTree.length > 0 && academicTree[0].careers && academicTree[0].careers.length > 0)
+        ? academicTree[0].careers[0].name
+        : 'Traducción e Interpretación';
+      const defaultProgram = maestriaProgramsList.length > 0 ? maestriaProgramsList[0] : '';
+
       setFormData({
         code: isDniLikely ? '' : code,
         documentNumber: isDniLikely ? code : '',
         firstName: '',
         lastName: '',
-        career: 'Traducción e Interpretación',
-        faculty: 'Humanidades y Lenguas Modernas',
-        program: MAESTRIA_PROGRAMS[0],
+        career: defaultCareer,
+        faculty: defaultFaculty,
+        program: defaultProgram,
         email: !isDniLikely && code ? `${code}@urp.edu.pe` : '',
         phone: '',
         checkInNow: true,
@@ -179,7 +201,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
       });
     }
     setError(null);
-  }, [isOpen, prefilledCode, initialPerson, initialType]);
+  }, [isOpen, prefilledCode, initialPerson, initialType, academicTree, maestriaProgramsList]);
 
   if (!isOpen) return null;
 
@@ -481,7 +503,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
                   className="input-futuristic"
                   style={{ fontSize: '0.92rem', padding: '10px 14px', width: '100%' }}
                 >
-                  {MAESTRIA_PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
+                  {maestriaProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             )}
@@ -497,7 +519,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
                   className="input-futuristic"
                   style={{ fontSize: '0.92rem', padding: '10px 14px', width: '100%' }}
                 >
-                  {DOCTORADO_PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
+                  {doctoradoProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             )}

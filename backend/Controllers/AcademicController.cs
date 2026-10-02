@@ -244,5 +244,101 @@ namespace AsistenciaLenguas.Api.Controllers
             await _context.Careers.DeleteOneAsync(c => c.Id == id);
             return Ok(new { success = true, message = $"Carrera '{career.Name}' eliminada exitosamente." });
         }
+
+        // ==================== POSTGRADUATE PROGRAMS CRUD ====================
+
+        public record PostgraduateProgramDto(string Name, string? Code, string DegreeType);
+
+        // GET /api/academic/programs
+        [HttpGet("programs")]
+        public async Task<IActionResult> GetPrograms([FromQuery] string? degreeType)
+        {
+            var filter = string.IsNullOrEmpty(degreeType)
+                ? Builders<PostgraduateProgram>.Filter.Empty
+                : Builders<PostgraduateProgram>.Filter.Eq(p => p.DegreeType, degreeType);
+
+            var programs = await _context.PostgraduatePrograms.Find(filter).SortBy(p => p.Name).ToListAsync();
+            return Ok(programs);
+        }
+
+        // POST /api/academic/programs
+        [HttpPost("programs")]
+        public async Task<IActionResult> CreateProgram([FromBody] PostgraduateProgramDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest(new { success = false, message = "El nombre del programa es obligatorio." });
+            }
+
+            var trimmedName = dto.Name.Trim();
+            var exists = await _context.PostgraduatePrograms.Find(p => p.Name.ToLower() == trimmedName.ToLower()).AnyAsync();
+            if (exists)
+            {
+                return BadRequest(new { success = false, message = $"Ya existe un programa registrado con el nombre '{trimmedName}'." });
+            }
+
+            var degreeType = string.IsNullOrWhiteSpace(dto.DegreeType) ? "Maestría" : dto.DegreeType.Trim();
+            if (degreeType != "Maestría" && degreeType != "Doctorado")
+            {
+                degreeType = "Maestría";
+            }
+
+            var program = new PostgraduateProgram
+            {
+                Name = trimmedName,
+                Code = (dto.Code ?? string.Empty).Trim().ToUpper(),
+                DegreeType = degreeType,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.PostgraduatePrograms.InsertOneAsync(program);
+            return Ok(new { success = true, message = "Programa de posgrado creado exitosamente.", data = program });
+        }
+
+        // PUT /api/academic/programs/{id}
+        [HttpPut("programs/{id}")]
+        public async Task<IActionResult> UpdateProgram(string id, [FromBody] PostgraduateProgramDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest(new { success = false, message = "El nombre del programa es obligatorio." });
+            }
+
+            var program = await _context.PostgraduatePrograms.Find(p => p.Id == id).FirstOrDefaultAsync();
+            if (program == null)
+            {
+                return NotFound(new { success = false, message = "Programa no encontrado." });
+            }
+
+            var trimmedName = dto.Name.Trim();
+            var duplicate = await _context.PostgraduatePrograms.Find(p => p.Id != id && p.Name.ToLower() == trimmedName.ToLower()).AnyAsync();
+            if (duplicate)
+            {
+                return BadRequest(new { success = false, message = $"Ya existe otro programa con el nombre '{trimmedName}'." });
+            }
+
+            var degreeType = string.IsNullOrWhiteSpace(dto.DegreeType) ? program.DegreeType : dto.DegreeType.Trim();
+
+            program.Name = trimmedName;
+            program.Code = (dto.Code ?? string.Empty).Trim().ToUpper();
+            program.DegreeType = degreeType;
+
+            await _context.PostgraduatePrograms.ReplaceOneAsync(p => p.Id == id, program);
+            return Ok(new { success = true, message = "Programa de posgrado actualizado exitosamente.", data = program });
+        }
+
+        // DELETE /api/academic/programs/{id}
+        [HttpDelete("programs/{id}")]
+        public async Task<IActionResult> DeleteProgram(string id)
+        {
+            var program = await _context.PostgraduatePrograms.Find(p => p.Id == id).FirstOrDefaultAsync();
+            if (program == null)
+            {
+                return NotFound(new { success = false, message = "Programa no encontrado." });
+            }
+
+            await _context.PostgraduatePrograms.DeleteOneAsync(p => p.Id == id);
+            return Ok(new { success = true, message = $"Programa '{program.Name}' eliminado exitosamente." });
+        }
     }
 }

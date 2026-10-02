@@ -96,6 +96,14 @@ export interface Career {
   createdAt?: string;
 }
 
+export interface PostgraduateProgram {
+  id?: string;
+  name: string;
+  code?: string;
+  degreeType: 'Maestría' | 'Doctorado' | string;
+  createdAt?: string;
+}
+
 export interface Faculty {
   id?: string;
   name: string;
@@ -544,6 +552,56 @@ export const api = {
   async deleteCareer(id: string): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await fetch(`${API_BASE}/academic/careers/${id}`, {
+        method: 'DELETE'
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  // ── Postgraduate Programs CRUD ──────────────────────────────────────────────
+
+  async getPostgraduatePrograms(degreeType?: string): Promise<PostgraduateProgram[]> {
+    try {
+      const url = degreeType ? `${API_BASE}/academic/programs?degreeType=${encodeURIComponent(degreeType)}` : `${API_BASE}/academic/programs`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  async createPostgraduateProgram(data: { name: string; code?: string; degreeType: string }): Promise<{ success: boolean; data?: PostgraduateProgram; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/programs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async updatePostgraduateProgram(id: string, data: { name: string; code?: string; degreeType?: string }): Promise<{ success: boolean; data?: PostgraduateProgram; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/programs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error de conexión' };
+    }
+  },
+
+  async deletePostgraduateProgram(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/academic/programs/${id}`, {
         method: 'DELETE'
       });
       return await res.json();

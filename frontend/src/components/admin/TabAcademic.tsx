@@ -1,23 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, BookOpen, Plus, Edit3, Trash2, Search, 
-  Check, X, AlertTriangle, Layers, GraduationCap, ArrowRight
+  Check, X, AlertTriangle, Layers, GraduationCap, ArrowRight, Award, School
 } from 'lucide-react';
-import { api, AcademicTreeFaculty, Faculty, Career, Student } from '../../services/api';
+import { api, AcademicTreeFaculty, Faculty, Career, Student, PostgraduateProgram, LibraryPerson } from '../../services/api';
 
 interface TabAcademicProps {
   students?: Student[];
+  persons?: LibraryPerson[];
   onTreeUpdated?: () => void;
 }
 
-export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeUpdated }) => {
+export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons = [], onTreeUpdated }) => {
+  const [subTab, setSubTab] = useState<'pregrado' | 'posgrado'>('pregrado');
   const [tree, setTree] = useState<AcademicTreeFaculty[]>([]);
+  const [programs, setPrograms] = useState<PostgraduateProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>('ALL');
 
   // Search terms
   const [searchFaculty, setSearchFaculty] = useState('');
   const [searchCareer, setSearchCareer] = useState('');
+  const [searchProgram, setSearchProgram] = useState('');
+  const [filterDegreeType, setFilterDegreeType] = useState<'ALL' | 'Maestría' | 'Doctorado'>('ALL');
 
   // Modals state
   const [facultyModalOpen, setFacultyModalOpen] = useState(false);
@@ -28,18 +33,28 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
   const [editingCareer, setEditingCareer] = useState<Career | null>(null);
   const [careerFormData, setCareerFormData] = useState({ name: '', code: '', facultyId: '' });
 
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'faculty' | 'career'; id: string; name: string } | null>(null);
+  const [programModalOpen, setProgramModalOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<PostgraduateProgram | null>(null);
+  const [programFormData, setProgramFormData] = useState<{ name: string; code: string; degreeType: 'Maestría' | 'Doctorado' }>({
+    name: '', code: '', degreeType: 'Maestría'
+  });
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'faculty' | 'career' | 'program'; id: string; name: string } | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Load tree
+  // Load data
   const loadAcademicData = async () => {
     try {
       setLoading(true);
-      const data = await api.getAcademicTree();
-      setTree(data);
+      const [treeData, progData] = await Promise.all([
+        api.getAcademicTree(),
+        api.getPostgraduatePrograms()
+      ]);
+      setTree(treeData || []);
+      setPrograms(progData || []);
       if (onTreeUpdated) onTreeUpdated();
     } catch (e: any) {
-      console.error('Error loading academic tree:', e);
+      console.error('Error loading academic data:', e);
     } finally {
       setLoading(false);
     }
@@ -178,6 +193,62 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
     }
   };
 
+  // Filtered Postgraduate Programs
+  const filteredPrograms = useMemo(() => {
+    let list = programs;
+    if (filterDegreeType !== 'ALL') {
+      list = list.filter(p => p.degreeType === filterDegreeType);
+    }
+    if (searchProgram.trim()) {
+      const q = searchProgram.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.code && p.code.toLowerCase().includes(q)));
+    }
+    return list;
+  }, [programs, filterDegreeType, searchProgram]);
+
+  // Program stats
+  const programStats = useMemo(() => {
+    const byProgram: Record<string, number> = {};
+    persons.forEach(p => {
+      if (p.program) byProgram[p.program] = (byProgram[p.program] || 0) + 1;
+    });
+    return byProgram;
+  }, [persons]);
+
+  // Handle Postgraduate Program Submit
+  const handleSaveProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!programFormData.name.trim()) {
+      showToast('error', 'El nombre del programa es obligatorio.');
+      return;
+    }
+
+    try {
+      if (editingProgram && editingProgram.id) {
+        const res = await api.updatePostgraduateProgram(editingProgram.id, programFormData);
+        if (res.success) {
+          showToast('success', res.message || 'Programa actualizado con éxito.');
+          setProgramModalOpen(false);
+          setEditingProgram(null);
+          await loadAcademicData();
+        } else {
+          showToast('error', res.message || 'Error al actualizar el programa.');
+        }
+      } else {
+        const res = await api.createPostgraduateProgram(programFormData);
+        if (res.success) {
+          showToast('success', res.message || 'Programa creado con éxito.');
+          setProgramModalOpen(false);
+          await loadAcademicData();
+        } else {
+          showToast('error', res.message || 'Error al crear el programa.');
+        }
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Error de conexión');
+    }
+  };
+
   // Confirm delete execution
   const executeDelete = async () => {
     if (!deleteConfirm) return;
@@ -192,13 +263,21 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
         } else {
           showToast('error', res.message || 'Error al eliminar la facultad.');
         }
-      } else {
+      } else if (deleteConfirm.type === 'career') {
         const res = await api.deleteCareer(deleteConfirm.id);
         if (res.success) {
           showToast('success', res.message || 'Carrera eliminada con éxito.');
           await loadAcademicData();
         } else {
           showToast('error', res.message || 'Error al eliminar la carrera.');
+        }
+      } else if (deleteConfirm.type === 'program') {
+        const res = await api.deletePostgraduateProgram(deleteConfirm.id);
+        if (res.success) {
+          showToast('success', res.message || 'Programa eliminado con éxito.');
+          await loadAcademicData();
+        } else {
+          showToast('error', res.message || 'Error al eliminar el programa.');
         }
       }
     } catch (err: any) {
@@ -232,7 +311,83 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
         </div>
       )}
 
-      {/* Main Grid: Left Section (Facultades), Divider Line, & Right Section (Carreras Profesionales) */}
+      {/* Subtab Selector */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        borderBottom: '1px solid #e2e8f0',
+        paddingBottom: '14px'
+      }}>
+        <button
+          type="button"
+          onClick={() => setSubTab('pregrado')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 18px',
+            borderRadius: '10px',
+            border: subTab === 'pregrado' ? '1.5px solid var(--urp-green-primary)' : '1px solid #e2e8f0',
+            background: subTab === 'pregrado' ? 'var(--urp-green-light)' : '#ffffff',
+            color: subTab === 'pregrado' ? 'var(--urp-green-primary)' : '#64748b',
+            fontSize: '0.88rem',
+            fontWeight: subTab === 'pregrado' ? 700 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: subTab === 'pregrado' ? '0 2px 4px rgba(15, 81, 66, 0.1)' : 'none'
+          }}
+        >
+          <Building2 size={16} />
+          <span>Pregrado: Facultades y Carreras</span>
+          <span style={{
+            fontSize: '0.74rem',
+            background: subTab === 'pregrado' ? '#ffffff' : '#f1f5f9',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontWeight: 700,
+            color: subTab === 'pregrado' ? 'var(--urp-green-primary)' : '#64748b'
+          }}>
+            {tree.length} fac. / {tree.reduce((acc, f) => acc + (f.careers?.length || 0), 0)} carr.
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSubTab('posgrado')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 18px',
+            borderRadius: '10px',
+            border: subTab === 'posgrado' ? '1.5px solid #b45309' : '1px solid #e2e8f0',
+            background: subTab === 'posgrado' ? 'rgba(180, 83, 9, 0.08)' : '#ffffff',
+            color: subTab === 'posgrado' ? '#b45309' : '#64748b',
+            fontSize: '0.88rem',
+            fontWeight: subTab === 'posgrado' ? 700 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: subTab === 'posgrado' ? '0 2px 4px rgba(180, 83, 9, 0.1)' : 'none'
+          }}
+        >
+          <Award size={16} />
+          <span>Posgrado: Maestrías y Doctorados</span>
+          <span style={{
+            fontSize: '0.74rem',
+            background: subTab === 'posgrado' ? '#ffffff' : '#f1f5f9',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontWeight: 700,
+            color: subTab === 'posgrado' ? '#b45309' : '#64748b'
+          }}>
+            {programs.length} programas
+          </span>
+        </button>
+      </div>
+
+      {subTab === 'pregrado' ? (
+      /* Main Grid: Left Section (Facultades), Divider Line, & Right Section (Carreras Profesionales) */
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(330px, 1fr) 1px minmax(440px, 1.4fr)',
@@ -648,6 +803,224 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
         </div>
 
       </div>
+      ) : (
+        /* ================= POSGRADO: PROGRAMAS DE MAESTRÍA Y DOCTORADO ================= */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Header & Controls */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
+                <Award size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Programas de Posgrado URP
+                </h3>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  {filteredPrograms.length} programas ({programs.filter(p => p.degreeType === 'Maestría').length} Maestrías, {programs.filter(p => p.degreeType === 'Doctorado').length} Doctorados)
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingProgram(null);
+                setProgramFormData({ name: '', code: '', degreeType: 'Maestría' });
+                setProgramModalOpen(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: '1px solid #b45309',
+                background: '#b45309',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 2px 4px rgba(180, 83, 9, 0.2)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#92400e'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#b45309'}
+            >
+              <Plus size={16} />
+              <span>Nuevo Programa</span>
+            </button>
+          </div>
+
+          {/* Filters & Search */}
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94a3b8' }} />
+              <input
+                type="text"
+                value={searchProgram}
+                onChange={(e) => setSearchProgram(e.target.value)}
+                placeholder="Buscar programa por nombre o acrónimo..."
+                className="input-futuristic"
+                style={{ padding: '8px 12px 8px 34px', fontSize: '0.86rem', width: '100%' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(['ALL', 'Maestría', 'Doctorado'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setFilterDegreeType(type)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: filterDegreeType === type ? 700 : 500,
+                    border: filterDegreeType === type ? '1px solid #b45309' : '1px solid #e2e8f0',
+                    background: filterDegreeType === type ? 'rgba(180, 83, 9, 0.1)' : '#ffffff',
+                    color: filterDegreeType === type ? '#b45309' : '#64748b',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {type === 'ALL' ? 'Todos los Tipos' : `${type}s`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid of Programs */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '16px',
+            maxHeight: 'calc(100vh - 320px)',
+            overflowY: 'auto',
+            paddingRight: '4px'
+          }}>
+            {filteredPrograms.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                No se encontraron programas de posgrado con el filtro aplicado.
+              </div>
+            ) : (
+              filteredPrograms.map(p => {
+                const enrolledCount = programStats[p.name] || 0;
+                const isMaestria = p.degreeType === 'Maestría';
+
+                return (
+                  <div
+                    key={p.id || p.name}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                      transition: 'border-color 0.15s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          background: isMaestria ? 'rgba(15, 81, 66, 0.08)' : 'rgba(180, 83, 9, 0.08)',
+                          color: isMaestria ? 'var(--urp-green-primary)' : '#b45309',
+                          border: `1px solid ${isMaestria ? 'rgba(15,81,66,0.2)' : 'rgba(180,83,9,0.2)'}`
+                        }}>
+                          {p.degreeType}
+                        </span>
+
+                        {p.code && (
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontFamily: 'monospace',
+                            fontWeight: 700,
+                            background: '#f8fafc',
+                            border: '1px solid #cbd5e1',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            color: '#334155'
+                          }}>
+                            {p.code}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35 }}>
+                        {p.name}
+                      </h4>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Inscritos: <strong style={{ color: enrolledCount > 0 ? '#b45309' : '#64748b' }}>{enrolledCount}</strong>
+                      </span>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => {
+                            setEditingProgram(p);
+                            setProgramFormData({
+                              name: p.name,
+                              code: p.code || '',
+                              degreeType: (p.degreeType === 'Doctorado' ? 'Doctorado' : 'Maestría')
+                            });
+                            setProgramModalOpen(true);
+                          }}
+                          title="Editar Programa"
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
+                            background: '#ffffff',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.76rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          <Edit3 size={13} />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm({ type: 'program', id: p.id || '', name: p.name })}
+                          title="Eliminar Programa"
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #fee2e2',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.76rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: NUEVA / EDITAR FACULTAD ================= */}
       {facultyModalOpen && (
@@ -885,6 +1258,129 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
         </div>
       )}
 
+      {/* ================= MODAL: NUEVO / EDITAR PROGRAMA POSGRADO ================= */}
+      {programModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            maxWidth: '500px',
+            width: '100%',
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '28px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={18} color="#b45309" />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {editingProgram ? 'Editar Programa de Posgrado' : 'Nuevo Programa de Posgrado'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setProgramModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProgram} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Tipo de Posgrado *
+                </label>
+                <select
+                  value={programFormData.degreeType}
+                  onChange={(e) => setProgramFormData({ ...programFormData, degreeType: e.target.value as any })}
+                  className="input-futuristic"
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem' }}
+                >
+                  <option value="Maestría">Maestría</option>
+                  <option value="Doctorado">Doctorado</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Nombre del Programa *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={programFormData.name}
+                  onChange={(e) => setProgramFormData({ ...programFormData, name: e.target.value })}
+                  placeholder="Ej: Maestría en Traductología"
+                  className="input-futuristic"
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Acrónimo o Código (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={programFormData.code}
+                  onChange={(e) => setProgramFormData({ ...programFormData, code: e.target.value })}
+                  placeholder="Ej: MTRAD"
+                  className="input-futuristic"
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setProgramModalOpen(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#475569',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    border: '1px solid #b45309',
+                    background: '#b45309',
+                    color: '#ffffff',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(180, 83, 9, 0.2)'
+                  }}
+                >
+                  {editingProgram ? 'Guardar Cambios' : 'Crear Programa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ================= CONFIRMATION MODAL ================= */}
       {deleteConfirm && (
         <div style={{
@@ -917,7 +1413,7 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], onTreeU
             </div>
 
             <p style={{ margin: 0, fontSize: '0.86rem', color: '#475569', lineHeight: '1.5' }}>
-              ¿Estás seguro de que deseas eliminar {deleteConfirm.type === 'faculty' ? 'la facultad' : 'la carrera'} <strong>"{deleteConfirm.name}"</strong>?
+              ¿Estás seguro de que deseas eliminar {deleteConfirm.type === 'faculty' ? 'la facultad' : deleteConfirm.type === 'career' ? 'la carrera' : 'el programa'} <strong>"{deleteConfirm.name}"</strong>?
               {deleteConfirm.type === 'faculty' && (
                 <span style={{ display: 'block', marginTop: '6px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600 }}>
                   Aviso: También se eliminarán todas las carreras profesionales asociadas a esta facultad.
