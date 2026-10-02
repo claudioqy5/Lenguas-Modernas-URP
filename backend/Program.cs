@@ -23,6 +23,9 @@ builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Background service: auto-closes active sessions at 22:00 Peru time
+builder.Services.AddHostedService<AutoCloseHostedService>();
+
 // CORS Configuration - Allow Vite dev server and production clients
 builder.Services.AddCors(options =>
 {
