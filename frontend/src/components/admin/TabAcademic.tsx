@@ -8,11 +8,20 @@ import { api, AcademicTreeFaculty, Faculty, Career, Student, PostgraduateProgram
 interface TabAcademicProps {
   students?: Student[];
   persons?: LibraryPerson[];
+  subTab?: 'pregrado' | 'posgrado';
+  setSubTab?: (t: 'pregrado' | 'posgrado') => void;
+  onCountsChange?: (counts: { facs: number, carrs: number, progs: number }) => void;
   onTreeUpdated?: () => void;
 }
 
-export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons = [], onTreeUpdated }) => {
-  const [subTab, setSubTab] = useState<'pregrado' | 'posgrado'>('pregrado');
+export const TabAcademic: React.FC<TabAcademicProps> = ({ 
+  students = [], 
+  persons = [], 
+  subTab = 'pregrado',
+  setSubTab,
+  onCountsChange,
+  onTreeUpdated 
+}) => {
   const [tree, setTree] = useState<AcademicTreeFaculty[]>([]);
   const [programs, setPrograms] = useState<PostgraduateProgram[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +72,16 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons
   useEffect(() => {
     loadAcademicData();
   }, []);
+
+  useEffect(() => {
+    if (onCountsChange) {
+      onCountsChange({
+        facs: tree.length,
+        carrs: tree.reduce((acc, f) => acc + (f.careers?.length || 0), 0),
+        progs: programs.length
+      });
+    }
+  }, [tree, programs, onCountsChange]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
@@ -310,81 +329,6 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons
           <span>{feedback.message}</span>
         </div>
       )}
-
-      {/* Subtab Selector */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        borderBottom: '1px solid #e2e8f0',
-        paddingBottom: '14px'
-      }}>
-        <button
-          type="button"
-          onClick={() => setSubTab('pregrado')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 18px',
-            borderRadius: '10px',
-            border: subTab === 'pregrado' ? '1.5px solid var(--urp-green-primary)' : '1px solid #e2e8f0',
-            background: subTab === 'pregrado' ? 'var(--urp-green-light)' : '#ffffff',
-            color: subTab === 'pregrado' ? 'var(--urp-green-primary)' : '#64748b',
-            fontSize: '0.88rem',
-            fontWeight: subTab === 'pregrado' ? 700 : 500,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: subTab === 'pregrado' ? '0 2px 4px rgba(15, 81, 66, 0.1)' : 'none'
-          }}
-        >
-          <Building2 size={16} />
-          <span>Pregrado: Facultades y Carreras</span>
-          <span style={{
-            fontSize: '0.74rem',
-            background: subTab === 'pregrado' ? '#ffffff' : '#f1f5f9',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            fontWeight: 700,
-            color: subTab === 'pregrado' ? 'var(--urp-green-primary)' : '#64748b'
-          }}>
-            {tree.length} fac. / {tree.reduce((acc, f) => acc + (f.careers?.length || 0), 0)} carr.
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSubTab('posgrado')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 18px',
-            borderRadius: '10px',
-            border: subTab === 'posgrado' ? '1.5px solid #b45309' : '1px solid #e2e8f0',
-            background: subTab === 'posgrado' ? 'rgba(180, 83, 9, 0.08)' : '#ffffff',
-            color: subTab === 'posgrado' ? '#b45309' : '#64748b',
-            fontSize: '0.88rem',
-            fontWeight: subTab === 'posgrado' ? 700 : 500,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: subTab === 'posgrado' ? '0 2px 4px rgba(180, 83, 9, 0.1)' : 'none'
-          }}
-        >
-          <Award size={16} />
-          <span>Posgrado: Maestrías y Doctorados</span>
-          <span style={{
-            fontSize: '0.74rem',
-            background: subTab === 'posgrado' ? '#ffffff' : '#f1f5f9',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            fontWeight: 700,
-            color: subTab === 'posgrado' ? '#b45309' : '#64748b'
-          }}>
-            {programs.length} programas
-          </span>
-        </button>
-      </div>
 
       {subTab === 'pregrado' ? (
       /* Main Grid: Left Section (Facultades), Divider Line, & Right Section (Carreras Profesionales) */
@@ -805,127 +749,250 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons
       </div>
       ) : (
         /* ================= POSGRADO: PROGRAMAS DE MAESTRÍA Y DOCTORADO ================= */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Header & Controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
-                <Award size={22} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  Programas de Posgrado URP
-                </h3>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  {filteredPrograms.length} programas ({programs.filter(p => p.degreeType === 'Maestría').length} Maestrías, {programs.filter(p => p.degreeType === 'Doctorado').length} Doctorados)
-                </span>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '360px 1fr',
+          gap: '32px',
+          alignItems: 'start'
+        }}>
+          {/* ================= SECTION 1: TIPOS DE PROGRAMA ================= */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
+                  <Award size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    Tipos de Programa
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    {programs.length} programas registrados
+                  </span>
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setEditingProgram(null);
-                setProgramFormData({ name: '', code: '', degreeType: 'Maestría' });
-                setProgramModalOpen(true);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '9px 16px',
-                borderRadius: '8px',
-                border: '1px solid #b45309',
-                background: '#b45309',
-                color: '#ffffff',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                boxShadow: '0 2px 4px rgba(180, 83, 9, 0.2)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#92400e'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#b45309'}
-            >
-              <Plus size={16} />
-              <span>Nuevo Programa</span>
-            </button>
+            {/* Types Scroll List */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              paddingRight: '4px'
+            }}>
+              {(['ALL', 'Maestría', 'Doctorado'] as const).map(type => {
+                const isSelected = filterDegreeType === type;
+                const typeCount = type === 'ALL' 
+                  ? programs.length 
+                  : programs.filter(p => p.degreeType === type).length;
+                
+                return (
+                  <div
+                    key={type}
+                    onClick={() => setFilterDegreeType(type)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: isSelected ? '1.5px solid #b45309' : '1px solid #e2e8f0',
+                      background: isSelected ? 'rgba(180, 83, 9, 0.05)' : '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.88rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? '#b45309' : 'var(--text-main)' }}>
+                      {type === 'ALL' ? 'Todos los Tipos' : `${type}s`}
+                    </span>
+                    <span style={{ fontSize: '0.74rem', background: '#ffffff', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '12px', color: '#64748b', fontWeight: 600 }}>
+                      {typeCount} programas
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Filters & Search */}
-          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
-              <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94a3b8' }} />
+          {/* ================= SECTION 2: LISTA DE PROGRAMAS ================= */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(180, 83, 9, 0.1)', color: '#b45309' }}>
+                  <School size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    {filterDegreeType === 'ALL' ? 'Todos los Programas' : `Programas de ${filterDegreeType}`}
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    {filteredPrograms.length} programas listados
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingProgram(null);
+                  setProgramFormData({ name: '', code: '', degreeType: filterDegreeType === 'Doctorado' ? 'Doctorado' : 'Maestría' });
+                  setProgramModalOpen(true);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #92400e',
+                  background: '#b45309',
+                  color: '#ffffff',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 2px rgba(180, 83, 9, 0.15)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#92400e'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#b45309'}
+              >
+                <Plus size={15} />
+                <span>Nuevo Programa</span>
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94a3b8' }} />
               <input
                 type="text"
                 value={searchProgram}
                 onChange={(e) => setSearchProgram(e.target.value)}
                 placeholder="Buscar programa por nombre o acrónimo..."
                 className="input-futuristic"
-                style={{ padding: '8px 12px 8px 34px', fontSize: '0.86rem', width: '100%' }}
+                style={{ padding: '8px 12px 8px 34px', fontSize: '0.84rem', width: '100%' }}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {(['ALL', 'Maestría', 'Doctorado'] as const).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setFilterDegreeType(type)}
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: filterDegreeType === type ? 700 : 500,
-                    border: filterDegreeType === type ? '1px solid #b45309' : '1px solid #e2e8f0',
-                    background: filterDegreeType === type ? 'rgba(180, 83, 9, 0.1)' : '#ffffff',
-                    color: filterDegreeType === type ? '#b45309' : '#64748b',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  {type === 'ALL' ? 'Todos los Tipos' : `${type}s`}
-                </button>
-              ))}
-            </div>
-          </div>
+            {/* Programs List */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              height: 'calc(100vh - 270px)',
+              maxHeight: 'calc(100vh - 270px)',
+              minHeight: '500px',
+              overflowY: 'auto',
+              paddingRight: '4px'
+            }}>
+              {filteredPrograms.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                  No se encontraron programas de posgrado.
+                </div>
+              ) : (
+                filteredPrograms.map(p => {
+                  const enrolledCount = programStats[p.name] || 0;
+                  const isMaestria = p.degreeType === 'Maestría';
 
-          {/* Grid of Programs */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '16px',
-            maxHeight: 'calc(100vh - 320px)',
-            overflowY: 'auto',
-            paddingRight: '4px'
-          }}>
-            {filteredPrograms.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                No se encontraron programas de posgrado con el filtro aplicado.
-              </div>
-            ) : (
-              filteredPrograms.map(p => {
-                const enrolledCount = programStats[p.name] || 0;
-                const isMaestria = p.degreeType === 'Maestría';
+                  return (
+                    <div
+                      key={p.id || p.name}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        transition: 'border-color 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                          {p.name}
+                          {p.code && (
+                            <span style={{
+                              marginLeft: '8px',
+                              fontSize: '0.7rem',
+                              fontFamily: 'monospace',
+                              fontWeight: 700,
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              color: '#334155'
+                            }}>
+                              {p.code}
+                            </span>
+                          )}
+                        </h4>
+                        
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => {
+                              setEditingProgram(p);
+                              setProgramFormData({
+                                name: p.name,
+                                code: p.code || '',
+                                degreeType: (p.degreeType === 'Doctorado' ? 'Doctorado' : 'Maestría')
+                              });
+                              setProgramModalOpen(true);
+                            }}
+                            title="Editar Programa"
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid #e2e8f0',
+                              background: '#f8fafc',
+                              color: '#475569',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                          >
+                            <Edit3 size={13} />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm({ type: 'program', id: p.id || '', name: p.name })}
+                            title="Eliminar Programa"
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid #fee2e2',
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fee2e2'; }}
+                          >
+                            <Trash2 size={13} />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </div>
 
-                return (
-                  <div
-                    key={p.id || p.name}
-                    style={{
-                      padding: '16px',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      background: '#ffffff',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                      transition: 'border-color 0.15s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{
                           fontSize: '0.72rem',
                           fontWeight: 700,
@@ -937,87 +1004,21 @@ export const TabAcademic: React.FC<TabAcademicProps> = ({ students = [], persons
                         }}>
                           {p.degreeType}
                         </span>
-
-                        {p.code && (
-                          <span style={{
-                            fontSize: '0.7rem',
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                            background: '#f8fafc',
-                            border: '1px solid #cbd5e1',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            color: '#334155'
-                          }}>
-                            {p.code}
-                          </span>
-                        )}
                       </div>
 
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35 }}>
-                        {p.name}
-                      </h4>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        Inscritos: <strong style={{ color: enrolledCount > 0 ? '#b45309' : '#64748b' }}>{enrolledCount}</strong>
-                      </span>
-
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button
-                          onClick={() => {
-                            setEditingProgram(p);
-                            setProgramFormData({
-                              name: p.name,
-                              code: p.code || '',
-                              degreeType: (p.degreeType === 'Doctorado' ? 'Doctorado' : 'Maestría')
-                            });
-                            setProgramModalOpen(true);
-                          }}
-                          title="Editar Programa"
-                          style={{
-                            padding: '5px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
-                            background: '#ffffff',
-                            color: '#475569',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '0.76rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          <Edit3 size={13} />
-                          <span>Editar</span>
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm({ type: 'program', id: p.id || '', name: p.name })}
-                          title="Eliminar Programa"
-                          style={{
-                            padding: '5px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #fee2e2',
-                            background: '#fef2f2',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '0.76rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                      <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          Inscritos matriculados:
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: enrolledCount > 0 ? '#b45309' : '#0f172a' }}>
+                          {enrolledCount} usuarios
+                        </span>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}

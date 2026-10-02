@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
   TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User,
-  Briefcase, MapPin, Building2
+  Briefcase, MapPin, Building2, Award
 } from 'lucide-react';
 import { 
   api, AnalyticsSummary, AttendanceRecord, Student, AuthSession, LibraryPerson,
@@ -56,6 +56,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editingPerson, setEditingPerson] = useState<LibraryPerson | undefined>(undefined);
   const [activePersonType, setActivePersonType] = useState<PersonTypeValue>('Todos');
   const [modalInitialType, setModalInitialType] = useState<PersonTypeValue>('Alumno');
+
+  const [academicSubTab, setAcademicSubTab] = useState<'pregrado' | 'posgrado'>('pregrado');
+  const [academicCounts, setAcademicCounts] = useState({ facs: 0, carrs: 0, progs: 0 });
 
   const getPersonTypeIcon = (type: string) => {
     switch (type) {
@@ -531,6 +534,79 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 })}
               </div>
             )}
+
+            {/* Sub-pestañas para Gestión Académica */}
+            {activeTab === 'academic' && (
+              <div 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#f8fafc',
+                  padding: '3px 4px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAcademicSubTab('pregrado')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 13px',
+                    borderRadius: '7px',
+                    border: academicSubTab === 'pregrado' ? '1px solid rgba(15, 81, 66, 0.25)' : '1px solid transparent',
+                    background: academicSubTab === 'pregrado' ? '#ffffff' : 'transparent',
+                    color: academicSubTab === 'pregrado' ? 'var(--urp-green-primary)' : '#64748b',
+                    fontSize: '0.84rem',
+                    fontWeight: academicSubTab === 'pregrado' ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: academicSubTab === 'pregrado' ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Building2 size={14} />
+                  <span>Pregrado: Fac. y Carr.</span>
+                  {academicCounts.facs > 0 && (
+                    <span style={{ fontSize: '0.7rem', background: academicSubTab === 'pregrado' ? 'var(--urp-green-light)' : '#e2e8f0', color: academicSubTab === 'pregrado' ? 'var(--urp-green-primary)' : '#475569', padding: '1px 6px', borderRadius: '10px', fontWeight: 700 }}>
+                      {academicCounts.facs} fac. / {academicCounts.carrs} carr.
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAcademicSubTab('posgrado')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 13px',
+                    borderRadius: '7px',
+                    border: academicSubTab === 'posgrado' ? '1px solid rgba(180, 83, 9, 0.25)' : '1px solid transparent',
+                    background: academicSubTab === 'posgrado' ? '#ffffff' : 'transparent',
+                    color: academicSubTab === 'posgrado' ? '#b45309' : '#64748b',
+                    fontSize: '0.84rem',
+                    fontWeight: academicSubTab === 'posgrado' ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: academicSubTab === 'posgrado' ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Award size={14} />
+                  <span>Posgrado: Maestrías y Doctorados</span>
+                  {academicCounts.progs > 0 && (
+                    <span style={{ fontSize: '0.7rem', background: academicSubTab === 'posgrado' ? 'rgba(180, 83, 9, 0.1)' : '#e2e8f0', color: academicSubTab === 'posgrado' ? '#b45309' : '#475569', padding: '1px 6px', borderRadius: '10px', fontWeight: 700 }}>
+                      {academicCounts.progs} programas
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -811,6 +887,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <TabAcademic 
               students={students}
               persons={persons}
+              subTab={academicSubTab}
+              setSubTab={setAcademicSubTab}
+              onCountsChange={setAcademicCounts}
               onTreeUpdated={() => {
                 api.getAllStudents().then(res => {
                   if (res) setStudents(res);

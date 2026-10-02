@@ -208,7 +208,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: '6px' }}>
             <button
-              onClick={() => exportAttendanceToExcel(filteredRecords, students)}
+              onClick={() => exportAttendanceToExcel(filteredRecords, students, undefined, activePersonType, codeToPerson)}
               title="Descargar reporte en formato Excel (.xlsx)"
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 13px',
@@ -224,10 +224,12 @@ export const TabReportes: React.FC<TabReportesProps> = ({
               onClick={() => exportAttendanceToPDF(
                 filteredRecords, 
                 null, 
-                `REPORTE DE ASISTENCIAS - ${activePersonType.toUpperCase()}S`, 
+                `REPORTE DE ASISTENCIAS - ${activePersonType.toUpperCase()}${activePersonType === 'Todos' ? '' : 'S'}`, 
                 (filterStartDate || filterEndDate) 
                   ? `Rango: ${filterStartDate || 'Inicio'} al ${filterEndDate || 'Fin'}`
-                  : ''
+                  : '',
+                activePersonType,
+                codeToPerson
               )}
               title="Descargar reporte en formato PDF (.pdf)"
               style={{

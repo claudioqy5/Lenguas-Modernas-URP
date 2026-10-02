@@ -231,7 +231,9 @@ export function exportAttendanceToPDF(
   records: AttendanceRecord[], 
   summary?: AnalyticsSummary | null,
   title: string = 'INFORME DE CONTROL DE ASISTENCIA',
-  subtitle: string = ''
+  subtitle: string = '',
+  personType: string = 'Todos',
+  codeToPerson?: Map<string, LibraryPerson>
 ) {
   const doc = new jsPDF();
 
@@ -263,21 +265,90 @@ export function exportAttendanceToPDF(
     doc.text(subtitle, 14, 44);
   }
 
-  const tableData = records.map((r, i) => [
-    (i + 1).toString(),
-    r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-    r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
-    r.studentCode,
-    r.studentName,
-    r.faculty || '—',
-    r.career,
-    r.visitReason,
-    r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
-  ]);
+  let head = [['#', 'Fecha', 'Hora', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
+  let tableData: any[][] = [];
+
+  if (personType === 'Todos') {
+    head = [['#', 'Fecha', 'Hora', 'Tipo', 'DNI/Cód', 'Usuario', 'Detalles', 'Motivo', 'Método']];
+    tableData = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      let details = r.career || r.faculty || '—';
+      if (p) {
+        if (p.personType === 'Alumno') details = `${p.faculty || ''} - ${p.career || ''}`;
+        else if (p.personType === 'Docente') details = p.faculty || '—';
+        else if (p.personType === 'Maestrando' || p.personType === 'Doctorando') details = p.program || '—';
+      }
+      return [
+        (i + 1).toString(),
+        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        p?.personType || r.personType || 'Alumno',
+        r.studentCode,
+        r.studentName,
+        details,
+        r.visitReason,
+        r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
+      ];
+    });
+  } else if (personType === 'Alumno') {
+    head = [['#', 'Fecha', 'Hora', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
+    tableData = records.map((r, i) => [
+      (i + 1).toString(),
+      r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+      r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+      r.studentCode,
+      r.studentName,
+      r.faculty || '—',
+      r.career,
+      r.visitReason,
+      r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
+    ]);
+  } else if (personType === 'Docente') {
+    head = [['#', 'Fecha', 'Hora', 'DNI/Cód', 'Docente', 'Facultad', 'Motivo', 'Método']];
+    tableData = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      return [
+        (i + 1).toString(),
+        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        r.studentCode,
+        r.studentName,
+        p?.faculty || r.faculty || '—',
+        r.visitReason,
+        r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
+      ];
+    });
+  } else if (personType === 'Maestrando' || personType === 'Doctorando') {
+    head = [['#', 'Fecha', 'Hora', 'DNI/Cód', personType, 'Programa', 'Motivo', 'Método']];
+    tableData = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      return [
+        (i + 1).toString(),
+        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        r.studentCode,
+        r.studentName,
+        p?.program || r.career || '—',
+        r.visitReason,
+        r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
+      ];
+    });
+  } else if (personType === 'Visitante') {
+    head = [['#', 'Fecha', 'Hora', 'DNI', 'Visitante', 'Motivo', 'Método']];
+    tableData = records.map((r, i) => [
+      (i + 1).toString(),
+      r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+      r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+      r.studentCode,
+      r.studentName,
+      r.visitReason,
+      r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
+    ]);
+  }
 
   autoTable(doc, {
     startY: subtitle ? 48 : 44,
-    head: [['#', 'Fecha', 'Hora', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']],
+    head: head,
     body: tableData,
     theme: 'striped',
     headStyles: {
@@ -305,33 +376,95 @@ export function exportAttendanceToPDF(
 export function exportAttendanceToExcel(
   records: AttendanceRecord[], 
   students?: Student[],
-  customFilename?: string
+  customFilename?: string,
+  personType: string = 'Todos',
+  codeToPerson?: Map<string, LibraryPerson>
 ) {
   const wb = XLSX.utils.book_new();
 
-  const attendanceRows = records.map((r, i) => ({
-    'N°': i + 1,
-    'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-    'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
-    'Código Estudiante': r.studentCode,
-    'Estudiante': r.studentName,
-    'Facultad': r.faculty || '—',
-    'Carrera': r.career,
-    'Motivo de Visita': r.visitReason,
-    'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
-  }));
+  let attendanceRows: any[] = [];
+  let cols: any[] = [];
+
+  if (personType === 'Todos') {
+    attendanceRows = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      let details = r.career || r.faculty || '—';
+      if (p) {
+        if (p.personType === 'Alumno') details = `${p.faculty || ''} - ${p.career || ''}`;
+        else if (p.personType === 'Docente') details = p.faculty || '—';
+        else if (p.personType === 'Maestrando' || p.personType === 'Doctorando') details = p.program || '—';
+      }
+      return {
+        'N°': i + 1,
+        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Tipo': p?.personType || r.personType || 'Alumno',
+        'DNI/Cód': r.studentCode,
+        'Usuario': r.studentName,
+        'Detalles': details,
+        'Motivo de Visita': r.visitReason,
+        'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+      };
+    });
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 30}, {wch: 22}, {wch: 18}];
+  } else if (personType === 'Alumno') {
+    attendanceRows = records.map((r, i) => ({
+      'N°': i + 1,
+      'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+      'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+      'Código Estudiante': r.studentCode,
+      'Estudiante': r.studentName,
+      'Facultad': r.faculty || '—',
+      'Carrera': r.career,
+      'Motivo de Visita': r.visitReason,
+      'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+    }));
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 28}, {wch: 28}, {wch: 22}, {wch: 18}];
+  } else if (personType === 'Docente') {
+    attendanceRows = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      return {
+        'N°': i + 1,
+        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'DNI/Cód': r.studentCode,
+        'Docente': r.studentName,
+        'Facultad': p?.faculty || r.faculty || '—',
+        'Motivo de Visita': r.visitReason,
+        'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+      };
+    });
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 28}, {wch: 22}, {wch: 18}];
+  } else if (personType === 'Maestrando' || personType === 'Doctorando') {
+    attendanceRows = records.map((r, i) => {
+      const p = codeToPerson?.get(r.studentCode);
+      return {
+        'N°': i + 1,
+        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'DNI/Cód': r.studentCode,
+        [personType]: r.studentName,
+        'Programa': p?.program || r.career || '—',
+        'Motivo de Visita': r.visitReason,
+        'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+      };
+    });
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 30}, {wch: 22}, {wch: 18}];
+  } else if (personType === 'Visitante') {
+    attendanceRows = records.map((r, i) => ({
+      'N°': i + 1,
+      'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
+      'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+      'DNI': r.studentCode,
+      'Visitante': r.studentName,
+      'Motivo de Visita': r.visitReason,
+      'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+    }));
+    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 30}, {wch: 22}, {wch: 18}];
+  }
+
   const wsAttendance = XLSX.utils.json_to_sheet(attendanceRows);
-  wsAttendance['!cols'] = [
-    { wch: 6 },
-    { wch: 12 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 30 },
-    { wch: 28 },
-    { wch: 28 },
-    { wch: 22 },
-    { wch: 18 }
-  ];
+  wsAttendance['!cols'] = cols;
   XLSX.utils.book_append_sheet(wb, wsAttendance, 'Asistencias');
 
   if (students && students.length > 0) {

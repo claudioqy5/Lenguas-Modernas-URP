@@ -195,7 +195,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
         program: defaultProgram,
         email: !isDniLikely && code ? `${code}@urp.edu.pe` : '',
         phone: '',
-        checkInNow: true,
+        checkInNow: false,
         visitReason: 'Lectura / Estudio',
         entryMethod: 'Manual'
       });
@@ -350,7 +350,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
 
           {!isEdit && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
-              {PERSON_TYPES.map(type => (
+              {PERSON_TYPES.filter(t => t !== 'Todos').map(type => (
                 <button
                   key={type}
                   type="button"
@@ -554,31 +554,6 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
               </div>
             </div>
 
-            {!isEdit && (
-              <div 
-                style={{ 
-                  padding: '12px 16px', 
-                  background: '#f8fafc', 
-                  borderRadius: '10px', 
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  id="checkInNow"
-                  checked={formData.checkInNow}
-                  onChange={(e) => setFormData({ ...formData, checkInNow: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#0f5142', cursor: 'pointer' }}
-                />
-                <label htmlFor="checkInNow" style={{ fontSize: '0.88rem', color: 'var(--text-main)', fontWeight: 500, cursor: 'pointer' }}>
-                  Marcar ingreso a la biblioteca San Jerónimo de inmediato al registrarme
-                </label>
-              </div>
-            )}
-
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
               <button
                 type="button"
@@ -627,7 +602,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
                 ) : (
                   <>
                     <Check size={16} /> 
-                    <span>{isEdit ? 'Guardar Cambios' : 'Guardar y Continuar'}</span>
+                    <span>{isEdit ? 'Guardar Cambios' : 'Crear Usuario'}</span>
                   </>
                 )}
               </button>
