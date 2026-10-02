@@ -35,12 +35,24 @@ namespace AsistenciaLenguas.Api.Data
                 var studentIndexOptions = new CreateIndexOptions { Unique = true };
                 Students.Indexes.CreateOne(new CreateIndexModel<Student>(studentIndexKeys, studentIndexOptions));
 
-                // Index on Attendance.Timestamp and DateString
+                // Index on Attendance.DateString
                 var attendanceDateKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.DateString);
                 AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceDateKeys));
 
+                // Index on Attendance.StudentCode
                 var attendanceStudentKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.StudentCode);
                 AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceStudentKeys));
+
+                // Index on Attendance.IsActive (for occupancy count queries)
+                var attendanceIsActiveKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.IsActive);
+                AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceIsActiveKeys));
+
+                // Compound index: (StudentCode + DateString + IsActive) for fast active-session lookup
+                var activeSessionKeys = Builders<AttendanceRecord>.IndexKeys
+                    .Ascending(a => a.StudentCode)
+                    .Ascending(a => a.DateString)
+                    .Ascending(a => a.IsActive);
+                AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(activeSessionKeys));
 
                 // Index on Faculty and Career
                 var facultyIndexKeys = Builders<Faculty>.IndexKeys.Ascending(f => f.Name);

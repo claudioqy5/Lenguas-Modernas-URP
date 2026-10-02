@@ -271,7 +271,10 @@ export const TabReportes: React.FC<TabReportesProps> = ({
           <thead>
             <tr style={{ borderBottom: '2px solid #e2e8f0', color: 'var(--text-subtle)', background: '#f8fafc' }}>
               <th style={{ padding: '12px 14px' }}>Fecha</th>
-              <th style={{ padding: '12px 14px' }}>Hora</th>
+              <th style={{ padding: '12px 14px' }}>Entrada</th>
+              <th style={{ padding: '12px 14px' }}>Salida</th>
+              <th style={{ padding: '12px 14px' }}>Duración</th>
+              <th style={{ padding: '12px 14px' }}>Estado</th>
               <th style={{ padding: '12px 14px' }}>Código</th>
               <th style={{ padding: '12px 14px' }}>Estudiante</th>
               <th style={{ padding: '12px 14px' }}>Facultad</th>
@@ -283,7 +286,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
           <tbody>
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <td colSpan={11} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   No se encontraron registros de asistencia.
                 </td>
               </tr>
@@ -316,6 +319,31 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                   <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                     <span style={{ color: 'var(--text-subtle)', fontWeight: 500 }}>{r.timeString}</span>
                   </td>
+                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: r.isActive ? 'var(--text-muted)' : 'var(--text-subtle)', fontWeight: 500 }}>
+                      {r.isActive ? '—' : (r.checkOutTimeString || '—')}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                    {r.isActive ? (
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>En curso</span>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--urp-green-primary)' }}>
+                        {r.durationMinutes < 60
+                          ? `${r.durationMinutes} min`
+                          : `${Math.floor(r.durationMinutes / 60)}h ${r.durationMinutes % 60}min`}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{
+                      fontSize: '0.75rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
+                      background: r.isActive ? 'rgba(5,150,105,0.1)' : 'rgba(100,116,139,0.1)',
+                      color: r.isActive ? '#059669' : '#64748b'
+                    }}>
+                      {r.isActive ? '🟢 En sala' : '⬜ Salió'}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: 'var(--urp-green-primary)', fontWeight: 700 }}>
                     {r.studentCode}
                   </td>
@@ -323,13 +351,13 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                     {r.studentName}
                   </td>
                   <td style={{ padding: '12px 14px' }}>
-                    <span style={{ 
-                      fontSize: '0.78rem', 
-                      background: 'rgba(15, 81, 66, 0.08)', 
-                      color: 'var(--urp-green-primary)', 
-                      padding: '3px 8px', 
-                      borderRadius: '6px', 
-                      fontWeight: 600 
+                    <span style={{
+                      fontSize: '0.78rem',
+                      background: 'rgba(15, 81, 66, 0.08)',
+                      color: 'var(--urp-green-primary)',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 600
                     }}>
                       {r.faculty}
                     </span>
@@ -343,7 +371,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                     </span>
                   </td>
                   <td style={{ padding: '12px 14px' }}>
-                    <span className="badge-tag" style={{ 
+                    <span className="badge-tag" style={{
                       background: r.entryMethod === 'Barcode' ? 'var(--urp-green-light)' : 'var(--urp-gold-light)',
                       color: r.entryMethod === 'Barcode' ? 'var(--urp-green-primary)' : 'var(--urp-gold-primary)',
                       border: r.entryMethod === 'Barcode' ? '1px solid rgba(15, 81, 66, 0.2)' : '1px solid rgba(180, 83, 9, 0.2)'

@@ -22,6 +22,13 @@ namespace AsistenciaLenguas.Api.DTOs
     {
         public bool Success { get; set; }
         public bool IsNewStudent { get; set; }
+
+        /// <summary>
+        /// true = this scan registered a CHECK-OUT (student was already inside).
+        /// false = this scan registered a CHECK-IN (new session opened).
+        /// </summary>
+        public bool IsCheckOut { get; set; } = false;
+
         public string Message { get; set; } = string.Empty;
         public Student? Student { get; set; }
         public AttendanceRecord? AttendanceRecord { get; set; }
@@ -29,5 +36,8 @@ namespace AsistenciaLenguas.Api.DTOs
         public int MaxCapacity { get; set; }
         public double OccupancyPercentage { get; set; }
         public LiteraryQuoteDto? Quote { get; set; }
+
+        /// <summary>Minutes spent in library (only meaningful when IsCheckOut = true).</summary>
+        public int DurationMinutes { get; set; } = 0;
     }
 }

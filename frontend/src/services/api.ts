@@ -35,6 +35,11 @@ export interface AttendanceRecord {
   visitReason: string;
   languageFocus: string;
   entryMethod: string;
+  // Checkout fields
+  isActive: boolean;
+  checkOutTimestamp?: string;
+  checkOutTimeString?: string;
+  durationMinutes: number;
 }
 
 export interface LiteraryQuote {
@@ -72,6 +77,8 @@ export interface AcademicTreeFaculty {
 export interface CheckInResponse {
   success: boolean;
   isNewStudent: boolean;
+  /** true = this scan was a CHECK-OUT, false = CHECK-IN */
+  isCheckOut: boolean;
   message: string;
   student?: Student;
   attendanceRecord?: AttendanceRecord;
@@ -79,6 +86,7 @@ export interface CheckInResponse {
   maxCapacity: number;
   occupancyPercentage: number;
   quote?: LiteraryQuote;
+  durationMinutes: number;
 }
 
 export interface OccupancyData {

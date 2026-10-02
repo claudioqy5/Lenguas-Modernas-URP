@@ -51,5 +51,27 @@ namespace AsistenciaLenguas.Api.Models
 
         [BsonElement("entryMethod")]
         public string EntryMethod { get; set; } = "Barcode"; // Barcode, Manual
+
+        // ── Checkout fields ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// true  = student is currently inside the library.
+        /// false = student has checked out (or session was auto-closed at 22:00 Peru).
+        /// </summary>
+        [BsonElement("isActive")]
+        public bool IsActive { get; set; } = true;
+
+        /// <summary>UTC timestamp of check-out. Null while student is still inside.</summary>
+        [BsonElement("checkOutTimestamp")]
+        [BsonIgnoreIfNull]
+        public DateTime? CheckOutTimestamp { get; set; }
+
+        /// <summary>Peru local time string of check-out (HH:mm:ss). Empty while inside.</summary>
+        [BsonElement("checkOutTimeString")]
+        public string CheckOutTimeString { get; set; } = string.Empty;
+
+        /// <summary>Total minutes spent inside the library. 0 while still active.</summary>
+        [BsonElement("durationMinutes")]
+        public int DurationMinutes { get; set; } = 0;
     }
 }
