@@ -1,7 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet, Users, Briefcase, MapPin, GraduationCap, Building2 } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet, Users } from 'lucide-react';
 import { Student, LibraryPerson, PersonTypeValue } from '../../services/api';
-import { exportStudentsToExcel, exportPersonsToExcel } from '../../utils/exportReports';
+import { exportCommunityMembersToExcel } from '../../utils/exportReports';
+
+export interface UnifiedCommunityMember {
+  id?: string;
+  originalStudent?: Student;
+  originalPerson?: LibraryPerson;
+  personType: PersonTypeValue;
+  code: string;
+  documentNumber: string;
+  fullName: string;
+  faculty: string;
+  career: string;
+  program: string;
+  email: string;
+  phone: string;
+  totalVisits: number;
+  lastVisitAt?: string;
+}
 
 interface TabComunidadProps {
   students: Student[];
@@ -36,62 +53,161 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 }) => {
   const [filterProgram, setFilterProgram] = useState('ALL');
 
-  // Filtered Students
-  const filteredStudents = useMemo(() => {
-    return students.filter(s => {
-      const matchSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.studentCode.includes(searchTerm) ||
-                          s.documentNumber.includes(searchTerm);
-      const matchCareer = filterCareer === 'ALL' || s.career === filterCareer;
-      const matchFaculty = filterFaculty === 'ALL' || s.faculty === filterFaculty;
-      return matchSearch && matchCareer && matchFaculty;
+  // 1. Unify all users (Students + LibraryPersons) with smart deduplication & merging
+  const combinedMembers = useMemo<UnifiedCommunityMember[]>(() => {
+    const list: UnifiedCommunityMember[] = [];
+    const keyIndexMap = new Map<string, number>();
+
+    // Step A: Add LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
+    persons.forEach(p => {
+      const member: UnifiedCommunityMember = {
+        id: p.id,
+        originalPerson: p,
+        personType: p.personType || 'Visitante',
+        code: (p.code || '').trim(),
+        documentNumber: (p.documentNumber || '').trim(),
+        fullName: p.fullName?.trim() || `${p.lastName || ''} ${p.firstName || ''}`.trim() || '—',
+        faculty: (p.faculty || '').trim(),
+        career: (p.career || '').trim(),
+        program: (p.program || '').trim(),
+        email: (p.email || '').trim(),
+        phone: (p.phone || '').trim(),
+        totalVisits: p.totalVisits || 0,
+        lastVisitAt: p.lastVisitAt
+      };
+
+      const idx = list.length;
+      list.push(member);
+
+      if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
+      if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
+      if (p.id) keyIndexMap.set(`id:${p.id}`, idx);
     });
-  }, [students, searchTerm, filterCareer, filterFaculty]);
 
-  // Filtered Persons (Docentes, Visitantes, Maestrandos, Doctorandos)
-  const filteredPersons = useMemo(() => {
-    return persons
-      .filter(p => activePersonType === 'Todos' || p.personType === activePersonType)
-      .filter(p => {
-        const fullName = p.fullName || `${p.lastName} ${p.firstName}`.trim();
-        const matchSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (p.code && p.code.includes(searchTerm)) ||
-                            (p.documentNumber && p.documentNumber.includes(searchTerm)) ||
-                            (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                            (p.program && p.program.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Step B: Add or merge Students
+    students.forEach(s => {
+      const codeKey = s.studentCode ? `code:${s.studentCode.trim().toLowerCase()}` : '';
+      const docKey = s.documentNumber ? `doc:${s.documentNumber.trim().toLowerCase()}` : '';
+      const idKey = s.id ? `id:${s.id}` : '';
 
-        let matchProgram = true;
-        if (activePersonType === 'Maestrando' || activePersonType === 'Doctorando') {
-          matchProgram = filterProgram === 'ALL' || p.program === filterProgram;
+      const existingIdx = 
+        (codeKey && keyIndexMap.has(codeKey)) ? keyIndexMap.get(codeKey) :
+        (docKey && keyIndexMap.has(docKey)) ? keyIndexMap.get(docKey) :
+        (idKey && keyIndexMap.has(idKey)) ? keyIndexMap.get(idKey) :
+        undefined;
+
+      if (existingIdx !== undefined) {
+        const existing = list[existingIdx];
+        if (!existing.originalStudent) existing.originalStudent = s;
+        if (!existing.faculty && s.faculty) existing.faculty = s.faculty.trim();
+        if (!existing.career && s.career) existing.career = s.career.trim();
+        if (!existing.code && s.studentCode) existing.code = s.studentCode.trim();
+        if (!existing.documentNumber && s.documentNumber) existing.documentNumber = s.documentNumber.trim();
+        if (!existing.email && s.email) existing.email = s.email.trim();
+        if (!existing.phone && s.phone) existing.phone = s.phone.trim();
+        if ((s.totalVisits || 0) > (existing.totalVisits || 0)) {
+          existing.totalVisits = s.totalVisits;
         }
+        if (!existing.lastVisitAt && s.lastVisitAt) {
+          existing.lastVisitAt = s.lastVisitAt;
+        }
+      } else {
+        const member: UnifiedCommunityMember = {
+          id: s.id,
+          originalStudent: s,
+          personType: 'Alumno',
+          code: (s.studentCode || '').trim(),
+          documentNumber: (s.documentNumber || '').trim(),
+          fullName: s.fullName?.trim() || `${s.lastName || ''} ${s.firstName || ''}`.trim() || '—',
+          faculty: (s.faculty || '').trim(),
+          career: (s.career || '').trim(),
+          program: '',
+          email: (s.email || '').trim(),
+          phone: (s.phone || '').trim(),
+          totalVisits: s.totalVisits || 0,
+          lastVisitAt: s.lastVisitAt
+        };
 
-        return matchSearch && matchProgram;
-      });
-  }, [persons, activePersonType, searchTerm, filterProgram]);
+        const idx = list.length;
+        list.push(member);
 
-  // Derived faculties & careers for Alumnos
-  const faculties = useMemo(() => Array.from(new Set(students.map(s => s.faculty))).filter(Boolean), [students]);
+        if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
+        if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
+        if (s.id) keyIndexMap.set(`id:${s.id}`, idx);
+      }
+    });
 
-  const availableCareers = useMemo(() => {
-    if (filterFaculty === 'ALL') {
-      return Array.from(new Set(students.map(s => s.career))).filter(Boolean);
-    }
-    return Array.from(new Set(students.filter(s => s.faculty === filterFaculty).map(s => s.career))).filter(Boolean);
-  }, [students, filterFaculty]);
+    return list;
+  }, [students, persons]);
 
-  // Available programs for Maestrandos or Doctorandos
-  const availablePrograms = useMemo(() => {
-    const list = persons
-      .filter(p => p.personType === activePersonType)
-      .map(p => p.program)
+  // 2. Filter unified community members
+  const filteredMembers = useMemo(() => {
+    return combinedMembers.filter(m => {
+      // Role filter
+      if (activePersonType !== 'Todos') {
+        if (m.personType !== activePersonType) return false;
+      }
+
+      // Faculty filter
+      if (filterFaculty !== 'ALL' && m.faculty !== filterFaculty) {
+        return false;
+      }
+
+      // Career filter
+      if (filterCareer !== 'ALL' && m.career !== filterCareer) {
+        return false;
+      }
+
+      // Program filter
+      if (filterProgram !== 'ALL' && m.program !== filterProgram) {
+        return false;
+      }
+
+      // Search filter across all attributes
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        const match =
+          m.fullName.toLowerCase().includes(q) ||
+          m.code.toLowerCase().includes(q) ||
+          m.documentNumber.toLowerCase().includes(q) ||
+          m.faculty.toLowerCase().includes(q) ||
+          m.career.toLowerCase().includes(q) ||
+          m.program.toLowerCase().includes(q) ||
+          m.email.toLowerCase().includes(q) ||
+          m.phone.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [combinedMembers, activePersonType, filterFaculty, filterCareer, filterProgram, searchTerm]);
+
+  // Dynamic filter lists
+  const faculties = useMemo(() => {
+    const list = combinedMembers
+      .filter(m => activePersonType === 'Todos' || m.personType === activePersonType)
+      .map(m => m.faculty)
       .filter(Boolean);
     return Array.from(new Set(list));
-  }, [persons, activePersonType]);
+  }, [combinedMembers, activePersonType]);
+
+  const availableCareers = useMemo(() => {
+    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
+    if (filterFaculty === 'ALL') {
+      return Array.from(new Set(relevant.map(m => m.career).filter(Boolean)));
+    }
+    return Array.from(new Set(relevant.filter(m => m.faculty === filterFaculty).map(m => m.career).filter(Boolean)));
+  }, [combinedMembers, activePersonType, filterFaculty]);
+
+  const availablePrograms = useMemo(() => {
+    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
+    return Array.from(new Set(relevant.map(m => m.program).filter(Boolean)));
+  }, [combinedMembers, activePersonType]);
 
   const handleFacultyFilterChange = (newFac: string) => {
     setFilterFaculty(newFac);
     if (newFac !== 'ALL') {
-      const allowed = students.filter(s => s.faculty === newFac).map(s => s.career);
+      const allowed = combinedMembers.filter(m => m.faculty === newFac).map(m => m.career);
       if (filterCareer !== 'ALL' && !allowed.includes(filterCareer)) {
         setFilterCareer('ALL');
       }
@@ -100,6 +216,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 
   const getRoleSingular = (type: PersonTypeValue) => {
     switch (type) {
+      case 'Todos': return 'Usuario';
       case 'Alumno': return 'Alumno';
       case 'Docente': return 'Docente';
       case 'Visitante': return 'Visitante';
@@ -111,7 +228,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 
   const getRolePlural = (type: PersonTypeValue) => {
     switch (type) {
-      case 'Alumno': return 'estudiantes';
+      case 'Todos': return 'usuarios';
+      case 'Alumno': return 'alumnos';
       case 'Docente': return 'docentes';
       case 'Visitante': return 'visitantes';
       case 'Maestrando': return 'maestrandos';
@@ -120,14 +238,29 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
     }
   };
 
-  const currentCount = activePersonType === 'Alumno' ? filteredStudents.length : filteredPersons.length;
+  const getRoleBadgeStyle = (type: PersonTypeValue) => {
+    switch (type) {
+      case 'Alumno':
+        return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+      case 'Docente':
+        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+      case 'Visitante':
+        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+      case 'Maestrando':
+        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
+      case 'Doctorando':
+        return { bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe' };
+      default:
+        return { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
+    }
+  };
 
   const handleExportExcel = () => {
-    if (activePersonType === 'Alumno') {
-      exportStudentsToExcel(filteredStudents);
-    } else {
-      exportPersonsToExcel(filteredPersons, activePersonType);
-    }
+    exportCommunityMembersToExcel(filteredMembers, activePersonType);
+  };
+
+  const handleNewClick = () => {
+    onNewPerson(activePersonType === 'Todos' ? 'Alumno' : activePersonType);
   };
 
   return (
@@ -140,15 +273,19 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${getRoleSingular(activePersonType).toLowerCase()} por nombre, código o DNI...`}
+            placeholder={
+              activePersonType === 'Todos'
+                ? 'Buscar en toda la comunidad por código, DNI, nombres, correo...'
+                : `Buscar ${getRoleSingular(activePersonType).toLowerCase()} por código, DNI o nombre...`
+            }
             className="input-futuristic"
-            style={{ paddingLeft: '40px', fontSize: '0.9rem', padding: '10px 14px 10px 40px' }}
+            style={{ paddingLeft: '40px', fontSize: '0.9rem', padding: '10px 14px 10px 40px', width: '100%' }}
           />
         </div>
         
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Filtros específicos de Alumnos */}
-          {activePersonType === 'Alumno' && (
+          {/* Filtros de Facultad y Carrera (cuando hay datos de facultad disponibles) */}
+          {faculties.length > 0 && (activePersonType === 'Todos' || activePersonType === 'Alumno') && (
             <>
               <select
                 value={filterFaculty}
@@ -171,8 +308,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             </>
           )}
 
-          {/* Filtros específicos de Posgrado (Maestrando / Doctorando) */}
-          {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando') && availablePrograms.length > 0 && (
+          {/* Filtro de Programa (para Maestrando, Doctorando o Todos cuando haya programas) */}
+          {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando' || (activePersonType === 'Todos' && availablePrograms.length > 0)) && availablePrograms.length > 0 && (
             <select
               value={filterProgram}
               onChange={(e) => setFilterProgram(e.target.value)}
@@ -184,8 +321,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             </select>
           )}
 
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px' }}>
-            Total: <span style={{ color: 'var(--urp-green-primary)' }}>{currentCount}</span> {getRolePlural(activePersonType)}
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px', whiteSpace: 'nowrap' }}>
+            Total: <span style={{ color: 'var(--urp-green-primary)' }}>{filteredMembers.length}</span> {getRolePlural(activePersonType)}
           </div>
 
           {/* Botón Excel */}
@@ -220,8 +357,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             <span>Excel</span>
           </button>
 
-          {/* Botón Difundir Correo (solo para Alumnos por ahora) */}
-          {activePersonType === 'Alumno' && onNavigateToDifusion && (
+          {/* Botón Difundir Correo */}
+          {onNavigateToDifusion && (
             <button
               onClick={onNavigateToDifusion}
               title="Ir a la sección de Difusión para redactar y enviar comunicados"
@@ -256,8 +393,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 
           {/* Botón Nuevo Registro Contextual */}
           <button
-            onClick={() => onNewPerson(activePersonType)}
-            title={`Registrar nuevo ${getRoleSingular(activePersonType).toLowerCase()}`}
+            onClick={handleNewClick}
+            title={activePersonType === 'Todos' ? 'Registrar nuevo usuario' : `Registrar nuevo ${getRoleSingular(activePersonType).toLowerCase()}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -281,222 +418,220 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             }}
           >
             <UserPlus size={15} />
-            <span>Nuevo {getRoleSingular(activePersonType)}</span>
+            <span>{activePersonType === 'Todos' ? 'Nuevo Usuario' : `Nuevo ${getRoleSingular(activePersonType)}`}</span>
           </button>
         </div>
       </div>
 
-      {/* Tabla de Comunidad */}
+      {/* Tabla Unificada de la Comunidad: Alumnos, Docentes, Visitantes, Maestrandos y Doctorandos */}
       <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.88rem' }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #e2e8f0', color: 'var(--text-subtle)', background: '#f8fafc' }}>
-              <th style={{ padding: '12px 14px', width: '40px' }}>#</th>
-              <th style={{ padding: '12px 14px' }}>DNI / Documento</th>
-              
-              {/* Código visible para Alumnos, Maestrandos, Doctorandos */}
-              {activePersonType !== 'Visitante' && activePersonType !== 'Docente' && (
-                <th style={{ padding: '12px 14px' }}>Código</th>
-              )}
-
-              <th style={{ padding: '12px 14px' }}>Apellidos y Nombres</th>
-
-              {/* Columnas específicas */}
-              {activePersonType === 'Alumno' && (
-                <>
-                  <th style={{ padding: '12px 14px' }}>Facultad</th>
-                  <th style={{ padding: '12px 14px' }}>Carrera</th>
-                </>
-              )}
-
-
-
-              {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando') && (
-                <th style={{ padding: '12px 14px' }}>
-                  {activePersonType === 'Maestrando' ? 'Programa de Maestría' : 'Programa de Doctorado'}
-                </th>
-              )}
-
-              <th style={{ padding: '12px 14px' }}>Correo Electrónico</th>
-              <th style={{ padding: '12px 14px' }}>Teléfono</th>
-              <th style={{ padding: '12px 14px' }}>Total Visitas</th>
-              <th style={{ padding: '12px 14px' }}>Última Visita</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center' }}>Acciones</th>
+            <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', background: '#f8fafc', fontSize: '0.80rem', fontWeight: 700, letterSpacing: '0.03em' }}>
+              <th style={{ padding: '12px 14px', width: '45px' }}>#</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>CODIGO</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>DNI</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '220px' }}>NOMBRES COMPLETOS</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>FACULTAD</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>CARRERA PROFESIONAL</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '180px' }}>PROGRAMA</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>CORREO</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>CELULAR</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>TOTAL VISITAS</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>ULTIMA VISITA</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', width: '90px' }}>ACCIONES</th>
             </tr>
           </thead>
           <tbody>
-            {/* VISTA 1: ALUMNOS */}
-            {activePersonType === 'Alumno' && (
-              filteredStudents.length === 0 ? (
-                <tr>
-                  <td colSpan={10} style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <Users size={36} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
-                    <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '4px' }}>
-                      No se encontraron alumnos registrados.
-                    </p>
-                    <p style={{ fontSize: '0.8rem' }}>Haz clic en "+ Nuevo Alumno" para registrar a un estudiante.</p>
+            {filteredMembers.length === 0 ? (
+              <tr>
+                <td colSpan={12} style={{ padding: '50px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Users size={38} style={{ margin: '0 auto 12px', opacity: 0.35, color: '#0f5142' }} />
+                  <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '4px' }}>
+                    No se encontraron {getRolePlural(activePersonType)} registrados.
+                  </p>
+                  <p style={{ fontSize: '0.82rem' }}>
+                    Haz clic en "{activePersonType === 'Todos' ? '+ Nuevo Usuario' : `+ Nuevo ${getRoleSingular(activePersonType)}`}" para agregar un nuevo registro a la comunidad.
+                  </p>
+                </td>
+              </tr>
+            ) : (
+              filteredMembers.map((member, idx) => (
+                <tr
+                  key={member.id || `${member.personType}-${member.code}-${member.documentNumber}-${idx}`}
+                  style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }}
+                  className="table-row-hover"
+                >
+                  {/* # */}
+                  <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem' }}>{idx + 1}</td>
+
+                  {/* CODIGO */}
+                  <td style={{ padding: '12px 14px' }}>
+                    {member.code ? (
+                      <span style={{ fontWeight: 700, color: 'var(--urp-green-primary)', fontFamily: 'monospace, sans-serif' }}>
+                        {member.code}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>—</span>
+                    )}
+                  </td>
+
+                  {/* DNI */}
+                  <td style={{ padding: '12px 14px' }}>
+                    {member.documentNumber ? (
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                        {member.documentNumber}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>—</span>
+                    )}
+                  </td>
+
+                  {/* NOMBRES COMPLETOS */}
+                  <td style={{ padding: '12px 14px', textAlign: 'left' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.88rem' }}>
+                      {member.fullName}
+                    </div>
+                    {activePersonType === 'Todos' && member.personType && (
+                      <div style={{ marginTop: '2px' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '1px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.70rem',
+                          fontWeight: 600,
+                          background: getRoleBadgeStyle(member.personType).bg,
+                          color: getRoleBadgeStyle(member.personType).color,
+                          border: `1px solid ${getRoleBadgeStyle(member.personType).border}`
+                        }}>
+                          {member.personType}
+                        </span>
+                      </div>
+                    )}
+                  </td>
+
+                  {/* FACULTAD */}
+                  <td style={{ padding: '12px 14px', textAlign: 'left', color: '#475569', fontSize: '0.84rem' }}>
+                    {member.faculty || '—'}
+                  </td>
+
+                  {/* CARRERA PROFESIONAL */}
+                  <td style={{ padding: '12px 14px', textAlign: 'left', color: '#475569', fontSize: '0.84rem' }}>
+                    {member.career || '—'}
+                  </td>
+
+                  {/* PROGRAMA */}
+                  <td style={{ padding: '12px 14px', textAlign: 'left', color: member.program ? '#0f5142' : '#94a3b8', fontWeight: member.program ? 600 : 400, fontSize: '0.84rem' }}>
+                    {member.program || '—'}
+                  </td>
+
+                  {/* CORREO */}
+                  <td style={{ padding: '12px 14px', textAlign: 'left', color: member.email ? '#64748b' : '#94a3b8', fontSize: '0.83rem' }}>
+                    {member.email || '—'}
+                  </td>
+
+                  {/* CELULAR */}
+                  <td style={{ padding: '12px 14px', color: member.phone ? '#64748b' : '#94a3b8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
+                    {member.phone || '—'}
+                  </td>
+
+                  {/* TOTAL VISITAS */}
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      background: 'rgba(15, 81, 66, 0.08)',
+                      color: 'var(--urp-green-primary)',
+                      fontWeight: 700,
+                      fontSize: '0.85rem'
+                    }}>
+                      {member.totalVisits || 0}
+                    </span>
+                  </td>
+
+                  {/* ULTIMA VISITA */}
+                  <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                    {member.lastVisitAt ? new Date(member.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'}
+                  </td>
+
+                  {/* ACCIONES */}
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => {
+                          if (member.originalPerson) {
+                            onEditPerson(member.originalPerson);
+                          } else if (member.originalStudent) {
+                            onEditPerson(member.originalStudent);
+                          } else {
+                            onEditPerson({
+                              id: member.id,
+                              personType: member.personType,
+                              code: member.code,
+                              documentNumber: member.documentNumber,
+                              firstName: '',
+                              lastName: '',
+                              fullName: member.fullName,
+                              faculty: member.faculty,
+                              career: member.career,
+                              program: member.program,
+                              email: member.email,
+                              phone: member.phone,
+                              totalVisits: member.totalVisits,
+                              lastVisitAt: member.lastVisitAt
+                            });
+                          }
+                        }}
+                        title={`Editar datos de ${member.fullName}`}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          color: '#0284c7',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#0284c7';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.color = '#0284c7';
+                        }}
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                      <button
+                        onClick={() => onDeletePerson(member.id, member.personType)}
+                        title={`Eliminar ${getRoleSingular(member.personType).toLowerCase()} ${member.fullName}`}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: '1px solid #fee2e2',
+                          background: '#fef2f2',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#fef2f2';
+                          e.currentTarget.style.color = '#ef4444';
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ) : (
-                filteredStudents.map((s, idx) => (
-                  <tr key={s.id || s.studentCode} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} className="table-row-hover">
-                    <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem' }}>{idx + 1}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>{s.documentNumber || '—'}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--urp-green-primary)' }}>{s.studentCode}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>{s.fullName}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748b' }}>{s.faculty || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748b' }}>{s.career || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.85rem' }}>{s.email || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748b' }}>{s.phone || '—'}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '3px 10px',
-                        borderRadius: '20px',
-                        background: 'rgba(15, 81, 66, 0.08)',
-                        color: 'var(--urp-green-primary)',
-                        fontWeight: 700,
-                        fontSize: '0.85rem'
-                      }}>
-                        {s.totalVisits || 0}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.82rem' }}>
-                      {s.lastVisitAt ? new Date(s.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'}
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => onEditPerson(s)}
-                          title="Editar datos del alumno"
-                          style={{
-                            padding: '6px',
-                            borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
-                            background: '#ffffff',
-                            color: '#0284c7',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => onDeletePerson(s.id, 'Alumno')}
-                          title="Eliminar alumno"
-                          style={{
-                            padding: '6px',
-                            borderRadius: '6px',
-                            border: '1px solid #fee2e2',
-                            background: '#fef2f2',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )
-            )}
-
-            {/* VISTA 2: OTROS ROLES (Docente, Visitante, Maestrando, Doctorando) */}
-            {activePersonType !== 'Alumno' && (
-              filteredPersons.length === 0 ? (
-                <tr>
-                  <td colSpan={10} style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    {activePersonType === 'Docente' && <Briefcase size={36} style={{ margin: '0 auto 10px', opacity: 0.3 }} />}
-                    {activePersonType === 'Visitante' && <MapPin size={36} style={{ margin: '0 auto 10px', opacity: 0.3 }} />}
-                    {activePersonType === 'Maestrando' && <GraduationCap size={36} style={{ margin: '0 auto 10px', opacity: 0.3 }} />}
-                    {activePersonType === 'Doctorando' && <Building2 size={36} style={{ margin: '0 auto 10px', opacity: 0.3 }} />}
-                    <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '4px' }}>
-                      No se encontraron {getRolePlural(activePersonType)} registrados.
-                    </p>
-                    <p style={{ fontSize: '0.8rem' }}>Haz clic en "+ Nuevo {getRoleSingular(activePersonType)}" para agregar un nuevo registro.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredPersons.map((p, idx) => (
-                  <tr key={p.id || p.documentNumber} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s ease' }} className="table-row-hover">
-                    <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem' }}>{idx + 1}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>{p.documentNumber || '—'}</td>
-                    
-                    {activePersonType !== 'Visitante' && activePersonType !== 'Docente' && (
-                      <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--urp-green-primary)' }}>
-                        {p.code || '—'}
-                      </td>
-                    )}
-
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                      {p.fullName || `${p.lastName} ${p.firstName}`.trim()}
-                    </td>
-
-
-
-                    {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando') && (
-                      <td style={{ padding: '12px 14px', color: '#0f5142', fontWeight: 600, fontSize: '0.84rem' }}>
-                        {p.program || '—'}
-                      </td>
-                    )}
-
-                    <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.85rem' }}>{p.email || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748b' }}>{p.phone || '—'}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '3px 10px',
-                        borderRadius: '20px',
-                        background: 'rgba(15, 81, 66, 0.08)',
-                        color: 'var(--urp-green-primary)',
-                        fontWeight: 700,
-                        fontSize: '0.85rem'
-                      }}>
-                        {p.totalVisits || 0}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.82rem' }}>
-                      {p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'}
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => onEditPerson(p)}
-                          title={`Editar datos de ${getRoleSingular(activePersonType).toLowerCase()}`}
-                          style={{
-                            padding: '6px',
-                            borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
-                            background: '#ffffff',
-                            color: '#0284c7',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => onDeletePerson(p.id, activePersonType)}
-                          title={`Eliminar ${getRoleSingular(activePersonType).toLowerCase()}`}
-                          style={{
-                            padding: '6px',
-                            borderRadius: '6px',
-                            border: '1px solid #fee2e2',
-                            background: '#fef2f2',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )
+              ))
             )}
           </tbody>
         </table>

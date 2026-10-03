@@ -567,6 +567,58 @@ export function exportPersonsToExcel(persons: LibraryPerson[], personType: strin
   XLSX.writeFile(wb, `Directorio_${personType}s_URP_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
+export interface UnifiedCommunityRow {
+  code: string;
+  documentNumber: string;
+  fullName: string;
+  faculty: string;
+  career: string;
+  program: string;
+  email: string;
+  phone: string;
+  totalVisits: number;
+  lastVisitAt?: string;
+  personType?: string;
+}
+
+/**
+ * Exporta la tabla unificada de la Comunidad a Excel con las 11 columnas exactas
+ */
+export function exportCommunityMembersToExcel(members: UnifiedCommunityRow[], categoryLabel: string = 'Todos') {
+  const wb = XLSX.utils.book_new();
+  const rows = members.map((m, i) => ({
+    'N°': i + 1,
+    'CODIGO': m.code || '—',
+    'DNI': m.documentNumber || '—',
+    'NOMBRES COMPLETOS': m.fullName || '—',
+    'FACULTAD': m.faculty || '—',
+    'CARRERA PROFESIONAL': m.career || '—',
+    'PROGRAMA': m.program || '—',
+    'CORREO': m.email || '—',
+    'CELULAR': m.phone || '—',
+    'TOTAL VISITAS': m.totalVisits || 0,
+    'ULTIMA VISITA': m.lastVisitAt ? new Date(m.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 6 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 32 },
+    { wch: 28 },
+    { wch: 28 },
+    { wch: 30 },
+    { wch: 28 },
+    { wch: 15 },
+    { wch: 14 },
+    { wch: 16 }
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Comunidad_URP');
+  const safeLabel = categoryLabel.replace(/[^a-zA-Z0-9]/g, '_');
+  XLSX.writeFile(wb, `Comunidad_URP_${safeLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 /**
  * Exporta el reporte estadístico histórico (asistencias, días concurridos, top estudiantes, carreras y motivos) a PDF
  */

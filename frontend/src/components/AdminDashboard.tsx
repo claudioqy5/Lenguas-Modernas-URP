@@ -848,7 +848,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               activePersonType={activePersonType}
               onNewPerson={(type) => {
                 setEditingPerson(undefined);
-                setModalInitialType(type);
+                setModalInitialType(type === 'Todos' ? 'Alumno' : type);
                 setShowNewStudentModal(true);
               }}
               onEditPerson={(person) => {
