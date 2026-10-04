@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
@@ -121,6 +121,18 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
       const timeB = new Date(b.timestamp).getTime();
       return timeB - timeA;
     }).slice(0, 7); // Show top 7 recent entries
+  }, [filteredRecords]);
+
+  // Extract recent exits for the selected date
+  const recentExits = useMemo(() => {
+    if (!filteredRecords) return [];
+    // Sort descending by checkOutTimestamp (most recent first)
+    const checkedOut = filteredRecords.filter(r => r.checkOutTimestamp && r.durationMinutes > 0);
+    return checkedOut.sort((a, b) => {
+      const timeA = new Date(a.checkOutTimestamp!).getTime();
+      const timeB = new Date(b.checkOutTimestamp!).getTime();
+      return timeB - timeA;
+    }).slice(0, 7); // Show top 7 recent exits
   }, [filteredRecords]);
 
   // Compute peak hours data dynamically when records are filtered for a selected date
@@ -363,13 +375,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
             <div style={{ height: '240px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chronologicalDurationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="durationColorLight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="var(--urp-gold-primary)" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
+                <LineChart data={chronologicalDurationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
@@ -378,8 +384,8 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                     formatter={(val: any, name: any, props: any) => [`${val} minutos`, props.payload.name]}
                     labelFormatter={(label) => `Hora de ingreso: ${label}`}
                   />
-                  <Area type="monotone" dataKey="duration" stroke="var(--urp-gold-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#durationColorLight)" />
-                </AreaChart>
+                  <Line type="monotone" dataKey="duration" stroke="var(--urp-gold-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: "var(--urp-gold-primary)", stroke: "#fff", strokeWidth: 2 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -631,6 +637,99 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Últimas Salidas (Actividad de Salida en Vivo) */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+                <Clock size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Últimas Salidas Registradas
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {formattedDateLabel ? `Salidas recientes del ${formattedDateLabel}` : 'Salidas en tiempo real de hoy'}
+                </p>
+              </div>
+            </div>
+
+            {recentExits.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px' }}>
+                <Clock size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>No hay registros de salidas para esta fecha.</p>
+                <p style={{ fontSize: '0.85rem' }}>Aún no se ha retirado nadie.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {recentExits.map((record, i) => (
+                  <div 
+                    key={record.id || i}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: '#f8fafc',
+                      border: '1px solid #f1f5f9',
+                      transition: 'all 0.2s ease',
+                      cursor: 'default'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.borderColor = 'var(--urp-gold-light)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#f1f5f9';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        borderRadius: '50%', 
+                        background: 'var(--urp-gold-light)', 
+                        color: 'var(--urp-gold-primary)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '1.1rem'
+                      }}>
+                        {record.studentName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 2px 0' }}>
+                          {record.studentName}
+                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+                          <span>{record.studentCode}</span>
+                          <span style={{ color: '#cbd5e1' }}>•</span>
+                          <span>{record.career}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '2px' }}>
+                        <Clock size={12} />
+                        {record.checkOutTimeString}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--urp-gold-primary)', fontWeight: 600 }}>
+                        {record.durationMinutes} minutos
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
