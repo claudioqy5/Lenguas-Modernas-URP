@@ -585,27 +585,46 @@ export interface UnifiedCommunityRow {
  * Exporta la tabla unificada de la Comunidad a Excel con las 11 columnas exactas
  */
 export function exportCommunityMembersToExcel(members: UnifiedCommunityRow[], categoryLabel: string = 'Todos') {
+  if (!members || members.length === 0) {
+    alert('No hay registros para exportar con los filtros seleccionados.');
+    return;
+  }
+
   const wb = XLSX.utils.book_new();
-  const rows = members.map((m, i) => ({
-    'N°': i + 1,
-    'CODIGO': m.code || '—',
-    'DNI': m.documentNumber || '—',
-    'NOMBRES COMPLETOS': m.fullName || '—',
-    'FACULTAD': m.faculty || '—',
-    'CARRERA PROFESIONAL': m.career || '—',
-    'PROGRAMA': m.program || '—',
-    'CORREO': m.email || '—',
-    'CELULAR': m.phone || '—',
-    'TOTAL VISITAS': m.totalVisits || 0,
-    'ULTIMA VISITA': m.lastVisitAt ? new Date(m.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas',
-  }));
+  const rows = members.map((m, i) => {
+    const row: Record<string, any> = {
+      'N°': i + 1,
+      'CODIGO': m.code || '—',
+      'DNI': m.documentNumber || '—',
+      'NOMBRES COMPLETOS': m.fullName || '—',
+    };
+
+    if (categoryLabel === 'Todos') {
+      row['TIPO DE USUARIO'] = m.personType || '—';
+    }
+
+    row['FACULTAD'] = m.faculty || '—';
+    row['CARRERA PROFESIONAL'] = m.career || '—';
+    row['PROGRAMA'] = m.program || '—';
+    row['CORREO'] = m.email || '—';
+    row['CELULAR'] = m.phone || '—';
+    row['TOTAL VISITAS'] = m.totalVisits || 0;
+    row['ULTIMA VISITA'] = m.lastVisitAt ? new Date(m.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas';
+
+    return row;
+  });
 
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [
+  const cols = [
     { wch: 6 },
     { wch: 16 },
     { wch: 14 },
-    { wch: 32 },
+    { wch: 32 }
+  ];
+  if (categoryLabel === 'Todos') {
+    cols.push({ wch: 16 });
+  }
+  cols.push(
     { wch: 28 },
     { wch: 28 },
     { wch: 30 },
@@ -613,10 +632,21 @@ export function exportCommunityMembersToExcel(members: UnifiedCommunityRow[], ca
     { wch: 15 },
     { wch: 14 },
     { wch: 16 }
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, 'Comunidad_URP');
-  const safeLabel = categoryLabel.replace(/[^a-zA-Z0-9]/g, '_');
-  XLSX.writeFile(wb, `Comunidad_URP_${safeLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  );
+  ws['!cols'] = cols;
+
+  const pluralRoleMap: Record<string, string> = {
+    'Todos': 'Todos_los_Usuarios',
+    'Alumno': 'Alumnos',
+    'Docente': 'Docentes',
+    'Visitante': 'Visitantes',
+    'Maestrando': 'Maestrandos',
+    'Doctorando': 'Doctorandos'
+  };
+
+  const rolePlural = pluralRoleMap[categoryLabel] || categoryLabel;
+  XLSX.utils.book_append_sheet(wb, ws, rolePlural.slice(0, 31));
+  XLSX.writeFile(wb, `Comunidad_URP_${rolePlural}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /**
