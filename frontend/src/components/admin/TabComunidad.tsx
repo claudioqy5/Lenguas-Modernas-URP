@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, UserPlus, Edit3, Trash2, FileSpreadsheet, Users } from 'lucide-react';
+import { Search, UserPlus, Edit3, Trash2, FileSpreadsheet, Users, Phone, Mail } from 'lucide-react';
 import { Student, LibraryPerson, PersonTypeValue, PERSON_TYPES, api, PostgraduateProgram } from '../../services/api';
 import { exportCommunityMembersToExcel } from '../../utils/exportReports';
 
@@ -334,8 +334,8 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
         marginBottom: '20px'
       }}>
         
-        {/* Zona Izquierda: Buscador, Lista Desplegable de Roles y Filtros Contextuales */}
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flex: 1, minWidth: '320px' }}>
+        {/* Zona Izquierda: Buscador + Filtros Contextuales (aparecen a la izquierda del selector de roles) */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flex: 1, minWidth: '300px' }}>
           
           {/* 1. Buscador */}
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
@@ -354,30 +354,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             />
           </div>
 
-          {/* 2. Lista Desplegable de Roles (Todos, Alumnos, Docentes, Visitantes, Maestrandos, Doctorandos) */}
-          <select
-            value={activePersonType}
-            onChange={(e) => handleRoleChange(e.target.value as PersonTypeValue)}
-            className="input-futuristic"
-            style={{
-              fontSize: '0.88rem',
-              padding: '9px 14px',
-              width: 'auto',
-              fontWeight: 700,
-              color: 'var(--urp-green-primary)',
-              background: '#ffffff',
-              border: '1px solid rgba(15, 81, 66, 0.3)'
-            }}
-          >
-            <option value="Todos">Todos ({getRoleCount('Todos')})</option>
-            <option value="Alumno">Alumnos ({getRoleCount('Alumno')})</option>
-            <option value="Docente">Docentes ({getRoleCount('Docente')})</option>
-            <option value="Visitante">Visitantes ({getRoleCount('Visitante')})</option>
-            <option value="Maestrando">Maestrandos ({getRoleCount('Maestrando')})</option>
-            <option value="Doctorando">Doctorandos ({getRoleCount('Doctorando')})</option>
-          </select>
-
-          {/* 3. Filtros Contextuales que aparecen al costado según el rol seleccionado */}
+          {/* 2. Filtros Contextuales que aparecen a la izquierda del selector de rol */}
           {/* CASO A: ALUMNOS (Facultad y Carrera) */}
           {activePersonType === 'Alumno' && faculties.length > 0 && (
             <>
@@ -442,8 +419,32 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
           )}
         </div>
 
-        {/* Zona Derecha: Contador de Resultados + Botón Excel + Botón Nuevo Usuario */}
+        {/* Zona Derecha: Selector de Rol (fijo a la derecha) + Contador de Resultados + Botón Excel + Botón Nuevo Usuario */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Selector de Rol: Se sitúa a la derecha para que los filtros contextuales aparezcan a su izquierda y este selector permanezca fijo en su posición */}
+          <select
+            value={activePersonType}
+            onChange={(e) => handleRoleChange(e.target.value as PersonTypeValue)}
+            className="input-futuristic"
+            style={{
+              fontSize: '0.88rem',
+              padding: '9px 14px',
+              width: 'auto',
+              minWidth: '155px',
+              fontWeight: 700,
+              color: 'var(--urp-green-primary)',
+              background: '#ffffff',
+              border: '1px solid rgba(15, 81, 66, 0.3)'
+            }}
+          >
+            <option value="Todos">Todos ({getRoleCount('Todos')})</option>
+            <option value="Alumno">Alumnos ({getRoleCount('Alumno')})</option>
+            <option value="Docente">Docentes ({getRoleCount('Docente')})</option>
+            <option value="Visitante">Visitantes ({getRoleCount('Visitante')})</option>
+            <option value="Maestrando">Maestrandos ({getRoleCount('Maestrando')})</option>
+            <option value="Doctorando">Doctorandos ({getRoleCount('Doctorando')})</option>
+          </select>
+
           <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px', whiteSpace: 'nowrap' }}>
             Total: <span style={{ color: 'var(--urp-green-primary)', fontWeight: 700 }}>{filteredMembers.length}</span> {getRolePlural(activePersonType)}
           </div>
@@ -523,8 +524,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
               <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>FACULTAD</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>CARRERA PROFESIONAL</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '180px' }}>PROGRAMA</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>CORREO</th>
-              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>CELULAR</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '190px' }}>CONTACTO</th>
               <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>TOTAL VISITAS</th>
               <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>ULTIMA VISITA</th>
               <th style={{ padding: '12px 14px', textAlign: 'center', width: '90px' }}>ACCIONES</th>
@@ -533,7 +533,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
           <tbody>
             {filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={12} style={{ padding: '50px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <td colSpan={11} style={{ padding: '50px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   <Users size={38} style={{ margin: '0 auto 12px', opacity: 0.35, color: '#0f5142' }} />
                   <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '4px' }}>
                     No se encontraron {getRolePlural(activePersonType)} registrados.
@@ -614,14 +614,38 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                     {member.program || '—'}
                   </td>
 
-                  {/* CORREO */}
-                  <td style={{ padding: '12px 14px', textAlign: 'left', color: member.email ? '#64748b' : '#94a3b8', fontSize: '0.83rem' }}>
-                    {member.email || '—'}
-                  </td>
+                  {/* CONTACTO: Celular arriba, Correo abajo */}
+                  <td style={{ padding: '8px 14px', textAlign: 'left', verticalAlign: 'middle' }}>
+                    {/* Celular arriba */}
+                    <div style={{
+                      fontSize: '0.84rem',
+                      fontWeight: member.phone ? 600 : 400,
+                      color: member.phone ? 'var(--text-main)' : '#94a3b8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <Phone size={12} style={{ color: member.phone ? 'var(--urp-green-primary)' : '#cbd5e1', flexShrink: 0 }} />
+                      <span>{member.phone || '—'}</span>
+                    </div>
 
-                  {/* CELULAR */}
-                  <td style={{ padding: '12px 14px', color: member.phone ? '#64748b' : '#94a3b8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
-                    {member.phone || '—'}
+                    {/* Correo abajo */}
+                    <div style={{
+                      fontSize: '0.78rem',
+                      color: member.email ? '#0284c7' : '#94a3b8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginTop: '3px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '210px'
+                    }} title={member.email || undefined}>
+                      <Mail size={12} style={{ color: member.email ? '#0284c7' : '#cbd5e1', flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.email || '—'}</span>
+                    </div>
                   </td>
 
                   {/* TOTAL VISITAS */}
