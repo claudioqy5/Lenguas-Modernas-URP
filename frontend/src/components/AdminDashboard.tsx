@@ -370,7 +370,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <GraduationCap size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Facultades y Carreras</span>
+              <GraduationCap size={18} style={{ minWidth: '18px' }} /> <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease' }}>Programas Académicos</span>
             </div>
           </button>
 
@@ -480,13 +480,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {activeTab === 'historico' && 'Estadísticas Históricas'}
               {activeTab === 'records' && 'Reporte de Asistencias'}
               {activeTab === 'students' && 'Comunidad'}
-              {activeTab === 'academic' && 'Gestión de Facultades y Carreras'}
+              {activeTab === 'academic' && 'Programas Académicos'}
               {activeTab === 'difusion' && 'Difusión Institucional'}
               {activeTab === 'settings' && 'Mi Perfil'}
             </h2>
 
-            {/* Sub-pestañas de Roles en la barra superior para Reportes y Comunidad */}
-            {(activeTab === 'records' || activeTab === 'students') && (
+            {/* Sub-pestañas de Roles en la barra superior solo para Reportes */}
+            {activeTab === 'records' && (
               <div 
                 style={{
                   display: 'inline-flex',
@@ -846,6 +846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               filterFaculty={filterFaculty}
               setFilterFaculty={setFilterFaculty}
               activePersonType={activePersonType}
+              setActivePersonType={setActivePersonType}
               onNewPerson={(type) => {
                 setEditingPerson(undefined);
                 setModalInitialType(type === 'Todos' ? 'Alumno' : type);
@@ -879,7 +880,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* TAB 5: DIFUSIÓN INSTITUCIONAL */}
           {activeTab === 'difusion' && (
-            <TabDifusion students={students} />
+            <TabDifusion students={students} persons={persons} />
           )}
 
           {/* TAB 6: GESTIÓN DE FACULTADES, CARRERAS Y POSGRADO */}

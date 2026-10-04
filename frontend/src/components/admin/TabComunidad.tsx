@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet, Users } from 'lucide-react';
-import { Student, LibraryPerson, PersonTypeValue } from '../../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet, Users, GraduationCap, Briefcase, MapPin, School, Building2 } from 'lucide-react';
+import { Student, LibraryPerson, PersonTypeValue, PERSON_TYPES, api, PostgraduateProgram } from '../../services/api';
 import { exportCommunityMembersToExcel } from '../../utils/exportReports';
 
 export interface UnifiedCommunityMember {
@@ -30,11 +30,34 @@ interface TabComunidadProps {
   filterFaculty: string;
   setFilterFaculty: (val: string) => void;
   activePersonType: PersonTypeValue;
+  setActivePersonType?: (val: PersonTypeValue) => void;
   onNewPerson: (type: PersonTypeValue) => void;
   onEditPerson: (person: LibraryPerson | Student) => void;
   onDeletePerson: (id?: string, type?: PersonTypeValue) => void;
   onNavigateToDifusion?: () => void;
 }
+
+const DEFAULT_MAESTRIAS = [
+  "Maestría en Administración y Crecimiento Empresarial",
+  "Arquitectura con Mención en Gestión Empresarial",
+  "Arquitectura y Sostenibilidad",
+  "Ciencia de Datos e Inteligencia Artificial",
+  "Ciencia Política",
+  "Comportamiento Organizacional y Recursos Humanos",
+  "Docencia Superior e Innovación Educativa",
+  "Ecología y Gestión Ambiental",
+  "Ingeniería Informática con Mención en Ingeniería de Software",
+  "Ingeniería Vial con Mención en Carreteras, Puentes y Túneles",
+  "Museología y Gestión Cultural",
+  "Psicología Clínica y de la Salud",
+  "Salud Pública con Mención en Administración Hospitalaria y de Servicios de Salud",
+  "Supply Chain Management"
+];
+
+const DEFAULT_DOCTORADOS = [
+  "Administración de Negocios Globales",
+  "Ciencia Política y Relaciones Internacionales"
+];
 
 export const TabComunidad: React.FC<TabComunidadProps> = ({
   students,
@@ -46,19 +69,34 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
   filterFaculty,
   setFilterFaculty,
   activePersonType,
+  setActivePersonType,
   onNewPerson,
   onEditPerson,
   onDeletePerson,
   onNavigateToDifusion
 }) => {
   const [filterProgram, setFilterProgram] = useState('ALL');
+  const [dbPrograms, setDbPrograms] = useState<PostgraduateProgram[]>([]);
 
-  // 1. Unify all users (Students + LibraryPersons) with smart deduplication & merging
+  // Cargar programas oficiales de la BD para tener el catálogo completo en los filtros
+  useEffect(() => {
+    let isMounted = true;
+    api.getPostgraduatePrograms().then(progs => {
+      if (isMounted && progs && progs.length > 0) {
+        setDbPrograms(progs);
+      }
+    }).catch(err => {
+      console.warn('Could not load programs in TabComunidad:', err);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // 1. Unificar todos los usuarios (Students + LibraryPersons) con deduplicación inteligente
   const combinedMembers = useMemo<UnifiedCommunityMember[]>(() => {
     const list: UnifiedCommunityMember[] = [];
     const keyIndexMap = new Map<string, number>();
 
-    // Step A: Add LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
+    // Paso A: Agregar LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
     persons.forEach(p => {
       const member: UnifiedCommunityMember = {
         id: p.id,
@@ -84,7 +122,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
       if (p.id) keyIndexMap.set(`id:${p.id}`, idx);
     });
 
-    // Step B: Add or merge Students
+    // Paso B: Agregar o fusionar Students
     students.forEach(s => {
       const codeKey = s.studentCode ? `code:${s.studentCode.trim().toLowerCase()}` : '';
       const docKey = s.documentNumber ? `doc:${s.documentNumber.trim().toLowerCase()}` : '';
@@ -140,30 +178,59 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
     return list;
   }, [students, persons]);
 
-  // 2. Filter unified community members
+  // Catálogos dinámicos para los filtros específicos
+  const maestriaProgramsList = useMemo(() => {
+    const fromDb = dbPrograms.filter(p => p.degreeType === 'Maestría').map(p => p.name);
+    const fromMembers = combinedMembers.filter(m => m.personType === 'Maestrando').map(m => m.program).filter(Boolean);
+    const set = new Set([...fromDb, ...DEFAULT_MAESTRIAS, ...fromMembers]);
+    return Array.from(set).sort();
+  }, [dbPrograms, combinedMembers]);
+
+  const doctoradoProgramsList = useMemo(() => {
+    const fromDb = dbPrograms.filter(p => p.degreeType === 'Doctorado').map(p => p.name);
+    const fromMembers = combinedMembers.filter(m => m.personType === 'Doctorando').map(m => m.program).filter(Boolean);
+    const set = new Set([...fromDb, ...DEFAULT_DOCTORADOS, ...fromMembers]);
+    return Array.from(set).sort();
+  }, [dbPrograms, combinedMembers]);
+
+  const faculties = useMemo(() => {
+    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
+    const list = relevant.map(m => m.faculty).filter(Boolean);
+    return Array.from(new Set(list)).sort();
+  }, [combinedMembers, activePersonType]);
+
+  const availableCareers = useMemo(() => {
+    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
+    if (filterFaculty === 'ALL') {
+      return Array.from(new Set(relevant.map(m => m.career).filter(Boolean))).sort();
+    }
+    return Array.from(new Set(relevant.filter(m => m.faculty === filterFaculty).map(m => m.career).filter(Boolean))).sort();
+  }, [combinedMembers, activePersonType, filterFaculty]);
+
+  // 2. Filtrar miembros unificados
   const filteredMembers = useMemo(() => {
     return combinedMembers.filter(m => {
-      // Role filter
+      // Filtro de Rol
       if (activePersonType !== 'Todos') {
         if (m.personType !== activePersonType) return false;
       }
 
-      // Faculty filter
+      // Filtro de Facultad (solo si aplica)
       if (filterFaculty !== 'ALL' && m.faculty !== filterFaculty) {
         return false;
       }
 
-      // Career filter
+      // Filtro de Carrera (solo si aplica)
       if (filterCareer !== 'ALL' && m.career !== filterCareer) {
         return false;
       }
 
-      // Program filter
+      // Filtro de Programa (solo si aplica a Maestrandos o Doctorandos)
       if (filterProgram !== 'ALL' && m.program !== filterProgram) {
         return false;
       }
 
-      // Search filter across all attributes
+      // Búsqueda en todos los campos
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase().trim();
         const match =
@@ -182,27 +249,15 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
     });
   }, [combinedMembers, activePersonType, filterFaculty, filterCareer, filterProgram, searchTerm]);
 
-  // Dynamic filter lists
-  const faculties = useMemo(() => {
-    const list = combinedMembers
-      .filter(m => activePersonType === 'Todos' || m.personType === activePersonType)
-      .map(m => m.faculty)
-      .filter(Boolean);
-    return Array.from(new Set(list));
-  }, [combinedMembers, activePersonType]);
-
-  const availableCareers = useMemo(() => {
-    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
-    if (filterFaculty === 'ALL') {
-      return Array.from(new Set(relevant.map(m => m.career).filter(Boolean)));
+  const handleRoleChange = (type: PersonTypeValue) => {
+    if (setActivePersonType) {
+      setActivePersonType(type);
     }
-    return Array.from(new Set(relevant.filter(m => m.faculty === filterFaculty).map(m => m.career).filter(Boolean)));
-  }, [combinedMembers, activePersonType, filterFaculty]);
-
-  const availablePrograms = useMemo(() => {
-    const relevant = combinedMembers.filter(m => activePersonType === 'Todos' || m.personType === activePersonType);
-    return Array.from(new Set(relevant.map(m => m.program).filter(Boolean)));
-  }, [combinedMembers, activePersonType]);
+    // Restablecer filtros secundarios al cambiar de rol
+    setFilterFaculty('ALL');
+    setFilterCareer('ALL');
+    setFilterProgram('ALL');
+  };
 
   const handleFacultyFilterChange = (newFac: string) => {
     setFilterFaculty(newFac);
@@ -238,6 +293,23 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
     }
   };
 
+  const getRoleCount = (type: PersonTypeValue) => {
+    if (type === 'Todos') return combinedMembers.length;
+    return combinedMembers.filter(m => m.personType === type).length;
+  };
+
+  const getRoleIcon = (type: PersonTypeValue) => {
+    switch (type) {
+      case 'Todos': return <Users size={14} />;
+      case 'Alumno': return <GraduationCap size={14} />;
+      case 'Docente': return <Briefcase size={14} />;
+      case 'Visitante': return <MapPin size={14} />;
+      case 'Maestrando': return <School size={14} />;
+      case 'Doctorando': return <Building2 size={14} />;
+      default: return <Users size={14} />;
+    }
+  };
+
   const getRoleBadgeStyle = (type: PersonTypeValue) => {
     switch (type) {
       case 'Alumno':
@@ -265,67 +337,65 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 
   return (
     <div style={{ padding: '0' }}>
-      {/* Toolbar: Buscador, Filtros y Botones de Acción */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '14px', top: '13px', color: '#94a3b8' }} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={
-              activePersonType === 'Todos'
-                ? 'Buscar en toda la comunidad por código, DNI, nombres, correo...'
-                : `Buscar ${getRoleSingular(activePersonType).toLowerCase()} por código, DNI o nombre...`
-            }
-            className="input-futuristic"
-            style={{ paddingLeft: '40px', fontSize: '0.9rem', padding: '10px 14px 10px 40px', width: '100%' }}
-          />
+      {/* 1. Barra de Selección de Roles (Bajada al inicio de la sección) y Acciones */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '18px' }}>
+        {/* Pestañas de Roles */}
+        <div 
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: '#f8fafc',
+            padding: '4px',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+          }}
+        >
+          {PERSON_TYPES.map(type => {
+            const isActive = activePersonType === type;
+            const count = getRoleCount(type);
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleRoleChange(type)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '7px 14px',
+                  borderRadius: '9px',
+                  border: isActive ? '1px solid rgba(15, 81, 66, 0.25)' : '1px solid transparent',
+                  background: isActive ? '#ffffff' : 'transparent',
+                  color: isActive ? 'var(--urp-green-primary)' : '#64748b',
+                  fontSize: '0.86rem',
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {getRoleIcon(type)}
+                <span>{type === 'Todos' ? 'Todos' : `${type}s`}</span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  background: isActive ? 'var(--urp-green-light)' : '#e2e8f0',
+                  color: isActive ? 'var(--urp-green-primary)' : '#64748b'
+                }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Filtros de Facultad y Carrera (cuando hay datos de facultad disponibles) */}
-          {faculties.length > 0 && (activePersonType === 'Todos' || activePersonType === 'Alumno') && (
-            <>
-              <select
-                value={filterFaculty}
-                onChange={(e) => handleFacultyFilterChange(e.target.value)}
-                className="input-futuristic"
-                style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
-              >
-                <option value="ALL">Todas las Facultades</option>
-                {faculties.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-              <select
-                value={filterCareer}
-                onChange={(e) => setFilterCareer(e.target.value)}
-                className="input-futuristic"
-                style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
-              >
-                <option value="ALL">{filterFaculty === 'ALL' ? 'Todas las Carreras' : `Carreras de ${filterFaculty}`}</option>
-                {availableCareers.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </>
-          )}
 
-          {/* Filtro de Programa (para Maestrando, Doctorando o Todos cuando haya programas) */}
-          {(activePersonType === 'Maestrando' || activePersonType === 'Doctorando' || (activePersonType === 'Todos' && availablePrograms.length > 0)) && availablePrograms.length > 0 && (
-            <select
-              value={filterProgram}
-              onChange={(e) => setFilterProgram(e.target.value)}
-              className="input-futuristic"
-              style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto', maxWidth: '280px' }}
-            >
-              <option value="ALL">Todos los Programas</option>
-              {availablePrograms.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          )}
-
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px', whiteSpace: 'nowrap' }}>
-            Total: <span style={{ color: 'var(--urp-green-primary)' }}>{filteredMembers.length}</span> {getRolePlural(activePersonType)}
-          </div>
-
-          {/* Botón Excel */}
+        {/* Botones de Acción Globales */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={handleExportExcel}
             title={`Exportar directorio de ${getRolePlural(activePersonType)} a Excel (.xlsx)`}
@@ -333,12 +403,12 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 13px',
+              padding: '8px 14px',
               borderRadius: '8px',
               border: '1px solid #16a34a',
               background: '#f0fdf4',
               color: '#15803d',
-              fontSize: '0.82rem',
+              fontSize: '0.84rem',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -357,7 +427,6 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             <span>Excel</span>
           </button>
 
-          {/* Botón Difundir Correo */}
           {onNavigateToDifusion && (
             <button
               onClick={onNavigateToDifusion}
@@ -366,12 +435,12 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 13px',
+                padding: '8px 14px',
                 borderRadius: '8px',
                 border: '1px solid #0284c7',
                 background: '#f0f9ff',
                 color: '#0284c7',
-                fontSize: '0.82rem',
+                fontSize: '0.84rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -391,7 +460,6 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
             </button>
           )}
 
-          {/* Botón Nuevo Registro Contextual */}
           <button
             onClick={handleNewClick}
             title={activePersonType === 'Todos' ? 'Registrar nuevo usuario' : `Registrar nuevo ${getRoleSingular(activePersonType).toLowerCase()}`}
@@ -399,12 +467,12 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 14px',
+              padding: '8px 16px',
               borderRadius: '8px',
               border: '1px solid #0f5142',
               background: 'var(--urp-green-primary)',
               color: '#ffffff',
-              fontSize: '0.82rem',
+              fontSize: '0.84rem',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -423,7 +491,95 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
         </div>
       </div>
 
-      {/* Tabla Unificada de la Comunidad: Alumnos, Docentes, Visitantes, Maestrandos y Doctorandos */}
+      {/* 2. Barra de Búsqueda y Filtros Contextuales (Aparecen al costado según la sección elegida) */}
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+        {/* Buscador Dinámico */}
+        <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '14px', top: '13px', color: '#94a3b8' }} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={
+              activePersonType === 'Todos'
+                ? 'Buscar en toda la comunidad por código, DNI, nombres, correo...'
+                : `Buscar ${getRoleSingular(activePersonType).toLowerCase()} por código, DNI o nombre...`
+            }
+            className="input-futuristic"
+            style={{ paddingLeft: '40px', fontSize: '0.9rem', padding: '10px 14px 10px 40px', width: '100%' }}
+          />
+        </div>
+
+        {/* CASO 1: Filtros de Pregrado para ALUMNOS (Facultad y Carrera) */}
+        {activePersonType === 'Alumno' && faculties.length > 0 && (
+          <>
+            <select
+              value={filterFaculty}
+              onChange={(e) => handleFacultyFilterChange(e.target.value)}
+              className="input-futuristic"
+              style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
+            >
+              <option value="ALL">Todas las Facultades</option>
+              {faculties.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <select
+              value={filterCareer}
+              onChange={(e) => setFilterCareer(e.target.value)}
+              className="input-futuristic"
+              style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
+            >
+              <option value="ALL">{filterFaculty === 'ALL' ? 'Todas las Carreras' : `Carreras de ${filterFaculty}`}</option>
+              {availableCareers.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </>
+        )}
+
+        {/* CASO 2: Filtro de Posgrado para MAESTRANDOS (Programas de Maestría) */}
+        {activePersonType === 'Maestrando' && (
+          <select
+            value={filterProgram}
+            onChange={(e) => setFilterProgram(e.target.value)}
+            className="input-futuristic"
+            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto', maxWidth: '340px' }}
+          >
+            <option value="ALL">Todos los Programas de Maestría</option>
+            {maestriaProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+
+        {/* CASO 3: Filtro de Posgrado para DOCTORANDOS (Programas de Doctorado) */}
+        {activePersonType === 'Doctorando' && (
+          <select
+            value={filterProgram}
+            onChange={(e) => setFilterProgram(e.target.value)}
+            className="input-futuristic"
+            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto', maxWidth: '340px' }}
+          >
+            <option value="ALL">Todos los Programas de Doctorado</option>
+            {doctoradoProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+
+        {/* CASO 4: Filtro de Facultad para DOCENTES */}
+        {activePersonType === 'Docente' && faculties.length > 0 && (
+          <select
+            value={filterFaculty}
+            onChange={(e) => handleFacultyFilterChange(e.target.value)}
+            className="input-futuristic"
+            style={{ fontSize: '0.88rem', padding: '9px 14px', width: 'auto' }}
+          >
+            <option value="ALL">Todas las Facultades</option>
+            {faculties.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        )}
+
+        {/* Contador de registros coincidentes */}
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-subtle)', fontWeight: 600, padding: '0 4px', whiteSpace: 'nowrap' }}>
+          Total: <span style={{ color: 'var(--urp-green-primary)', fontWeight: 700 }}>{filteredMembers.length}</span> {getRolePlural(activePersonType)}
+        </div>
+      </div>
+
+      {/* 3. Tabla Unificada de la Comunidad: Alumnos, Docentes, Visitantes, Maestrandos y Doctorandos */}
       <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.88rem' }}>
           <thead>
