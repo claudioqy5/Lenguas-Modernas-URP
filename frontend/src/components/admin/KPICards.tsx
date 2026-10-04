@@ -157,62 +157,42 @@ export const KPICards: React.FC<KPICardsProps> = ({
       {!isPeriodMode && (
         <>
           {/* Aforo Actual Widget */}
-          <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ position: 'relative', width: '70px', height: '70px', flexShrink: 0 }}>
-              <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                <circle 
-                  cx="50" cy="50" r="40" 
-                  fill="none" 
-                  stroke={isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)'} 
-                  strokeWidth="12" 
-                  strokeDasharray="251.2" 
-                  strokeDashoffset={251.2 - (251.2 * occupancyPercent) / 100}
-                  style={{ transition: 'stroke-dashoffset 1s ease-in-out, stroke 0.5s ease' }}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--text-main)', lineHeight: 1 }}>
-                  {currentOccupancy}
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {maxCapacity}</span>
+          <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Aforo Actual
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', marginTop: '4px' }}>
+                  {currentOccupancy} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/ {maxCapacity}</span>
+                </div>
+              </div>
+              <div style={{ padding: '8px', borderRadius: '10px', background: isOverCapacity ? '#fef2f2' : 'var(--urp-green-light)', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)' }}>
+                <Users size={18} />
               </div>
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <Users size={16} color="var(--urp-green-primary)" />
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Aforo Actual</h3>
-              </div>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 8px 0', lineHeight: 1.2 }}>
-                Capacidad real
-              </p>
-              {isOverCapacity ? (
-                <span style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 8px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700 }}>
-                  Sobrecarga: {currentOccupancy - maxCapacity}
-                </span>
-              ) : (
-                <span style={{ background: '#f0fdf4', color: '#15803d', padding: '3px 8px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 700 }}>
-                  {maxCapacity - currentOccupancy} libres
-                </span>
-              )}
+            <div style={{ fontSize: '0.75rem', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', fontWeight: 600, marginTop: '8px' }}>
+              {isOverCapacity ? `Sobrecarga: ${currentOccupancy - maxCapacity}` : `${maxCapacity - currentOccupancy} libres`}
             </div>
           </div>
 
           {/* Total Visits of the selected Date */}
           <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Total Asistencias
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
+                  {selectedDateVisitsCount ?? summary?.totalVisitsToday ?? 0}
+                </div>
+              </div>
               <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
                 <Activity size={18} />
               </div>
-              <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Total Asistencias</h3>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>{formattedDateLabel ? `del ${formattedDateLabel}` : 'de hoy'}</p>
-              </div>
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
-              {selectedDateVisitsCount ?? summary?.totalVisitsToday ?? 0}
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: '6px' }}>registros</span>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: '8px' }}>
+              {formattedDateLabel ? `del ${formattedDateLabel}` : 'de hoy'}
             </div>
           </div>
         </>

@@ -343,7 +343,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
             <div style={{ height: '270px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={peakHoursData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={peakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="hourColorLight" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#0f5142" stopOpacity={0.35} />
@@ -383,7 +383,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
             <div style={{ height: '240px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={exitPeakHoursData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={exitPeakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="exitHourColorLight" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
