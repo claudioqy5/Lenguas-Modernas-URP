@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass } from 'lucide-react';
+import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass, LogOut } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 import { getRecordDateStr, getRecordHour } from '../../utils/dateUtils';
@@ -138,14 +138,14 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   // Compute peak hours data dynamically when records are filtered for a selected date
   const peakHoursData = useMemo(() => {
     const hoursMap: Record<number, number> = {};
-    for (let h = 8; h <= 21; h++) {
+    for (let h = 8; h <= 22; h++) {
       hoursMap[h] = 0;
     }
     
     if (filteredRecords && filteredRecords.length > 0) {
       filteredRecords.forEach(r => {
         const hour = getRecordHour(r);
-        if (hour >= 8 && hour <= 21) {
+        if (hour >= 8 && hour <= 22) {
           hoursMap[hour] = (hoursMap[hour] || 0) + 1;
         }
       });
@@ -198,21 +198,29 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
   const sortedPersonTypeData = [...personTypeDistributionData].sort((a, b) => b.count - a.count);
 
-  // Compute chronological duration trend
-  const chronologicalDurationData = useMemo(() => {
-    if (!filteredRecords || filteredRecords.length === 0) return [];
+  // Compute exit peak hours data dynamically when records are filtered for a selected date
+  const exitPeakHoursData = useMemo(() => {
+    const hoursMap: Record<number, number> = {};
+    for (let h = 8; h <= 22; h++) {
+      hoursMap[h] = 0;
+    }
     
-    // Filter out users who haven't checked out (duration is 0)
-    const validRecords = filteredRecords.filter(r => r.durationMinutes && r.durationMinutes > 0);
-    
-    // Sort chronologically by entry time
-    validRecords.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    if (filteredRecords && filteredRecords.length > 0) {
+      filteredRecords.forEach(r => {
+        if (r.checkOutTimestamp && r.durationMinutes > 0) {
+          const hour = new Date(r.checkOutTimestamp).getHours();
+          if (hour >= 8 && hour <= 22) {
+            hoursMap[hour] = (hoursMap[hour] || 0) + 1;
+          }
+        }
+      });
+    }
 
-    return validRecords.map(r => ({
-      name: r.studentName.split(' ')[0], // First name for tooltip
-      time: r.timeString, // Time of entry
-      duration: r.durationMinutes
-    }));
+    return Object.keys(hoursMap).map(hStr => {
+      const h = parseInt(hStr, 10);
+      const label = `${h.toString().padStart(2, '0')}:00`;
+      return { hour: h, label, count: hoursMap[h] };
+    });
   }, [filteredRecords]);
 
   const handleExportPDF = () => {
@@ -355,37 +363,42 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             </div>
           </div>
 
-          {/* Duration Distribution Chart */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+          {/* Exit Peak Hours Chart */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <Hourglass size={18} />
+                <LogOut size={18} />
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Curva Cronológica de Ocupación
+                  Horarios de Mayor Salida (Horas Pico)
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                   {formattedDateLabel 
-                    ? `Tiempo de estancia de cada usuario el ${formattedDateLabel}` 
-                    : 'Tiempo de estancia de cada usuario registrado hoy'}
+                    ? `Distribución de salidas por franja horaria para el ${formattedDateLabel}` 
+                    : 'Distribución de salidas por franja horaria de hoy'}
                 </p>
               </div>
             </div>
 
             <div style={{ height: '240px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chronologicalDurationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={exitPeakHoursData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="exitHourColorLight" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--urp-gold-primary)" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
+                  <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                    formatter={(val: any, name: any, props: any) => [`${val} minutos`, props.payload.name]}
-                    labelFormatter={(label) => `Hora de ingreso: ${label}`}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    formatter={(val: any) => [`${val} salidas`, 'Afluencia']}
                   />
-                  <Line type="monotone" dataKey="duration" stroke="var(--urp-gold-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: "var(--urp-gold-primary)", stroke: "#fff", strokeWidth: 2 }} />
-                </LineChart>
+                  <Area type="monotone" dataKey="count" stroke="var(--urp-gold-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#exitHourColorLight)" />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -580,9 +593,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {formattedDateLabel ? `Afluencia por Carrera (${formattedDateLabel})` : 'Afluencia por Carrera (Ingresos de Hoy)'}
+                  {formattedDateLabel ? `Afluencia por Programa Académico (${formattedDateLabel})` : 'Afluencia por Programa Académico (Hoy)'}
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de estudiantes según su facultad/carrera</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su programa o carrera</p>
               </div>
             </div>
 
