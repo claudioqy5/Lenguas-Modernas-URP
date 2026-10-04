@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, Clock, Calendar, Activity } from 'lucide-react';
-import { AnalyticsSummary } from '../../services/api';
+import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 
 interface KPICardsProps {
   summary: AnalyticsSummary | null;
@@ -12,6 +12,7 @@ interface KPICardsProps {
   periodLabel?: string;
   periodVisitsCount?: number;
   periodUniqueStudentsCount?: number;
+  records?: AttendanceRecord[];
 }
 
 export const KPICards: React.FC<KPICardsProps> = ({ 
@@ -22,7 +23,8 @@ export const KPICards: React.FC<KPICardsProps> = ({
   periodType,
   periodLabel,
   periodVisitsCount,
-  periodUniqueStudentsCount
+  periodUniqueStudentsCount,
+  records
 }) => {
   // Format selected date YYYY-MM-DD -> DD/MM/YYYY
   const formattedDateLabel = selectedDate ? (() => {
@@ -59,11 +61,34 @@ export const KPICards: React.FC<KPICardsProps> = ({
     card2Subtitle = `Reporte Diario (${formattedDateLabel})`;
   }
 
+  // Calculate Average Duration
+  let avgDurationMinutes = 0;
+  if (records && records.length > 0) {
+    const completedVisits = records.filter(r => r.durationMinutes && r.durationMinutes > 0);
+    if (completedVisits.length > 0) {
+      const totalDuration = completedVisits.reduce((acc, r) => acc + r.durationMinutes, 0);
+      avgDurationMinutes = Math.round(totalDuration / completedVisits.length);
+    }
+  }
+
+  // Format the duration string
+  const formatDuration = (minutes: number) => {
+    if (minutes === 0) return '0 min';
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
+  const avgDurationStr = formatDuration(avgDurationMinutes);
+
   // Determine Card 3 Title & Subtitle based on mode
   const isPeriodMode = Boolean(periodType);
-  const card3Title = isPeriodMode ? 'Alumnos en el Período' : 'Asistencias del Mes';
-  const card3Value = isPeriodMode ? (periodUniqueStudentsCount ?? 0) : (summary?.totalVisitsThisMonth ?? 0);
-  const card3Subtitle = isPeriodMode ? 'Estudiantes únicos que asistieron' : 'Afluencia total acumulada';
+  const card3Title = 'Tiempo Prom. de Estadía';
+  const card3Value = avgDurationStr;
+  const card3Subtitle = isPeriodMode 
+    ? `Promedio de estadía (${periodLabel || 'Período'})` 
+    : (formattedDateLabel ? `Promedio del ${formattedDateLabel}` : 'Promedio de hoy');
 
   const currentOccupancy = summary?.currentOccupancy || 0;
   const maxCapacity = summary?.maxCapacity || 50;
@@ -76,7 +101,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-              Alumnos Registrados
+              Usuarios Registrados
             </div>
             <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
               {summary?.totalRegisteredStudents ?? studentsCount}

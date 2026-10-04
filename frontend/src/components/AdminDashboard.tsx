@@ -775,25 +775,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <main style={{ padding: '32px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1, background: '#ffffff' }}>
           {/* KPI Cards */}
-          {(activeTab === 'inicio' || activeTab === 'historico') && (
-            <KPICards 
-              summary={summary} 
-              studentsCount={(students || []).length}
-              selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
-              selectedDateVisitsCount={
-                activeTab === 'inicio' 
-                  ? (records || []).filter(r => {
-                      const recDate = getRecordDateStr(r);
-                      return recDate === inicioDate;
-                    }).length
-                  : undefined
-              }
-              periodType={activeTab === 'historico' ? (historyFilter as any) : undefined}
-              periodLabel={activeTab === 'historico' ? historicoPeriodLabel : undefined}
-              periodVisitsCount={activeTab === 'historico' ? (historicoFilteredRecords || []).length : undefined}
-              periodUniqueStudentsCount={activeTab === 'historico' ? historicoUniqueStudentsCount : undefined}
-            />
-          )}
+          {(activeTab === 'inicio' || activeTab === 'historico') && (() => {
+            const currentRecords = activeTab === 'inicio'
+              ? (records || []).filter(r => getRecordDateStr(r) === inicioDate)
+              : (activeTab === 'historico' ? historicoFilteredRecords : undefined);
+
+            return (
+              <KPICards 
+                summary={summary} 
+                studentsCount={(students || []).length}
+                selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
+                selectedDateVisitsCount={activeTab === 'inicio' ? currentRecords?.length : undefined}
+                periodType={activeTab === 'historico' ? (historyFilter as any) : undefined}
+                periodLabel={activeTab === 'historico' ? historicoPeriodLabel : undefined}
+                periodVisitsCount={activeTab === 'historico' ? currentRecords?.length : undefined}
+                periodUniqueStudentsCount={activeTab === 'historico' ? historicoUniqueStudentsCount : undefined}
+                records={currentRecords}
+              />
+            );
+          })()}
 
           {/* TAB 1: INICIO (Daily Stats) */}
           {activeTab === 'inicio' && summary && (

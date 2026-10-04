@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
-import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 import { getRecordDateStr, getRecordHour } from '../../utils/dateUtils';
@@ -186,6 +186,31 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
   const sortedPersonTypeData = [...personTypeDistributionData].sort((a, b) => b.count - a.count);
 
+  // Compute duration distribution
+  const durationDistributionData = useMemo(() => {
+    if (!filteredRecords || filteredRecords.length === 0) return [];
+    
+    let less30 = 0, min30_60 = 0, h1_2 = 0, h2_3 = 0, more3 = 0;
+    
+    filteredRecords.forEach(r => {
+      if (r.durationMinutes && r.durationMinutes > 0) {
+        if (r.durationMinutes < 30) less30++;
+        else if (r.durationMinutes < 60) min30_60++;
+        else if (r.durationMinutes < 120) h1_2++;
+        else if (r.durationMinutes < 180) h2_3++;
+        else more3++;
+      }
+    });
+
+    return [
+      { name: '< 30 min', count: less30 },
+      { name: '30m - 1h', count: min30_60 },
+      { name: '1h - 2h', count: h1_2 },
+      { name: '2h - 3h', count: h2_3 },
+      { name: '> 3h', count: more3 }
+    ];
+  }, [filteredRecords]);
+
   const handleExportPDF = () => {
     exportDailyReportPDF(
       formattedDateLabel || selectedDate || new Date().toLocaleDateString('es-PE'),
@@ -206,367 +231,414 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
-        {/* Peak Hours Chart */}
-        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            flexWrap: 'wrap', 
-            gap: '12px', 
-            marginBottom: '18px' 
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-                <Clock size={18} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(380px, 1fr)', gap: '24px', alignItems: 'start' }}>
+        
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Peak Hours Chart */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              marginBottom: '18px' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                    Horarios de Mayor Ingreso (Horas Pico)
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                    {formattedDateLabel 
+                      ? `Distribución por franja horaria para el ${formattedDateLabel}` 
+                      : 'Distribución de estudiantes por franja horaria (8am a 9pm)'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Export Buttons in Top-Right Corner */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleExportExcel}
+                  title="Descargar reporte del día en formato Excel (.xlsx)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 13px',
+                    borderRadius: '8px',
+                    border: '1px solid #16a34a',
+                    background: '#f0fdf4',
+                    color: '#15803d',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#15803d';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#f0fdf4';
+                    e.currentTarget.style.color = '#15803d';
+                  }}
+                >
+                  <FileSpreadsheet size={15} />
+                  <span>Excel</span>
+                </button>
+
+                <button
+                  onClick={handleExportPDF}
+                  title="Descargar reporte del día en formato PDF (.pdf)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 13px',
+                    borderRadius: '8px',
+                    border: '1px solid #dc2626',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#dc2626';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#fef2f2';
+                    e.currentTarget.style.color = '#dc2626';
+                  }}
+                >
+                  <FileText size={15} />
+                  <span>PDF</span>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ height: '270px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={peakHoursData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="hourColorLight" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0f5142" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#0f5142" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
+                  <YAxis stroke="#64748b" fontSize={11} />
+                  <Tooltip 
+                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    formatter={(val: any) => [`${val} asistencias`, 'Afluencia']}
+                  />
+                  <Area type="monotone" dataKey="count" stroke="#0f5142" strokeWidth={2.5} fillOpacity={1} fill="url(#hourColorLight)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Duration Distribution Chart */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+                <Hourglass size={18} />
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Horarios de Mayor Ingreso (Horas Pico)
+                  Curva de Ocupación por Duración
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                   {formattedDateLabel 
-                    ? `Distribución por franja horaria para el ${formattedDateLabel}` 
-                    : 'Distribución de estudiantes por franja horaria (8am a 9pm)'}
+                    ? `Distribución del tiempo de permanencia para el ${formattedDateLabel}` 
+                    : 'Distribución del tiempo de permanencia de las visitas de hoy'}
                 </p>
               </div>
             </div>
 
-            {/* Export Buttons in Top-Right Corner */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={handleExportExcel}
-                title="Descargar reporte del día en formato Excel (.xlsx)"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 13px',
-                  borderRadius: '8px',
-                  border: '1px solid #16a34a',
-                  background: '#f0fdf4',
-                  color: '#15803d',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#15803d';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f0fdf4';
-                  e.currentTarget.style.color = '#15803d';
-                }}
-              >
-                <FileSpreadsheet size={15} />
-                <span>Excel</span>
-              </button>
-
-              <button
-                onClick={handleExportPDF}
-                title="Descargar reporte del día en formato PDF (.pdf)"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 13px',
-                  borderRadius: '8px',
-                  border: '1px solid #dc2626',
-                  background: '#fef2f2',
-                  color: '#dc2626',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#dc2626';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#fef2f2';
-                  e.currentTarget.style.color = '#dc2626';
-                }}
-              >
-                <FileText size={15} />
-                <span>PDF</span>
-              </button>
+            <div style={{ height: '240px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={durationDistributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                    formatter={(val: any) => [`${val} visitas`, 'Cantidad']}
+                  />
+                  <Bar dataKey="count" fill="var(--urp-gold-primary)" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          <div style={{ height: '270px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={peakHoursData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="hourColorLight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0f5142" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#0f5142" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
-                <Tooltip 
-                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                  formatter={(val: any) => [`${val} asistencias`, 'Afluencia']}
-                />
-                <Area type="monotone" dataKey="count" stroke="#0f5142" strokeWidth={2.5} fillOpacity={1} fill="url(#hourColorLight)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Person Type Distribution (Pie Chart) */}
-        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-              <PieChartIcon size={18} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {formattedDateLabel ? `Afluencia por Tipo (${formattedDateLabel})` : 'Afluencia por Tipo (Hoy)'}
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su rol</p>
-            </div>
-          </div>
-
-          {sortedPersonTypeData.length === 0 ? (
-            <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
-              <PieChartIcon size={32} style={{ opacity: 0.3 }} />
-              <span>No hay registros para esta fecha.</span>
-            </div>
-          ) : (
-            <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
-              {/* Pie Chart */}
-              <div style={{ flex: '0 0 55%', height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={sortedPersonTypeData}
-                      dataKey="count"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      innerRadius={50}
-                      paddingAngle={3}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {sortedPersonTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+          {/* Últimos Ingresos (Actividad en Vivo) */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
+                <Activity size={18} />
               </div>
-              {/* Custom Legend - sorted descending */}
-              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
-                {sortedPersonTypeData.map((item, index) => (
-                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      background: BAR_COLORS[index % BAR_COLORS.length]
-                    }} />
-                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
-                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
-                    </span>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Últimos Ingresos Registrados
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {formattedDateLabel ? `Actividad reciente del ${formattedDateLabel}` : 'Actividad en tiempo real de hoy'}
+                </p>
+              </div>
+            </div>
+
+            {recentActivity.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px' }}>
+                <User size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>No hay registros de ingreso para esta fecha.</p>
+                <p style={{ fontSize: '0.85rem' }}>La biblioteca se encuentra vacía o aún no hay ingresos.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {recentActivity.map((record, i) => (
+                  <div 
+                    key={record.id || i}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: '#f8fafc',
+                      border: '1px solid #f1f5f9',
+                      transition: 'all 0.2s ease',
+                      cursor: 'default'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+                      e.currentTarget.style.background = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.background = '#f8fafc';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ 
+                        width: '42px', 
+                        height: '42px', 
+                        borderRadius: '50%', 
+                        background: 'var(--urp-green-light)', 
+                        color: 'var(--urp-green-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '1rem'
+                      }}>
+                        {record.studentName.charAt(0)}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                          {record.studentName}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{record.studentCode}</span>
+                          <span style={{ color: '#cbd5e1' }}>•</span>
+                          <span style={{ fontWeight: 600 }}>{record.career}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '6px', 
+                        color: 'var(--text-main)', 
+                        fontWeight: 700, 
+                        fontSize: '0.88rem', 
+                        background: '#ffffff', 
+                        padding: '5px 12px', 
+                        borderRadius: '20px', 
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                      }}>
+                        <Clock size={13} style={{ color: 'var(--urp-green-primary)' }} />
+                        {record.timeString}
+                      </div>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#64748b', 
+                        fontWeight: 500,
+                        paddingRight: '4px' 
+                      }}>
+                        {getRelativeTimeString(record.timestamp, record.dateString, record.timeString)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Career Distribution (Pie Chart) */}
-        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-              <Building2 size={18} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {formattedDateLabel ? `Afluencia por Carrera (${formattedDateLabel})` : 'Afluencia por Carrera (Ingresos de Hoy)'}
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de estudiantes según su facultad/carrera</p>
-            </div>
+            )}
           </div>
 
-          {sortedCareerData.length === 0 ? (
-            <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
-              <Building2 size={32} style={{ opacity: 0.3 }} />
-              <span>No hay registros de carreras para esta fecha.</span>
-            </div>
-          ) : (
-            <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
-              {/* Pie Chart */}
-              <div style={{ flex: '0 0 55%', height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={sortedCareerData}
-                      dataKey="count"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      innerRadius={50}
-                      paddingAngle={3}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {sortedCareerData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+        </div>
+
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Person Type Distribution (Pie Chart) */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+                <PieChartIcon size={18} />
               </div>
-              {/* Custom Legend - sorted descending */}
-              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
-                {sortedCareerData.map((item, index) => (
-                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      background: BAR_COLORS[index % BAR_COLORS.length]
-                    }} />
-                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
-                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
-                    </span>
-                  </div>
-                ))}
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {formattedDateLabel ? `Afluencia por Tipo (${formattedDateLabel})` : 'Afluencia por Tipo (Hoy)'}
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su rol</p>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Nuevo Bloque: Últimos Ingresos (Actividad en Vivo) */}
-      <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
-            <Activity size={18} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Últimos Ingresos Registrados
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {formattedDateLabel ? `Actividad reciente del ${formattedDateLabel}` : 'Actividad en tiempo real de hoy'}
-            </p>
-          </div>
-        </div>
-
-        {recentActivity.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px' }}>
-            <User size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-            <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>No hay registros de ingreso para esta fecha.</p>
-            <p style={{ fontSize: '0.85rem' }}>La biblioteca se encuentra vacía o aún no hay ingresos.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {recentActivity.map((record, i) => (
-              <div 
-                key={record.id || i}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: '#f8fafc',
-                  border: '1px solid #f1f5f9',
-                  transition: 'all 0.2s ease',
-                  cursor: 'default'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                  e.currentTarget.style.background = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.background = '#f8fafc';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ 
-                    width: '42px', 
-                    height: '42px', 
-                    borderRadius: '50%', 
-                    background: 'var(--urp-green-light)', 
-                    color: 'var(--urp-green-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '1rem'
-                  }}>
-                    {record.studentName.charAt(0)}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                      {record.studentName}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{record.studentCode}</span>
-                      <span style={{ color: '#cbd5e1' }}>•</span>
-                      <span style={{ fontWeight: 600 }}>{record.career}</span>
-                    </div>
-                  </div>
+            {sortedPersonTypeData.length === 0 ? (
+              <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
+                <PieChartIcon size={32} style={{ opacity: 0.3 }} />
+                <span>No hay registros para esta fecha.</span>
+              </div>
+            ) : (
+              <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+                {/* Pie Chart */}
+                <div style={{ flex: '0 0 55%', height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={sortedPersonTypeData}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        innerRadius={50}
+                        paddingAngle={3}
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {sortedPersonTypeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px', 
-                    color: 'var(--text-main)', 
-                    fontWeight: 700, 
-                    fontSize: '0.88rem', 
-                    background: '#ffffff', 
-                    padding: '5px 12px', 
-                    borderRadius: '20px', 
-                    border: '1px solid #e2e8f0',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                  }}>
-                    <Clock size={13} style={{ color: 'var(--urp-green-primary)' }} />
-                    {record.timeString}
-                  </div>
-                  <span style={{ 
-                    fontSize: '0.75rem', 
-                    color: '#64748b', 
-                    fontWeight: 500,
-                    paddingRight: '4px' 
-                  }}>
-                    {getRelativeTimeString(record.timestamp, record.dateString, record.timeString)}
-                  </span>
+                {/* Custom Legend - sorted descending */}
+                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                  {sortedPersonTypeData.map((item, index) => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        background: BAR_COLORS[index % BAR_COLORS.length]
+                      }} />
+                      <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                        {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        )}
+
+          {/* Career Distribution (Pie Chart) */}
+          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+                <Building2 size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {formattedDateLabel ? `Afluencia por Carrera (${formattedDateLabel})` : 'Afluencia por Carrera (Ingresos de Hoy)'}
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de estudiantes según su facultad/carrera</p>
+              </div>
+            </div>
+
+            {sortedCareerData.length === 0 ? (
+              <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
+                <Building2 size={32} style={{ opacity: 0.3 }} />
+                <span>No hay registros de carreras para esta fecha.</span>
+              </div>
+            ) : (
+              <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+                {/* Pie Chart */}
+                <div style={{ flex: '0 0 55%', height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={sortedCareerData}
+                        dataKey="count"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        innerRadius={50}
+                        paddingAngle={3}
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {sortedCareerData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Custom Legend - sorted descending */}
+                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                  {sortedCareerData.map((item, index) => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        background: BAR_COLORS[index % BAR_COLORS.length]
+                      }} />
+                      <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                        {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
