@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Clock, Calendar, Activity } from 'lucide-react';
+import { Users, Clock, Calendar, UserCheck } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 
 interface KPICardsProps {
@@ -81,6 +81,15 @@ export const KPICards: React.FC<KPICardsProps> = ({
   };
 
   const avgDurationStr = formatDuration(avgDurationMinutes);
+
+  // Calculate unique users count for the selected records/day
+  const uniqueUsersCount = React.useMemo(() => {
+    if (!records || records.length === 0) return 0;
+    const uniqueKeys = new Set(
+      records.map(r => (r.studentCode?.trim() || r.studentId?.trim() || r.studentName?.trim() || '')).filter(Boolean)
+    );
+    return uniqueKeys.size;
+  }, [records]);
 
   // Determine Card 3 Title & Subtitle based on mode
   const isPeriodMode = Boolean(periodType);
@@ -176,23 +185,23 @@ export const KPICards: React.FC<KPICardsProps> = ({
             </div>
           </div>
 
-          {/* Total Visits of the selected Date */}
+          {/* Unique Users of the selected Date */}
           <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Total Asistencias
+                  Usuarios Únicos
                 </div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-                  {selectedDateVisitsCount ?? summary?.totalVisitsToday ?? 0}
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-purple)', marginTop: '4px' }}>
+                  {uniqueUsersCount}
                 </div>
               </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
-                <Activity size={18} />
+              <div style={{ padding: '8px', borderRadius: '10px', background: '#f5f3ff', color: 'var(--accent-purple)' }}>
+                <UserCheck size={18} />
               </div>
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: '8px' }}>
-              {formattedDateLabel ? `del ${formattedDateLabel}` : 'de hoy'}
+            <div style={{ fontSize: '0.75rem', color: 'var(--accent-purple)', fontWeight: 600, marginTop: '8px' }}>
+              {formattedDateLabel ? `Sin reingresos (${formattedDateLabel})` : 'Sin contar reingresos'}
             </div>
           </div>
         </>
