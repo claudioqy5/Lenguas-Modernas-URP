@@ -186,29 +186,21 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
   const sortedPersonTypeData = [...personTypeDistributionData].sort((a, b) => b.count - a.count);
 
-  // Compute duration distribution
-  const durationDistributionData = useMemo(() => {
+  // Compute chronological duration trend
+  const chronologicalDurationData = useMemo(() => {
     if (!filteredRecords || filteredRecords.length === 0) return [];
     
-    let less30 = 0, min30_60 = 0, h1_2 = 0, h2_3 = 0, more3 = 0;
+    // Filter out users who haven't checked out (duration is 0)
+    const validRecords = filteredRecords.filter(r => r.durationMinutes && r.durationMinutes > 0);
     
-    filteredRecords.forEach(r => {
-      if (r.durationMinutes && r.durationMinutes > 0) {
-        if (r.durationMinutes < 30) less30++;
-        else if (r.durationMinutes < 60) min30_60++;
-        else if (r.durationMinutes < 120) h1_2++;
-        else if (r.durationMinutes < 180) h2_3++;
-        else more3++;
-      }
-    });
+    // Sort chronologically by entry time
+    validRecords.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    return [
-      { name: '< 30 min', count: less30 },
-      { name: '30m - 1h', count: min30_60 },
-      { name: '1h - 2h', count: h1_2 },
-      { name: '2h - 3h', count: h2_3 },
-      { name: '> 3h', count: more3 }
-    ];
+    return validRecords.map(r => ({
+      name: r.studentName.split(' ')[0], // First name for tooltip
+      time: r.timeString, // Time of entry
+      duration: r.durationMinutes
+    }));
   }, [filteredRecords]);
 
   const handleExportPDF = () => {
@@ -359,29 +351,35 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Curva de Ocupación por Duración
+                  Curva Cronológica de Ocupación
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                   {formattedDateLabel 
-                    ? `Distribución del tiempo de permanencia para el ${formattedDateLabel}` 
-                    : 'Distribución del tiempo de permanencia de las visitas de hoy'}
+                    ? `Tiempo de estancia de cada usuario el ${formattedDateLabel}` 
+                    : 'Tiempo de estancia de cada usuario registrado hoy'}
                 </p>
               </div>
             </div>
 
             <div style={{ height: '240px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={durationDistributionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={chronologicalDurationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="durationColorLight" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--urp-gold-primary)" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} minTickGap={30} />
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                    formatter={(val: any) => [`${val} visitas`, 'Cantidad']}
+                    formatter={(val: any, name: any, props: any) => [`${val} minutos`, props.payload.name]}
+                    labelFormatter={(label) => `Hora de ingreso: ${label}`}
                   />
-                  <Bar dataKey="count" fill="var(--urp-gold-primary)" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                </BarChart>
+                  <Area type="monotone" dataKey="duration" stroke="var(--urp-gold-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#durationColorLight)" />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
