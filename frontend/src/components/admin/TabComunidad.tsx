@@ -517,16 +517,16 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.88rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#475569', background: '#f8fafc', fontSize: '0.80rem', fontWeight: 700, letterSpacing: '0.03em' }}>
-              <th style={{ padding: '12px 14px', width: '45px' }}>#</th>
-              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>CODIGO</th>
-              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>DNI</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '220px' }}>NOMBRES COMPLETOS</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>FACULTAD</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '170px' }}>CARRERA PROFESIONAL</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '180px' }}>PROGRAMA</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', minWidth: '190px' }}>CONTACTO</th>
-              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>TOTAL VISITAS</th>
-              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>ULTIMA VISITA</th>
+              <th style={{ padding: '12px 14px', width: '45px', textAlign: 'center' }}>#</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap', textAlign: 'center' }}>CODIGO</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap', textAlign: 'center' }}>DNI</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', minWidth: '220px' }}>NOMBRES COMPLETOS</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', minWidth: '170px' }}>FACULTAD</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', minWidth: '170px' }}>CARRERA PROFESIONAL</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', minWidth: '180px' }}>PROGRAMA</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', minWidth: '190px' }}>CONTACTO</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap', textAlign: 'center' }}>TOTAL VISITAS</th>
+              <th style={{ padding: '12px 14px', whiteSpace: 'nowrap', textAlign: 'center' }}>ULTIMA VISITA</th>
               <th style={{ padding: '12px 14px', textAlign: 'center', width: '90px' }}>ACCIONES</th>
             </tr>
           </thead>
@@ -551,10 +551,10 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   className="table-row-hover"
                 >
                   {/* # */}
-                  <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem' }}>{idx + 1}</td>
+                  <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center' }}>{idx + 1}</td>
 
                   {/* CODIGO */}
-                  <td style={{ padding: '12px 14px' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     {member.code ? (
                       <span style={{ fontWeight: 700, color: 'var(--urp-green-primary)', fontFamily: 'monospace, sans-serif' }}>
                         {member.code}
@@ -565,7 +565,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   </td>
 
                   {/* DNI */}
-                  <td style={{ padding: '12px 14px' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     {member.documentNumber ? (
                       <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
                         {member.documentNumber}
@@ -576,12 +576,12 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   </td>
 
                   {/* NOMBRES COMPLETOS */}
-                  <td style={{ padding: '12px 14px', textAlign: 'left' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.88rem' }}>
                       {member.fullName}
                     </div>
                     {activePersonType === 'Todos' && member.personType && (
-                      <div style={{ marginTop: '2px' }}>
+                      <div style={{ marginTop: '3px', display: 'flex', justifyContent: 'center' }}>
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -600,22 +600,22 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   </td>
 
                   {/* FACULTAD */}
-                  <td style={{ padding: '12px 14px', textAlign: 'left', color: '#475569', fontSize: '0.84rem' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontSize: '0.84rem' }}>
                     {member.faculty || '—'}
                   </td>
 
                   {/* CARRERA PROFESIONAL */}
-                  <td style={{ padding: '12px 14px', textAlign: 'left', color: '#475569', fontSize: '0.84rem' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', color: '#475569', fontSize: '0.84rem' }}>
                     {member.career || '—'}
                   </td>
 
                   {/* PROGRAMA */}
-                  <td style={{ padding: '12px 14px', textAlign: 'left', color: member.program ? '#0f5142' : '#94a3b8', fontWeight: member.program ? 600 : 400, fontSize: '0.84rem' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', color: member.program ? '#0f5142' : '#94a3b8', fontWeight: member.program ? 600 : 400, fontSize: '0.84rem' }}>
                     {member.program || '—'}
                   </td>
 
-                  {/* CONTACTO: Celular arriba, Correo abajo */}
-                  <td style={{ padding: '8px 14px', textAlign: 'left', verticalAlign: 'middle' }}>
+                  {/* CONTACTO: Celular arriba, Correo abajo (Centrado) */}
+                  <td style={{ padding: '8px 14px', textAlign: 'center', verticalAlign: 'middle' }}>
                     {/* Celular arriba */}
                     <div style={{
                       fontSize: '0.84rem',
@@ -623,6 +623,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                       color: member.phone ? 'var(--text-main)' : '#94a3b8',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '5px',
                       whiteSpace: 'nowrap'
                     }}>
@@ -636,12 +637,14 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                       color: member.email ? '#0284c7' : '#94a3b8',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '5px',
                       marginTop: '3px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      maxWidth: '210px'
+                      maxWidth: '220px',
+                      margin: '3px auto 0'
                     }} title={member.email || undefined}>
                       <Mail size={12} style={{ color: member.email ? '#0284c7' : '#cbd5e1', flexShrink: 0 }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.email || '—'}</span>
@@ -649,7 +652,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   </td>
 
                   {/* TOTAL VISITAS */}
-                  <td style={{ padding: '12px 14px' }}>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     <span style={{
                       display: 'inline-block',
                       padding: '3px 10px',
@@ -664,7 +667,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
                   </td>
 
                   {/* ULTIMA VISITA */}
-                  <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '0.82rem', whiteSpace: 'nowrap', textAlign: 'center' }}>
                     {member.lastVisitAt ? new Date(member.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'}
                   </td>
 

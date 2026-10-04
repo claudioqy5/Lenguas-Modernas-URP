@@ -431,146 +431,139 @@ export const TabDifusion: React.FC<TabDifusionProps> = ({ students, persons = []
               </div>
             </div>
 
-            <div style={{
-              fontSize: '0.84rem',
-              color: 'var(--urp-green-primary)',
-              fontWeight: 700,
-              background: 'var(--urp-green-light)',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              border: '1px solid rgba(15, 81, 66, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <Users size={14} />
-              <span>{targetedRecipients.length} destinatarios listos</span>
+            {/* Controles del encabezado: Selector de Público Objetivo (Lista Desplegable) + Badge de Destinatarios */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                  Público Objetivo:
+                </label>
+                <select
+                  value={targetRole}
+                  onChange={(e) => handleRoleChange(e.target.value as PersonTypeValue)}
+                  className="input-futuristic"
+                  style={{
+                    fontSize: '0.84rem',
+                    padding: '7px 12px',
+                    fontWeight: 700,
+                    color: 'var(--urp-green-primary)',
+                    background: '#ffffff',
+                    border: '1px solid rgba(15, 81, 66, 0.3)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Todos">Toda la Comunidad ({getRoleEmailCount('Todos')})</option>
+                  <option value="Alumno">Alumnos ({getRoleEmailCount('Alumno')})</option>
+                  <option value="Docente">Docentes ({getRoleEmailCount('Docente')})</option>
+                  <option value="Visitante">Visitantes ({getRoleEmailCount('Visitante')})</option>
+                  <option value="Maestrando">Maestrandos ({getRoleEmailCount('Maestrando')})</option>
+                  <option value="Doctorando">Doctorandos ({getRoleEmailCount('Doctorando')})</option>
+                </select>
+              </div>
+
+              <div style={{
+                fontSize: '0.84rem',
+                color: 'var(--urp-green-primary)',
+                fontWeight: 700,
+                background: 'var(--urp-green-light)',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: '1px solid rgba(15, 81, 66, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap'
+              }}>
+                <Users size={14} />
+                <span>{targetedRecipients.length} destinatarios listos</span>
+              </div>
             </div>
           </div>
 
-          {/* 1. Selección de Audiencia / Rol de la Comunidad */}
-          <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
-              Público Objetivo (Tipo de Usuario):
-            </label>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {PERSON_TYPES.map(type => {
-                const isActive = targetRole === type;
-                const count = getRoleEmailCount(type);
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => handleRoleChange(type)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: isActive ? '1px solid #0f5142' : '1px solid #cbd5e1',
-                      background: isActive ? 'var(--urp-green-primary)' : '#ffffff',
-                      color: isActive ? '#ffffff' : '#475569',
-                      fontSize: '0.82rem',
-                      fontWeight: isActive ? 700 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: isActive ? '0 1px 3px rgba(15, 81, 66, 0.2)' : 'none'
-                    }}
-                  >
-                    {getRoleIcon(type)}
-                    <span>{type === 'Todos' ? 'Toda la Comunidad' : `${type}s`}</span>
-                    <span style={{
-                      fontSize: '0.70rem',
-                      padding: '1px 5px',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      background: isActive ? 'rgba(255, 255, 255, 0.2)' : '#e2e8f0',
-                      color: isActive ? '#ffffff' : '#64748b'
-                    }}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Sub-segmentación Contextual según el Rol seleccionado */}
+          {(targetRole === 'Alumno' || targetRole === 'Maestrando' || targetRole === 'Doctorando' || targetRole === 'Docente') && (
+            <div style={{
+              background: '#f8fafc',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '10px',
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Filter size={13} /> Filtrar por:
+              </span>
 
-            {/* Sub-segmentación Contextual según el Rol seleccionado */}
-            {(targetRole === 'Alumno' || targetRole === 'Maestrando' || targetRole === 'Doctorando' || targetRole === 'Docente') && (
-              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Filter size={13} /> Filtrar por:
-                </span>
-
-                {/* Sub-filtro Alumnos: Facultad y Carrera */}
-                {targetRole === 'Alumno' && (
-                  <>
-                    <select
-                      value={selectedFaculty}
-                      onChange={(e) => {
-                        setSelectedFaculty(e.target.value);
-                        setSelectedCareer('ALL');
-                      }}
-                      className="input-futuristic"
-                      style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto' }}
-                    >
-                      <option value="ALL">Todas las Facultades</option>
-                      {faculties.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-
-                    <select
-                      value={selectedCareer}
-                      onChange={(e) => setSelectedCareer(e.target.value)}
-                      className="input-futuristic"
-                      style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto' }}
-                    >
-                      <option value="ALL">{selectedFaculty === 'ALL' ? 'Todas las Carreras' : `Carreras de ${selectedFaculty}`}</option>
-                      {careers.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </>
-                )}
-
-                {/* Sub-filtro Maestrandos: Programas de Maestría */}
-                {targetRole === 'Maestrando' && (
-                  <select
-                    value={selectedProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="input-futuristic"
-                    style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto', maxWidth: '380px' }}
-                  >
-                    <option value="ALL">Todos los Programas de Maestría</option>
-                    {maestriaProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                )}
-
-                {/* Sub-filtro Doctorandos: Programas de Doctorado */}
-                {targetRole === 'Doctorando' && (
-                  <select
-                    value={selectedProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="input-futuristic"
-                    style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto', maxWidth: '380px' }}
-                  >
-                    <option value="ALL">Todos los Programas de Doctorado</option>
-                    {doctoradoProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                )}
-
-                {/* Sub-filtro Docentes: Facultad */}
-                {targetRole === 'Docente' && faculties.length > 0 && (
+              {/* Sub-filtro Alumnos: Facultad y Carrera */}
+              {targetRole === 'Alumno' && (
+                <>
                   <select
                     value={selectedFaculty}
-                    onChange={(e) => setSelectedFaculty(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedFaculty(e.target.value);
+                      setSelectedCareer('ALL');
+                    }}
                     className="input-futuristic"
                     style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto' }}
                   >
                     <option value="ALL">Todas las Facultades</option>
                     {faculties.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
-                )}
-              </div>
-            )}
-          </div>
+
+                  <select
+                    value={selectedCareer}
+                    onChange={(e) => setSelectedCareer(e.target.value)}
+                    className="input-futuristic"
+                    style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto' }}
+                  >
+                    <option value="ALL">{selectedFaculty === 'ALL' ? 'Todas las Carreras' : `Carreras de ${selectedFaculty}`}</option>
+                    {careers.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </>
+              )}
+
+              {/* Sub-filtro Maestrandos: Programas de Maestría */}
+              {targetRole === 'Maestrando' && (
+                <select
+                  value={selectedProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="input-futuristic"
+                  style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto', maxWidth: '380px' }}
+                >
+                  <option value="ALL">Todos los Programas de Maestría</option>
+                  {maestriaProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              )}
+
+              {/* Sub-filtro Doctorandos: Programas de Doctorado */}
+              {targetRole === 'Doctorando' && (
+                <select
+                  value={selectedProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="input-futuristic"
+                  style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto', maxWidth: '380px' }}
+                >
+                  <option value="ALL">Todos los Programas de Doctorado</option>
+                  {doctoradoProgramsList.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              )}
+
+              {/* Sub-filtro Docentes: Facultad */}
+              {targetRole === 'Docente' && faculties.length > 0 && (
+                <select
+                  value={selectedFaculty}
+                  onChange={(e) => setSelectedFaculty(e.target.value)}
+                  className="input-futuristic"
+                  style={{ fontSize: '0.84rem', padding: '7px 12px', width: 'auto' }}
+                >
+                  <option value="ALL">Todas las Facultades</option>
+                  {faculties.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              )}
+            </div>
+          )}
 
           {/* Plantillas Rápidas Institucionales */}
           <div>
