@@ -433,10 +433,7 @@ export const TabDifusion: React.FC<TabDifusionProps> = ({ students, persons = []
 
             {/* Controles del encabezado: Selector de Público Objetivo (Lista Desplegable) + Badge de Destinatarios */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                  Público Objetivo:
-                </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>                
                 <select
                   value={targetRole}
                   onChange={(e) => handleRoleChange(e.target.value as PersonTypeValue)}
@@ -459,23 +456,7 @@ export const TabDifusion: React.FC<TabDifusionProps> = ({ students, persons = []
                   <option value="Maestrando">Maestrandos ({getRoleEmailCount('Maestrando')})</option>
                   <option value="Doctorando">Doctorandos ({getRoleEmailCount('Doctorando')})</option>
                 </select>
-              </div>
-
-              <div style={{
-                fontSize: '0.84rem',
-                color: 'var(--urp-green-primary)',
-                fontWeight: 700,
-                background: 'var(--urp-green-light)',
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: '1px solid rgba(15, 81, 66, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap'
-              }}>
-                <Users size={14} />
-                <span>{targetedRecipients.length} destinatarios listos</span>
+              </div>              
               </div>
             </div>
           </div>

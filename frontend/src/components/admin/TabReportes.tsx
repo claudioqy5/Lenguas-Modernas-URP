@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, FileSpreadsheet, FileText, UserCheck, UserX, AlertTriangle, Users, GraduationCap, Briefcase, MapPin, Building2 } from 'lucide-react';
 import { AttendanceRecord, Student, AcademicTreeFaculty, api, LibraryPerson, PERSON_TYPES, PersonTypeValue } from '../../services/api';
-import { exportAttendanceToPDF, exportAttendanceToExcel } from '../../utils/exportReports';
+import { exportAttendanceToPDF, exportAttendanceToExcel, resolveAttendanceIdentifiers } from '../../utils/exportReports';
 import { getRecordDateStr } from '../../utils/dateUtils';
 
 interface TabReportesProps {
@@ -51,14 +51,37 @@ export const TabReportes: React.FC<TabReportesProps> = ({
     return () => { isMounted = false; };
   }, []);
 
-  // Make map to enrich rows with LibraryPerson data
+  // Make map to enrich rows with LibraryPerson data (index by code and documentNumber)
   const codeToPerson = useMemo(() => {
     const map = new Map<string, LibraryPerson>();
     persons.forEach(p => {
-      map.set(p.code || p.documentNumber, p);
+      if (p.code) {
+        map.set(p.code.trim(), p);
+        map.set(p.code.trim().toLowerCase(), p);
+      }
+      if (p.documentNumber) {
+        map.set(p.documentNumber.trim(), p);
+        map.set(p.documentNumber.trim().toLowerCase(), p);
+      }
     });
     return map;
   }, [persons]);
+
+  // Make map to enrich rows with Student data (index by studentCode and documentNumber)
+  const codeToStudent = useMemo(() => {
+    const map = new Map<string, Student>();
+    students.forEach(s => {
+      if (s.studentCode) {
+        map.set(s.studentCode.trim(), s);
+        map.set(s.studentCode.trim().toLowerCase(), s);
+      }
+      if (s.documentNumber) {
+        map.set(s.documentNumber.trim(), s);
+        map.set(s.documentNumber.trim().toLowerCase(), s);
+      }
+    });
+    return map;
+  }, [students]);
 
   // Legacy mappings for Alumnos
   const careerToFaculty = useMemo(() => {
@@ -114,16 +137,25 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         return type === activePersonType;
       })
       .map(r => {
-        const personInfo = codeToPerson.get(r.studentCode);
-        const fac = personInfo?.faculty || r.faculty || studentToFaculty.get(r.studentCode) || careerToFaculty.get(r.career) || 'Facultad URP';
-        return { ...r, faculty: fac, _personInfo: personInfo };
+        const cleanCode = (r.studentCode || '').trim();
+        const cleanCodeLower = cleanCode.toLowerCase();
+        const personInfo = codeToPerson.get(cleanCode) || codeToPerson.get(cleanCodeLower);
+        const studentInfo = codeToStudent.get(cleanCode) || codeToStudent.get(cleanCodeLower);
+        const fac = personInfo?.faculty || studentInfo?.faculty || r.faculty || studentToFaculty.get(r.studentCode) || careerToFaculty.get(r.career) || 'Facultad URP';
+        const identifiers = resolveAttendanceIdentifiers(r, codeToPerson, students);
+        return { ...r, faculty: fac, _personInfo: personInfo, _studentInfo: studentInfo, _identifiers: identifiers };
       })
       .filter(r => {
         const typeStr = r.personType || 'Alumno';
-        const matchSearch = r.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            r.studentCode.includes(searchTerm) ||
-                            r.visitReason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            typeStr.toLowerCase().includes(searchTerm.toLowerCase());
+        const q = searchTerm.toLowerCase().trim();
+        const iden = r._identifiers;
+        const matchSearch = !q ||
+                            r.studentName.toLowerCase().includes(q) ||
+                            r.studentCode.toLowerCase().includes(q) ||
+                            (iden?.dni && iden.dni !== '-' && iden.dni.toLowerCase().includes(q)) ||
+                            (iden?.code && iden.code !== '-' && iden.code.toLowerCase().includes(q)) ||
+                            r.visitReason.toLowerCase().includes(q) ||
+                            typeStr.toLowerCase().includes(q);
                             
         let matchFaculty = true;
         let matchCareer = true;
@@ -148,7 +180,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
 
         return matchSearch && matchFaculty && matchCareer && matchDate && matchSession;
       });
-  }, [records, searchTerm, filterFaculty, filterCareer, filterStartDate, filterEndDate, studentToFaculty, careerToFaculty, filterAutoClose, activePersonType, codeToPerson]);
+  }, [records, searchTerm, filterFaculty, filterCareer, filterStartDate, filterEndDate, studentToFaculty, careerToFaculty, filterAutoClose, activePersonType, codeToPerson, codeToStudent, students]);
 
   return (
     <div style={{ padding: '0' }}>
@@ -229,7 +261,8 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                   ? `Rango: ${filterStartDate || 'Inicio'} al ${filterEndDate || 'Fin'}`
                   : '',
                 activePersonType,
-                codeToPerson
+                codeToPerson,
+                students
               )}
               title="Descargar reporte en formato PDF (.pdf)"
               style={{
@@ -389,7 +422,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                     {/* Todos Columns */}
                     {activePersonType === 'Todos' && (
                       <>
-                        <td style={{ padding: '12px 14px' }}>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                           <span style={{ 
                             backgroundColor: 'rgba(0, 0, 0, 0.05)', 
                             padding: '4px 8px', 
@@ -401,18 +434,38 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                             {person?.personType || r.personType || 'Alumno'}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: 'var(--urp-green-primary)', fontWeight: 700 }}>
-                          {person?.documentNumber || person?.code || r.studentCode || '-'}
+
+                        {/* DNI arriba y Código abajo */}
+                        <td style={{ padding: '8px 14px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          {/* DNI arriba */}
+                          <div style={{
+                            fontSize: '0.85rem',
+                            fontWeight: r._identifiers?.dni && r._identifiers.dni !== '-' ? 700 : 400,
+                            color: r._identifiers?.dni && r._identifiers.dni !== '-' ? 'var(--text-main)' : '#94a3b8'
+                          }}>
+                            {r._identifiers?.dni || '-'}
+                          </div>
+                          {/* Código abajo */}
+                          <div style={{
+                            fontSize: '0.78rem',
+                            fontWeight: r._identifiers?.code && r._identifiers.code !== '-' ? 700 : 400,
+                            fontFamily: 'monospace, sans-serif',
+                            color: r._identifiers?.code && r._identifiers.code !== '-' ? 'var(--urp-green-primary)' : '#94a3b8',
+                            marginTop: '2px'
+                          }}>
+                            {r._identifiers?.code || '-'}
+                          </div>
                         </td>
-                        <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                          {person?.fullName || r.studentName || '-'}
+
+                        <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'center' }}>
+                          {person?.fullName || r._studentInfo?.fullName || r.studentName || '-'}
                         </td>
-                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
                           {(() => {
                             const pType = person?.personType || r.personType || 'Alumno';
                             if (pType === 'Alumno') return `${r.faculty || '-'} / ${r.career || '-'}`;
                             if (pType === 'Maestrando' || pType === 'Doctorando') return person?.program || '-';
-                            if (pType === 'Docente') return person?.email || '-';
+                            if (pType === 'Docente') return person?.faculty || person?.email || '-';
                             if (pType === 'Visitante') return person?.email || person?.phone || '-';
                             return '-';
                           })()}
