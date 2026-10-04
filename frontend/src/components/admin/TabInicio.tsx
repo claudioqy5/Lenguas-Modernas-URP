@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass, LogOut } from 'lucide-react';
+import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass, LogOut, BarChart2, List } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 import { getRecordDateStr, getRecordHour } from '../../utils/dateUtils';
@@ -87,6 +87,8 @@ const getRelativeTimeString = (timestamp?: string, dateString?: string, timeStri
 export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, records }) => {
   // Tick state to re-evaluate relative time every 30 seconds
   const [, setTick] = useState(0);
+  const [entryViewMode, setEntryViewMode] = useState<'chart' | 'list'>('chart');
+  const [exitViewMode, setExitViewMode] = useState<'chart' | 'list'>('chart');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -120,7 +122,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
       return timeB - timeA;
-    }).slice(0, 7); // Show top 7 recent entries
+    });
   }, [filteredRecords]);
 
   // Extract recent exits for the selected date
@@ -132,7 +134,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
       const timeA = new Date(a.checkOutTimestamp!).getTime();
       const timeB = new Date(b.checkOutTimestamp!).getTime();
       return timeB - timeA;
-    }).slice(0, 7); // Show top 7 recent exits
+    });
   }, [filteredRecords]);
 
   // Compute peak hours data dynamically when records are filtered for a selected date
@@ -249,7 +251,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         {/* Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Peak Hours Chart */}
+          {/* Peak Hours Chart / Recent Entries Card */}
           <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
             <div style={{ 
               display: 'flex', 
@@ -261,22 +263,79 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-                  <Clock size={18} />
+                  {entryViewMode === 'chart' ? <Clock size={18} /> : <Activity size={18} />}
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                    Horarios de Mayor Ingreso (Horas Pico)
+                    {entryViewMode === 'chart' 
+                      ? 'Horarios de Mayor Ingreso (Horas Pico)' 
+                      : 'Últimos Ingresos Registrados'}
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                    {formattedDateLabel 
-                      ? `Distribución por franja horaria para el ${formattedDateLabel}` 
-                      : 'Distribución de estudiantes por franja horaria (8am a 9pm)'}
+                    {entryViewMode === 'chart'
+                      ? (formattedDateLabel ? `Distribución por franja horaria para el ${formattedDateLabel}` : 'Distribución de estudiantes por franja horaria (8am a 10pm)')
+                      : (formattedDateLabel ? `Actividad reciente del ${formattedDateLabel}` : 'Actividad en tiempo real de hoy')}
                   </p>
                 </div>
               </div>
 
-              {/* Export Buttons in Top-Right Corner */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* View Switcher & Export Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {/* Segmented control */}
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center',
+                  background: '#f1f5f9', 
+                  padding: '3px', 
+                  borderRadius: '8px', 
+                  border: '1px solid #e2e8f0' 
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setEntryViewMode('chart')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 11px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: entryViewMode === 'chart' ? '#ffffff' : 'transparent',
+                      color: entryViewMode === 'chart' ? 'var(--urp-green-primary)' : '#64748b',
+                      fontWeight: entryViewMode === 'chart' ? 700 : 500,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      boxShadow: entryViewMode === 'chart' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <BarChart2 size={13} />
+                    <span>Gráfico</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEntryViewMode('list')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 11px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: entryViewMode === 'list' ? '#ffffff' : 'transparent',
+                      color: entryViewMode === 'list' ? 'var(--urp-green-primary)' : '#64748b',
+                      fontWeight: entryViewMode === 'list' ? 700 : 500,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      boxShadow: entryViewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <List size={13} />
+                    <span>Últimos Ingresos ({recentActivity.length})</span>
+                  </button>
+                </div>
+
                 <button
                   onClick={handleExportExcel}
                   title="Descargar reporte del día en formato Excel (.xlsx)"
@@ -341,174 +400,287 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
               </div>
             </div>
 
+            {/* Content Area (Height 270px) */}
             <div style={{ height: '270px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={peakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="hourColorLight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0f5142" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#0f5142" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
-                  <YAxis stroke="#64748b" fontSize={11} />
-                  <Tooltip 
-                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                    formatter={(val: any) => [`${val} asistencias`, 'Afluencia']}
-                  />
-                  <Area type="monotone" dataKey="count" stroke="#0f5142" strokeWidth={2.5} fillOpacity={1} fill="url(#hourColorLight)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {entryViewMode === 'chart' ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={peakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="hourColorLight" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0f5142" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#0f5142" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
+                    <YAxis stroke="#64748b" fontSize={11} />
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                      formatter={(val: any) => [`${val} asistencias`, 'Afluencia']}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="#0f5142" strokeWidth={2.5} fillOpacity={1} fill="url(#hourColorLight)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: '100%', width: '100%', overflowY: 'auto', paddingRight: '4px' }}>
+                  {recentActivity.length === 0 ? (
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px', padding: '20px' }}>
+                      <User size={30} style={{ opacity: 0.5, marginBottom: '8px' }} />
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>No hay registros de ingreso para esta fecha.</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>La biblioteca se encuentra vacía o aún no hay ingresos.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {recentActivity.map((record, i) => (
+                        <div 
+                          key={record.id || i}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            background: '#f8fafc',
+                            border: '1px solid #f1f5f9',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                            <div style={{ 
+                              width: '34px', 
+                              height: '34px', 
+                              borderRadius: '50%', 
+                              background: 'var(--urp-green-light)', 
+                              color: 'var(--urp-green-primary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                              flexShrink: 0
+                            }}>
+                              {record.studentName.charAt(0)}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {record.studentName}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <span>{record.studentCode}</span>
+                                <span style={{ color: '#cbd5e1' }}>•</span>
+                                <span style={{ fontWeight: 600 }}>{record.career}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              color: 'var(--text-main)', 
+                              fontWeight: 700, 
+                              fontSize: '0.8rem', 
+                              background: '#ffffff', 
+                              padding: '3px 9px', 
+                              borderRadius: '20px', 
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                            }}>
+                              <Clock size={11} style={{ color: 'var(--urp-green-primary)' }} />
+                              {record.timeString}
+                            </div>
+                            <span style={{ 
+                              fontSize: '0.7rem', 
+                              color: '#64748b', 
+                              fontWeight: 500,
+                              paddingRight: '2px'
+                            }}>
+                              {getRelativeTimeString(record.timestamp, record.dateString, record.timeString)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Exit Peak Hours Chart */}
+          {/* Exit Peak Hours Chart / Recent Exits Card */}
           <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <LogOut size={18} />
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              flexWrap: 'wrap', 
+              gap: '12px', 
+              marginBottom: '18px' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+                  {exitViewMode === 'chart' ? <LogOut size={18} /> : <Clock size={18} />}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                    {exitViewMode === 'chart' 
+                      ? 'Horarios de Mayor Salida (Horas Pico)' 
+                      : 'Últimas Salidas Registradas'}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                    {exitViewMode === 'chart'
+                      ? (formattedDateLabel ? `Distribución de salidas por franja horaria para el ${formattedDateLabel}` : 'Distribución de salidas por franja horaria de hoy')
+                      : (formattedDateLabel ? `Salidas recientes del ${formattedDateLabel}` : 'Salidas en tiempo real de hoy')}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Horarios de Mayor Salida (Horas Pico)
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  {formattedDateLabel 
-                    ? `Distribución de salidas por franja horaria para el ${formattedDateLabel}` 
-                    : 'Distribución de salidas por franja horaria de hoy'}
-                </p>
+
+              {/* View Switcher */}
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center',
+                background: '#f1f5f9', 
+                padding: '3px', 
+                borderRadius: '8px', 
+                border: '1px solid #e2e8f0' 
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setExitViewMode('chart')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '5px 11px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: exitViewMode === 'chart' ? '#ffffff' : 'transparent',
+                    color: exitViewMode === 'chart' ? 'var(--urp-gold-primary)' : '#64748b',
+                    fontWeight: exitViewMode === 'chart' ? 700 : 500,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: exitViewMode === 'chart' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <BarChart2 size={13} />
+                  <span>Gráfico</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExitViewMode('list')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '5px 11px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: exitViewMode === 'list' ? '#ffffff' : 'transparent',
+                    color: exitViewMode === 'list' ? 'var(--urp-gold-primary)' : '#64748b',
+                    fontWeight: exitViewMode === 'list' ? 700 : 500,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: exitViewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <List size={13} />
+                  <span>Últimas Salidas ({recentExits.length})</span>
+                </button>
               </div>
             </div>
 
-            <div style={{ height: '240px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={exitPeakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="exitHourColorLight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="var(--urp-gold-primary)" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                    formatter={(val: any) => [`${val} salidas`, 'Afluencia']}
-                  />
-                  <Area type="monotone" dataKey="count" stroke="var(--urp-gold-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#exitHourColorLight)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Últimos Ingresos (Actividad en Vivo) */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
-                <Activity size={18} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Últimos Ingresos Registrados
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {formattedDateLabel ? `Actividad reciente del ${formattedDateLabel}` : 'Actividad en tiempo real de hoy'}
-                </p>
-              </div>
-            </div>
-
-            {recentActivity.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px' }}>
-                <User size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>No hay registros de ingreso para esta fecha.</p>
-                <p style={{ fontSize: '0.85rem' }}>La biblioteca se encuentra vacía o aún no hay ingresos.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {recentActivity.map((record, i) => (
-                  <div 
-                    key={record.id || i}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      background: '#f8fafc',
-                      border: '1px solid #f1f5f9',
-                      transition: 'all 0.2s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                      e.currentTarget.style.background = '#ffffff';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.background = '#f8fafc';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ 
-                        width: '42px', 
-                        height: '42px', 
-                        borderRadius: '50%', 
-                        background: 'var(--urp-green-light)', 
-                        color: 'var(--urp-green-primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '1rem'
-                      }}>
-                        {record.studentName.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                          {record.studentName}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>{record.studentCode}</span>
-                          <span style={{ color: '#cbd5e1' }}>•</span>
-                          <span style={{ fontWeight: 600 }}>{record.career}</span>
-                        </div>
-                      </div>
+            {/* Content Area (Height 270px) */}
+            <div style={{ height: '270px', width: '100%' }}>
+              {exitViewMode === 'chart' ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={exitPeakHoursData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="exitHourColorLight" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--urp-gold-primary)" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="var(--urp-gold-primary)" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                      formatter={(val: any) => [`${val} salidas`, 'Afluencia']}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="var(--urp-gold-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#exitHourColorLight)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: '100%', width: '100%', overflowY: 'auto', paddingRight: '4px' }}>
+                  {recentExits.length === 0 ? (
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px', padding: '20px' }}>
+                      <Clock size={30} style={{ opacity: 0.5, marginBottom: '8px' }} />
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>No hay registros de salidas para esta fecha.</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>Aún no se ha retirado nadie.</p>
                     </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px', 
-                        color: 'var(--text-main)', 
-                        fontWeight: 700, 
-                        fontSize: '0.88rem', 
-                        background: '#ffffff', 
-                        padding: '5px 12px', 
-                        borderRadius: '20px', 
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}>
-                        <Clock size={13} style={{ color: 'var(--urp-green-primary)' }} />
-                        {record.timeString}
-                      </div>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        color: '#64748b', 
-                        fontWeight: 500,
-                        paddingRight: '4px' 
-                      }}>
-                        {getRelativeTimeString(record.timestamp, record.dateString, record.timeString)}
-                      </span>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {recentExits.map((record, i) => (
+                        <div 
+                          key={record.id || i}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            background: '#f8fafc',
+                            border: '1px solid #f1f5f9',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                            <div style={{ 
+                              width: '34px', 
+                              height: '34px', 
+                              borderRadius: '50%', 
+                              background: 'var(--urp-gold-light)', 
+                              color: 'var(--urp-gold-primary)',
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              fontWeight: 700, 
+                              fontSize: '0.9rem',
+                              flexShrink: 0
+                            }}>
+                              {record.studentName.charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <h4 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {record.studentName}
+                              </h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <span>{record.studentCode}</span>
+                                <span style={{ color: '#cbd5e1' }}>•</span>
+                                <span>{record.career}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '2px' }}>
+                              <Clock size={11} style={{ color: 'var(--urp-gold-primary)' }} />
+                              {record.checkOutTimeString}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--urp-gold-primary)', fontWeight: 600 }}>
+                              {record.durationMinutes} minutos
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
@@ -654,103 +826,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             )}
           </div>
 
-          {/* Últimas Salidas (Actividad de Salida en Vivo) */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <Clock size={18} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Últimas Salidas Registradas
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {formattedDateLabel ? `Salidas recientes del ${formattedDateLabel}` : 'Salidas en tiempo real de hoy'}
-                </p>
-              </div>
-            </div>
-
-            {recentExits.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px' }}>
-                <Clock size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>No hay registros de salidas para esta fecha.</p>
-                <p style={{ fontSize: '0.85rem' }}>Aún no se ha retirado nadie.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {recentExits.map((record, i) => (
-                  <div 
-                    key={record.id || i}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      background: '#f8fafc',
-                      border: '1px solid #f1f5f9',
-                      transition: 'all 0.2s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                      e.currentTarget.style.background = '#ffffff';
-                      e.currentTarget.style.borderColor = 'var(--urp-gold-light)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.background = '#f8fafc';
-                      e.currentTarget.style.borderColor = '#f1f5f9';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        borderRadius: '50%', 
-                        background: 'var(--urp-gold-light)', 
-                        color: 'var(--urp-gold-primary)',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '1.1rem'
-                      }}>
-                        {record.studentName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 2px 0' }}>
-                          {record.studentName}
-                        </h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
-                          <span>{record.studentCode}</span>
-                          <span style={{ color: '#cbd5e1' }}>•</span>
-                          <span>{record.career}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '2px' }}>
-                        <Clock size={12} />
-                        {record.checkOutTimeString}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--urp-gold-primary)', fontWeight: 600 }}>
-                        {record.durationMinutes} minutos
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
         </div>
 
       </div>
     </div>
   );
 };
-
