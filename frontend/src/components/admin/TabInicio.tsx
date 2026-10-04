@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Legend, Cell } from 'recharts';
-import { Clock, Building2, Activity, User, FileSpreadsheet, FileText } from 'lucide-react';
+import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, Users, PieChart as PieChartIcon } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 import { getRecordDateStr, getRecordHour } from '../../utils/dateUtils';
@@ -167,6 +167,31 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
   const sortedCareerData = [...careerDistributionData].sort((a, b) => b.count - a.count);
 
+  // Compute person type distribution
+  const personTypeDistributionData = useMemo(() => {
+    if (!filteredRecords || filteredRecords.length === 0) return [];
+    const typeMap: Record<string, number> = {};
+    filteredRecords.forEach(r => {
+      const pType = r.personType || 'Alumno';
+      typeMap[pType] = (typeMap[pType] || 0) + 1;
+    });
+
+    const total = filteredRecords.length;
+    return Object.entries(typeMap).map(([name, count]) => ({
+      name,
+      count,
+      percentage: Math.round((count / total) * 100)
+    }));
+  }, [filteredRecords]);
+
+  const sortedPersonTypeData = [...personTypeDistributionData].sort((a, b) => b.count - a.count);
+
+  const currentOccupancy = summary?.currentOccupancy || 0;
+  const maxCapacity = summary?.maxCapacity || 50;
+  // Calculate percentage, capping at 100 for purely circular/bar visual bounds, but allowing the text to show > 100%
+  const occupancyPercent = Math.min(Math.round((currentOccupancy / maxCapacity) * 100), 100);
+  const isOverCapacity = currentOccupancy > maxCapacity;
+
   const handleExportPDF = () => {
     exportDailyReportPDF(
       formattedDateLabel || selectedDate || new Date().toLocaleDateString('es-PE'),
@@ -188,6 +213,70 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+      {/* Top Section: Aforo and General Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        
+        {/* Aforo Actual Widget */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+            <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+              <circle 
+                cx="50" cy="50" r="40" 
+                fill="none" 
+                stroke={isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)'} 
+                strokeWidth="12" 
+                strokeDasharray="251.2" 
+                strokeDashoffset={251.2 - (251.2 * occupancyPercent) / 100}
+                style={{ transition: 'stroke-dashoffset 1s ease-in-out, stroke 0.5s ease' }}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '1.8rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--text-main)', lineHeight: 1 }}>
+                {currentOccupancy}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {maxCapacity}</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Users size={20} color="var(--urp-green-primary)" />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Aforo Actual</h3>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 12px 0' }}>
+              Capacidad en tiempo real
+            </p>
+            {isOverCapacity ? (
+              <span style={{ background: '#fef2f2', color: '#ef4444', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                Sobrecarga: {currentOccupancy - maxCapacity} extras
+              </span>
+            ) : (
+              <span style={{ background: '#f0fdf4', color: '#15803d', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>
+                {maxCapacity - currentOccupancy} disponibles
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Total Visits of the selected Date */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ padding: '10px', borderRadius: '10px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
+              <Activity size={24} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Total Asistencias</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>{formattedDateLabel ? `del ${formattedDateLabel}` : 'de hoy'}</p>
+            </div>
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
+            {filteredRecords?.length || 0}
+            <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: '8px' }}>registros</span>
+          </div>
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
         {/* Peak Hours Chart */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
@@ -301,6 +390,75 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
               </AreaChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Person Type Distribution (Pie Chart) */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+              <PieChartIcon size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                {formattedDateLabel ? `Afluencia por Tipo (${formattedDateLabel})` : 'Afluencia por Tipo (Hoy)'}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su rol</p>
+            </div>
+          </div>
+
+          {sortedPersonTypeData.length === 0 ? (
+            <div style={{ height: '270px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
+              <PieChartIcon size={32} style={{ opacity: 0.3 }} />
+              <span>No hay registros para esta fecha.</span>
+            </div>
+          ) : (
+            <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: '0 0 55%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sortedPersonTypeData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={50}
+                      paddingAngle={3}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {sortedPersonTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Custom Legend - sorted descending */}
+              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                {sortedPersonTypeData.map((item, index) => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: BAR_COLORS[index % BAR_COLORS.length]
+                    }} />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Career Distribution (Pie Chart) */}
