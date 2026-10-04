@@ -456,7 +456,6 @@ export const TabDifusion: React.FC<TabDifusionProps> = ({ students, persons = []
                   <option value="Maestrando">Maestrandos ({getRoleEmailCount('Maestrando')})</option>
                   <option value="Doctorando">Doctorandos ({getRoleEmailCount('Doctorando')})</option>
                 </select>
-              </div>              
               </div>
             </div>
           </div>
