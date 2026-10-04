@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, UserPlus, Edit3, Trash2, Mail, FileSpreadsheet } from 'lucide-react';
 import { Student } from '../../services/api';
 import { exportStudentsToExcel } from '../../utils/exportReports';
+import { normalizeSearchText } from './TabReportes';
 
 interface TabAlumnosProps {
   students: Student[];
@@ -31,9 +32,21 @@ export const TabAlumnos: React.FC<TabAlumnosProps> = ({
   onNavigateToDifusion
 }) => {
   const filteredStudents = students.filter(s => {
-    const matchSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        s.studentCode.includes(searchTerm) ||
-                        s.documentNumber.includes(searchTerm);
+    const tokens = normalizeSearchText(searchTerm).split(/\s+/).filter(Boolean);
+    let matchSearch = true;
+    if (tokens.length > 0) {
+      const target = normalizeSearchText([
+        s.fullName,
+        s.firstName,
+        s.lastName,
+        s.studentCode,
+        s.documentNumber,
+        s.email,
+        s.faculty,
+        s.career
+      ].filter(Boolean).join(' '));
+      matchSearch = tokens.every(t => target.includes(t));
+    }
     const matchCareer = filterCareer === 'ALL' || s.career === filterCareer;
     const matchFaculty = filterFaculty === 'ALL' || s.faculty === filterFaculty;
     return matchSearch && matchCareer && matchFaculty;

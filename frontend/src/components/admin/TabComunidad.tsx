@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, UserPlus, Edit3, Trash2, FileSpreadsheet, Users, Phone, Mail } from 'lucide-react';
 import { Student, LibraryPerson, PersonTypeValue, PERSON_TYPES, api, PostgraduateProgram } from '../../services/api';
 import { exportCommunityMembersToExcel } from '../../utils/exportReports';
+import { normalizeSearchText } from './TabReportes';
 
 export interface UnifiedCommunityMember {
   id?: string;
@@ -229,19 +230,24 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
         return false;
       }
 
-      // Búsqueda en todos los campos
+      // Búsqueda inteligente en todos los campos (DNI, código, nombres, apellidos, correo, etc.)
       if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase().trim();
-        const match =
-          m.fullName.toLowerCase().includes(q) ||
-          m.code.toLowerCase().includes(q) ||
-          m.documentNumber.toLowerCase().includes(q) ||
-          m.faculty.toLowerCase().includes(q) ||
-          m.career.toLowerCase().includes(q) ||
-          m.program.toLowerCase().includes(q) ||
-          m.email.toLowerCase().includes(q) ||
-          m.phone.toLowerCase().includes(q);
-        if (!match) return false;
+        const tokens = normalizeSearchText(searchTerm).split(/\s+/).filter(Boolean);
+        if (tokens.length > 0) {
+          const searchableTarget = normalizeSearchText([
+            m.fullName,
+            m.code,
+            m.documentNumber,
+            m.faculty,
+            m.career,
+            m.program,
+            m.email,
+            m.phone,
+            m.personType
+          ].filter(Boolean).join(' '));
+          const match = tokens.every(t => searchableTarget.includes(t));
+          if (!match) return false;
+        }
       }
 
       return true;

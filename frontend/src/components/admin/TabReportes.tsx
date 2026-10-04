@@ -4,6 +4,15 @@ import { AttendanceRecord, Student, AcademicTreeFaculty, api, LibraryPerson, PER
 import { exportAttendanceToPDF, exportAttendanceToExcel, resolveAttendanceIdentifiers } from '../../utils/exportReports';
 import { getRecordDateStr } from '../../utils/dateUtils';
 
+export const normalizeSearchText = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+};
+
 interface TabReportesProps {
   records: AttendanceRecord[];
   searchTerm: string;
@@ -146,16 +155,33 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         return { ...r, faculty: fac, _personInfo: personInfo, _studentInfo: studentInfo, _identifiers: identifiers };
       })
       .filter(r => {
-        const typeStr = r.personType || 'Alumno';
-        const q = searchTerm.toLowerCase().trim();
-        const iden = r._identifiers;
-        const matchSearch = !q ||
-                            r.studentName.toLowerCase().includes(q) ||
-                            r.studentCode.toLowerCase().includes(q) ||
-                            (iden?.dni && iden.dni !== '-' && iden.dni.toLowerCase().includes(q)) ||
-                            (iden?.code && iden.code !== '-' && iden.code.toLowerCase().includes(q)) ||
-                            r.visitReason.toLowerCase().includes(q) ||
-                            typeStr.toLowerCase().includes(q);
+        const tokens = normalizeSearchText(searchTerm).split(/\s+/).filter(Boolean);
+        let matchSearch = true;
+        if (tokens.length > 0) {
+          const personInfo = r._personInfo;
+          const studentInfo = r._studentInfo;
+          const iden = r._identifiers;
+          const searchableTarget = normalizeSearchText([
+            r.studentName,
+            r.studentCode,
+            iden?.dni !== '-' ? iden?.dni : '',
+            iden?.code !== '-' ? iden?.code : '',
+            personInfo?.fullName,
+            personInfo?.documentNumber,
+            personInfo?.code,
+            studentInfo?.fullName,
+            studentInfo?.firstName,
+            studentInfo?.lastName,
+            studentInfo?.studentCode,
+            studentInfo?.documentNumber,
+            r.visitReason,
+            r.personType || 'Alumno',
+            r.faculty,
+            r.career
+          ].filter(Boolean).join(' '));
+
+          matchSearch = tokens.every(token => searchableTarget.includes(token));
+        }
                             
         let matchFaculty = true;
         let matchCareer = true;
@@ -192,7 +218,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nombre, código o motivo..."
+            placeholder="Buscar por DNI, código, nombres, apellidos o motivo..."
             className="input-futuristic"
             style={{ paddingLeft: '40px', fontSize: '0.9rem', padding: '10px 14px 10px 40px' }}
           />

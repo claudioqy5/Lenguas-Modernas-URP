@@ -278,7 +278,45 @@ export function resolveAttendanceIdentifiers(
 }
 
 /**
- * Exporta listado de asistencias a PDF (general)
+ * Extrae y formatea los datos de fecha, entrada, salida, duración y estado para reportes
+ */
+export function getAttendanceEntryExit(r: AttendanceRecord) {
+  const rawDate = r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—');
+  let dateFormatted = rawDate;
+  if (rawDate && rawDate.includes('-')) {
+    const parts = rawDate.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      dateFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+
+  const entrada = r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—');
+  const salida = r.isActive ? '—' : (r.checkOutTimeString || '—');
+
+  let duracion = '—';
+  if (r.isActive) {
+    duracion = 'En curso';
+  } else if (r.durationMinutes !== undefined && r.durationMinutes !== null) {
+    duracion = r.durationMinutes < 60
+      ? `${r.durationMinutes} min`
+      : `${Math.floor(r.durationMinutes / 60)}h ${r.durationMinutes % 60}min`;
+  }
+
+  const isAutoClose = !r.isActive && (r.checkOutTimeString?.includes('cierre auto') ?? false);
+  let estado = 'Ya se retiró';
+  if (r.isActive || r.isActive === undefined) {
+    estado = 'En sala';
+  } else if (isAutoClose) {
+    estado = 'Cierre auto';
+  } else {
+    estado = 'Ya se retiró';
+  }
+
+  return { dateFormatted, entrada, salida, duracion, estado };
+}
+
+/**
+ * Exporta listado de asistencias a PDF (general) en formato horizontal (Landscape)
  */
 export function exportAttendanceToPDF(
   records: AttendanceRecord[], 
@@ -289,35 +327,48 @@ export function exportAttendanceToPDF(
   codeToPerson?: Map<string, LibraryPerson>,
   students?: Student[]
 ) {
-  const doc = new jsPDF();
+  // Orientación horizontal para visualización óptima de múltiples columnas
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(15, 81, 66);
-  doc.rect(0, 0, 210, 28, 'F');
+  doc.rect(0, 0, pageWidth, 26, 'F');
 
   doc.setFillColor(180, 83, 9);
-  doc.rect(0, 28, 210, 2, 'F');
+  doc.rect(0, 26, pageWidth, 2, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('UNIVERSIDAD RICARDO PALMA', 14, 11);
+  doc.text('UNIVERSIDAD RICARDO PALMA', 14, 10);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo', 14, 17);
-  doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`, 14, 23);
+  doc.text('Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo', 14, 16);
+  doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`, 14, 22);
 
   doc.setTextColor(15, 81, 66);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, 14, 38);
+  doc.text(title, 14, 36);
 
   if (subtitle) {
     doc.setTextColor(71, 85, 105);
-    doc.setFontSize(9.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(subtitle, 14, 44);
+    doc.text(subtitle, 14, 42);
   }
+
+  // Resumen numérico en la esquina superior derecha
+  const total = records.length;
+  const enSala = records.filter(r => r.isActive).length;
+  const retirados = records.filter(r => !r.isActive && !r.checkOutTimeString?.includes('cierre auto')).length;
+  const cierreAuto = records.filter(r => !r.isActive && r.checkOutTimeString?.includes('cierre auto')).length;
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Total: ${total} | En sala: ${enSala} | Retirados: ${retirados} | Cierre auto: ${cierreAuto}`, pageWidth - 14, 36, { align: 'right' });
 
   const roleNameMap: Record<string, string> = {
     'Todos': 'Todos_los_Usuarios',
@@ -329,12 +380,13 @@ export function exportAttendanceToPDF(
   };
   const roleSuffix = roleNameMap[personType] || personType;
 
-  let head: string[][] = [['#', 'Fecha', 'Hora', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
+  let head: string[][] = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
   let tableData: any[][] = [];
 
   if (personType === 'Todos') {
-    head = [['#', 'Fecha', 'Hora', 'Tipo', 'DNI', 'Código', 'Usuario', 'Detalles', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'Tipo', 'DNI', 'Código', 'Usuario', 'Detalles (Fac./Prog.)', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       const p = codeToPerson?.get(r.studentCode) || (iden.code !== '-' ? codeToPerson?.get(iden.code) : undefined) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       let details = r.career || r.faculty || '—';
@@ -342,11 +394,15 @@ export function exportAttendanceToPDF(
         if (p.personType === 'Alumno') details = `${p.faculty || ''} - ${p.career || ''}`;
         else if (p.personType === 'Docente') details = p.faculty || p.email || '—';
         else if (p.personType === 'Maestrando' || p.personType === 'Doctorando') details = p.program || '—';
+        else if (p.personType === 'Visitante') details = p.email || p.phone || '—';
       }
       return [
         (i + 1).toString(),
-        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        dateFormatted,
+        entrada,
+        salida,
+        duracion,
+        estado,
         p?.personType || r.personType || 'Alumno',
         iden.dni,
         iden.code,
@@ -357,13 +413,17 @@ export function exportAttendanceToPDF(
       ];
     });
   } else if (personType === 'Alumno') {
-    head = [['#', 'Fecha', 'Hora', 'DNI', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'DNI', 'Código', 'Estudiante', 'Facultad', 'Carrera', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       return [
         (i + 1).toString(),
-        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        dateFormatted,
+        entrada,
+        salida,
+        duracion,
+        estado,
         iden.dni,
         iden.code !== '-' ? iden.code : r.studentCode,
         r.studentName,
@@ -374,29 +434,40 @@ export function exportAttendanceToPDF(
       ];
     });
   } else if (personType === 'Docente') {
-    head = [['#', 'Fecha', 'Hora', 'DNI', 'Código', 'Docente', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'DNI', 'Código', 'Docente', 'Facultad', 'Correo', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
+      const p = codeToPerson?.get(r.studentCode) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return [
         (i + 1).toString(),
-        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        dateFormatted,
+        entrada,
+        salida,
+        duracion,
+        estado,
         iden.dni,
         iden.code,
         r.studentName,
+        p?.faculty || r.faculty || '—',
+        p?.email || '—',
         r.visitReason,
         r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
       ];
     });
   } else if (personType === 'Maestrando' || personType === 'Doctorando') {
-    head = [['#', 'Fecha', 'Hora', 'DNI', 'Código', personType, 'Programa', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'DNI', 'Código', personType, 'Programa', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
-      const p = codeToPerson?.get(r.studentCode);
+      const p = codeToPerson?.get(r.studentCode) || (iden.code !== '-' ? codeToPerson?.get(iden.code) : undefined) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return [
         (i + 1).toString(),
-        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        dateFormatted,
+        entrada,
+        salida,
+        duracion,
+        estado,
         iden.dni,
         iden.code,
         r.studentName,
@@ -406,15 +477,22 @@ export function exportAttendanceToPDF(
       ];
     });
   } else if (personType === 'Visitante') {
-    head = [['#', 'Fecha', 'Hora', 'DNI', 'Visitante', 'Motivo', 'Método']];
+    head = [['#', 'Fecha', 'Entrada', 'Salida', 'Duración', 'Estado', 'DNI', 'Visitante', 'Correo', 'Celular', 'Motivo', 'Método']];
     tableData = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
+      const p = codeToPerson?.get(r.studentCode) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return [
         (i + 1).toString(),
-        r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        dateFormatted,
+        entrada,
+        salida,
+        duracion,
+        estado,
         iden.dni,
         r.studentName,
+        p?.email || '—',
+        p?.phone || '—',
         r.visitReason,
         r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
       ];
@@ -422,11 +500,14 @@ export function exportAttendanceToPDF(
   }
 
   if (tableData.length === 0) {
-    tableData = [['-', '-', '-', '-', '-', '-', 'No se encontraron asistencias para los filtros seleccionados.', '-', '-', '-']];
+    const colCount = head[0]?.length || 10;
+    const emptyRow = new Array(colCount).fill('-');
+    emptyRow[Math.floor(colCount / 2)] = 'No se encontraron asistencias para los filtros seleccionados.';
+    tableData = [emptyRow];
   }
 
   autoTable(doc, {
-    startY: subtitle ? 48 : 44,
+    startY: subtitle ? 46 : 42,
     head: head,
     body: tableData,
     theme: 'striped',
@@ -434,16 +515,30 @@ export function exportAttendanceToPDF(
       fillColor: [15, 81, 66],
       textColor: [255, 255, 255],
       fontSize: 7.2,
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      halign: 'center',
+      valign: 'middle'
     },
     bodyStyles: {
       fontSize: 6.8,
-      textColor: [30, 41, 59]
+      textColor: [30, 41, 59],
+      valign: 'middle'
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252]
     },
-    margin: { left: 14, right: 14 }
+    columnStyles: {
+      0: { halign: 'center' }, // #
+      1: { halign: 'center' }, // Fecha
+      2: { halign: 'center' }, // Entrada
+      3: { halign: 'center' }, // Salida
+      4: { halign: 'center' }, // Duración
+      5: { halign: 'center' }, // Estado
+      6: { halign: 'center' }, // Tipo o DNI
+      7: { halign: 'center' }, // DNI o Código
+      8: { halign: 'center' }  // Código o Nombre
+    },
+    margin: { left: 10, right: 10 }
   });
 
   doc.save(`Reporte_Asistencias_URP_${roleSuffix}_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -476,6 +571,7 @@ export function exportAttendanceToExcel(
 
   if (personType === 'Todos') {
     attendanceRows = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       const p = codeToPerson?.get(r.studentCode) || (iden.code !== '-' ? codeToPerson?.get(iden.code) : undefined) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       let details = r.career || r.faculty || '—';
@@ -483,11 +579,15 @@ export function exportAttendanceToExcel(
         if (p.personType === 'Alumno') details = `${p.faculty || ''} - ${p.career || ''}`;
         else if (p.personType === 'Docente') details = p.faculty || p.email || '—';
         else if (p.personType === 'Maestrando' || p.personType === 'Doctorando') details = p.program || '—';
+        else if (p.personType === 'Visitante') details = p.email || p.phone || '—';
       }
       return {
         'N°': i + 1,
-        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Fecha': dateFormatted,
+        'Entrada': entrada,
+        'Salida': salida,
+        'Duración': duracion,
+        'Estado': estado,
         'Tipo de Usuario': p?.personType || r.personType || 'Alumno',
         'DNI': iden.dni,
         'Código': iden.code,
@@ -497,14 +597,32 @@ export function exportAttendanceToExcel(
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 16}, {wch: 14}, {wch: 15}, {wch: 32}, {wch: 30}, {wch: 22}, {wch: 18}];
+    cols = [
+      { wch: 6 },
+      { wch: 12 },
+      { wch: 11 },
+      { wch: 22 },
+      { wch: 13 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 15 },
+      { wch: 32 },
+      { wch: 32 },
+      { wch: 22 },
+      { wch: 18 }
+    ];
   } else if (personType === 'Alumno') {
     attendanceRows = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       return {
         'N°': i + 1,
-        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Fecha': dateFormatted,
+        'Entrada': entrada,
+        'Salida': salida,
+        'Duración': duracion,
+        'Estado': estado,
         'DNI': iden.dni,
         'Código Estudiante': iden.code !== '-' ? iden.code : r.studentCode,
         'Estudiante': r.studentName,
@@ -514,15 +632,33 @@ export function exportAttendanceToExcel(
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 14}, {wch: 16}, {wch: 32}, {wch: 28}, {wch: 28}, {wch: 22}, {wch: 18}];
+    cols = [
+      { wch: 6 },
+      { wch: 12 },
+      { wch: 11 },
+      { wch: 22 },
+      { wch: 13 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 32 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 22 },
+      { wch: 18 }
+    ];
   } else if (personType === 'Docente') {
     attendanceRows = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       const p = codeToPerson?.get(r.studentCode) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return {
         'N°': i + 1,
-        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Fecha': dateFormatted,
+        'Entrada': entrada,
+        'Salida': salida,
+        'Duración': duracion,
+        'Estado': estado,
         'DNI': iden.dni,
         'Código': iden.code,
         'Docente': r.studentName,
@@ -532,15 +668,33 @@ export function exportAttendanceToExcel(
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 14}, {wch: 14}, {wch: 32}, {wch: 26}, {wch: 28}, {wch: 22}, {wch: 18}];
+    cols = [
+      { wch: 6 },
+      { wch: 12 },
+      { wch: 11 },
+      { wch: 22 },
+      { wch: 13 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 26 },
+      { wch: 28 },
+      { wch: 22 },
+      { wch: 18 }
+    ];
   } else if (personType === 'Maestrando' || personType === 'Doctorando') {
     attendanceRows = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       const p = codeToPerson?.get(r.studentCode) || (iden.code !== '-' ? codeToPerson?.get(iden.code) : undefined) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return {
         'N°': i + 1,
-        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Fecha': dateFormatted,
+        'Entrada': entrada,
+        'Salida': salida,
+        'Duración': duracion,
+        'Estado': estado,
         'DNI': iden.dni,
         'Código': iden.code,
         [personType]: r.studentName,
@@ -549,15 +703,32 @@ export function exportAttendanceToExcel(
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 14}, {wch: 14}, {wch: 32}, {wch: 30}, {wch: 22}, {wch: 18}];
+    cols = [
+      { wch: 6 },
+      { wch: 12 },
+      { wch: 11 },
+      { wch: 22 },
+      { wch: 13 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 30 },
+      { wch: 22 },
+      { wch: 18 }
+    ];
   } else if (personType === 'Visitante') {
     attendanceRows = records.map((r, i) => {
+      const { dateFormatted, entrada, salida, duracion, estado } = getAttendanceEntryExit(r);
       const iden = resolveAttendanceIdentifiers(r, codeToPerson, students);
       const p = codeToPerson?.get(r.studentCode) || (iden.dni !== '-' ? codeToPerson?.get(iden.dni) : undefined);
       return {
         'N°': i + 1,
-        'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-        'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
+        'Fecha': dateFormatted,
+        'Entrada': entrada,
+        'Salida': salida,
+        'Duración': duracion,
+        'Estado': estado,
         'DNI': iden.dni,
         'Visitante': r.studentName,
         'Correo': p?.email || '—',
@@ -566,7 +737,20 @@ export function exportAttendanceToExcel(
         'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
       };
     });
-    cols = [{wch: 6}, {wch: 12}, {wch: 12}, {wch: 14}, {wch: 32}, {wch: 26}, {wch: 16}, {wch: 22}, {wch: 18}];
+    cols = [
+      { wch: 6 },
+      { wch: 12 },
+      { wch: 11 },
+      { wch: 22 },
+      { wch: 13 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 26 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 18 }
+    ];
   }
 
   if (attendanceRows.length === 0) {
