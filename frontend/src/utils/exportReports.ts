@@ -760,7 +760,25 @@ export function exportAttendanceToExcel(
     cols = [{ wch: 70 }];
   }
 
-  const wsAttendance = XLSX.utils.json_to_sheet(attendanceRows);
+  const now = new Date();
+  const fechaGeneracion = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaGeneracion = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const enSalaCount = records.filter(r => r.isActive).length;
+  const retiradosCount = records.filter(r => !r.isActive && !r.checkOutTimeString?.includes('cierre auto')).length;
+  const autoCloseCount = records.filter(r => !r.isActive && r.checkOutTimeString?.includes('cierre auto')).length;
+
+  const titleRows = [
+    ['UNIVERSIDAD RICARDO PALMA'],
+    ['Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo'],
+    [`REPORTE DE CONTROL DE ASISTENCIAS - ${personType === 'Todos' ? 'TODOS LOS USUARIOS' : personType.toUpperCase() + 'S'}`],
+    [`Fecha y hora de emisión: ${fechaGeneracion} a las ${horaGeneracion}`],
+    [`Total registros: ${records.length} | En sala: ${enSalaCount} | Retirados: ${retiradosCount} | Cierre auto: ${autoCloseCount}`],
+    []
+  ];
+
+  const wsAttendance = XLSX.utils.aoa_to_sheet(titleRows);
+  XLSX.utils.sheet_add_json(wsAttendance, attendanceRows, { origin: 'A7' });
   wsAttendance['!cols'] = cols;
   XLSX.utils.book_append_sheet(wb, wsAttendance, `Asistencias_${roleSuffix}`.slice(0, 31));
 
@@ -786,7 +804,22 @@ export function exportStudentsToExcel(students: Student[]) {
     'Total Visitas': s.totalVisits,
     'Última Visita': s.lastVisitAt ? new Date(s.lastVisitAt).toLocaleDateString('es-PE') : 'Sin visitas'
   }));
-  const ws = XLSX.utils.json_to_sheet(rows);
+
+  const now = new Date();
+  const fechaGeneracion = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaGeneracion = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const titleRows = [
+    ['UNIVERSIDAD RICARDO PALMA'],
+    ['Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo'],
+    ['DIRECTORIO DE ESTUDIANTES'],
+    [`Fecha y hora de emisión: ${fechaGeneracion} a las ${horaGeneracion}`],
+    [`Total estudiantes registrados: ${students.length}`],
+    []
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(titleRows);
+  XLSX.utils.sheet_add_json(ws, rows, { origin: 'A7' });
   ws['!cols'] = [
     { wch: 6 },
     { wch: 14 },
@@ -836,7 +869,21 @@ export function exportPersonsToExcel(persons: LibraryPerson[], personType: strin
     return base;
   });
 
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const now = new Date();
+  const fechaGeneracion = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaGeneracion = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const titleRows = [
+    ['UNIVERSIDAD RICARDO PALMA'],
+    ['Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo'],
+    [`DIRECTORIO DE ${personType.toUpperCase()}S`],
+    [`Fecha y hora de emisión: ${fechaGeneracion} a las ${horaGeneracion}`],
+    [`Total registros: ${persons.length}`],
+    []
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(titleRows);
+  XLSX.utils.sheet_add_json(ws, rows, { origin: 'A7' });
   ws['!cols'] = [
     { wch: 6 },
     { wch: 16 },
@@ -898,7 +945,21 @@ export function exportCommunityMembersToExcel(members: UnifiedCommunityRow[], ca
     return row;
   });
 
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const now = new Date();
+  const fechaGeneracion = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaGeneracion = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const titleRows = [
+    ['UNIVERSIDAD RICARDO PALMA'],
+    ['Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo'],
+    [`DIRECTORIO DE COMUNIDAD UNIVERSITARIA - ${categoryLabel === 'Todos' ? 'TODOS LOS USUARIOS' : categoryLabel.toUpperCase() + 'S'}`],
+    [`Fecha y hora de emisión: ${fechaGeneracion} a las ${horaGeneracion}`],
+    [`Total miembros registrados: ${members.length}`],
+    []
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(titleRows);
+  XLSX.utils.sheet_add_json(ws, rows, { origin: 'A7' });
   const cols = [
     { wch: 6 },
     { wch: 16 },
