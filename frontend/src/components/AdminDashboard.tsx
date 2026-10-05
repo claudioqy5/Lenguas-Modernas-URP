@@ -159,21 +159,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return Math.max(keys.size, summaryCount);
   }, [students, persons, records, summary]);
 
+  const defaultSummary: AnalyticsSummary = useMemo(() => ({
+    totalRegisteredStudents: (students || []).length + (persons || []).length,
+    totalVisitsAllTime: (records || []).length,
+    totalVisitsToday: 0,
+    totalVisitsThisMonth: 0,
+    currentOccupancy: 0,
+    maxCapacity: 50,
+    occupancyPercentage: 0,
+    peakHours: [],
+    peakDays: [],
+    topStudents: [],
+    careerDistribution: [],
+    reasonDistribution: [],
+    languageDistribution: []
+  }), [students, persons, records]);
+
+  const effectiveSummary = summary || defaultSummary;
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [sumData, recData, stuData, perData] = await Promise.all([
+      const [sumRes, recRes, stuRes, perRes] = await Promise.allSettled([
         api.getAnalyticsSummary(),
         api.getRecentAttendances(10000),
         api.getAllStudents(),
         api.getPersons(undefined, session?.token)
       ]);
-      setSummary(sumData);
-      setRecords(recData || []);
-      setStudents(stuData || []);
-      setPersons(perData || []);
+
+      if (sumRes.status === 'fulfilled' && sumRes.value) {
+        setSummary(sumRes.value);
+      }
+      if (recRes.status === 'fulfilled' && recRes.value) {
+        setRecords(recRes.value || []);
+      }
+      if (stuRes.status === 'fulfilled' && stuRes.value) {
+        setStudents(stuRes.value || []);
+      }
+      if (perRes.status === 'fulfilled' && perRes.value) {
+        setPersons(perRes.value || []);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Error al cargar datos:', e);
     } finally {
       setLoading(false);
     }
@@ -937,7 +964,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             return (
               <KPICards 
-                summary={summary} 
+                summary={effectiveSummary} 
                 studentsCount={(students || []).length}
                 totalUsersCount={totalRegisteredUsersCount}
                 selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
@@ -952,15 +979,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           })()}
 
           {/* TAB 1: INICIO (Daily Stats) */}
-          {activeTab === 'inicio' && summary && (
-            <TabInicio ref={inicioRef} summary={summary} selectedDate={inicioDate} records={records} />
+          {activeTab === 'inicio' && (
+            <TabInicio ref={inicioRef} summary={effectiveSummary} selectedDate={inicioDate} records={records} />
           )}
 
           {/* TAB 1B: HISTORICO */}
-          {activeTab === 'historico' && summary && (
+          {activeTab === 'historico' && (
             <TabHistorico 
               ref={historicoRef}
-              summary={summary}
+              summary={effectiveSummary}
               records={records}
               filterType={historyFilter}
               filterValue={
