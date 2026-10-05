@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, LabelList } from 'recharts';
-import { Calendar, Trophy, BookOpen, Inbox, Building2, Clock, Users, PieChart as PieChartIcon } from 'lucide-react';
+import { Calendar, Trophy, BookOpen, Inbox, Building2, Clock, Users, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel, getRecordDateStr } from '../../utils/dateUtils';
 import { exportHistoricoReportPDF, exportHistoricoReportExcel } from '../../utils/exportReports';
@@ -121,15 +121,24 @@ const CustomTemporalTooltip = ({ active, payload }: any) => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#64748b' }}>👥 Total Asistencias:</span>
+            <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={13} style={{ color: '#0f5142' }} />
+              <span>Total Asistencias:</span>
+            </span>
             <span style={{ fontWeight: 700, color: '#0f5142' }}>{data.count} {data.count === 1 ? 'visita' : 'visitas'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#64748b' }}>⏱️ Tiempo de Permanencia:</span>
+            <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Clock size={13} style={{ color: '#b45309' }} />
+              <span>Tiempo de Permanencia:</span>
+            </span>
             <span style={{ fontWeight: 700, color: '#b45309' }}>{data.formattedTime} ({Number(data.totalMinutes).toLocaleString()} min)</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px dashed #f1f5f9' }}>
-            <span style={{ color: '#64748b' }}>📊 Promedio por Visita:</span>
+            <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BarChart2 size={13} style={{ color: '#64748b' }} />
+              <span>Promedio por Visita:</span>
+            </span>
             <span style={{ fontWeight: 600, color: '#334155' }}>{data.formattedAvg}</span>
           </div>
         </div>
@@ -650,6 +659,9 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                   type="button"
                   onClick={() => setDayMetricMode('visits')}
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     padding: '5px 12px',
                     borderRadius: '6px',
                     border: 'none',
@@ -662,12 +674,16 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  👥 Total Visitas
+                  <Users size={13} />
+                  <span>Total Visitas</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDayMetricMode('minutes')}
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     padding: '5px 12px',
                     borderRadius: '6px',
                     border: 'none',
@@ -680,7 +696,8 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  ⏱️ Minutos Usados
+                  <Clock size={13} />
+                  <span>Minutos Usados</span>
                 </button>
               </div>
             </div>
