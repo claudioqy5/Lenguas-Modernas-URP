@@ -113,12 +113,15 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const isSubmittingRef = useRef(false);
+
   // Process Check-In
   const handleCheckIn = async (codeToSubmit: string, method: 'Barcode' | 'Manual' = 'Manual') => {
     const code = codeToSubmit.trim();
-    if (!code) return;
+    if (!code || isSubmittingRef.current) return;
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
 
       // Check identity to prevent checking in as someone else by mistake
@@ -169,6 +172,7 @@ export function App() {
     } catch (err: any) {
       console.error(err);
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
@@ -178,6 +182,7 @@ export function App() {
     onScan: (scannedCode) => {
       setScannerNotification(`Código detectado por escáner: ${scannedCode}`);
       setTimeout(() => setScannerNotification(null), 3500);
+      setStudentCodeInput(scannedCode);
       handleCheckIn(scannedCode, 'Barcode');
     }
   });
@@ -478,6 +483,7 @@ export function App() {
               </label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="kiosk-code-input"
                   type="text"
                   required
                   autoFocus

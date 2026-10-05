@@ -1,4 +1,5 @@
 using AsistenciaLenguas.Api.DTOs;
+using AsistenciaLenguas.Api.Models;
 using AsistenciaLenguas.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,16 @@ namespace AsistenciaLenguas.Api.Controllers
     {
         private readonly IStudentService _studentService;
         private readonly IAttendanceService _attendanceService;
+        private readonly ILibraryPersonService _personService;
 
-        public StudentsController(IStudentService studentService, IAttendanceService attendanceService)
+        public StudentsController(
+            IStudentService studentService,
+            IAttendanceService attendanceService,
+            ILibraryPersonService personService)
         {
             _studentService = studentService;
             _attendanceService = attendanceService;
+            _personService = personService;
         }
 
         [HttpGet]
@@ -28,12 +34,35 @@ namespace AsistenciaLenguas.Api.Controllers
         [HttpGet("check/{code}")]
         public async Task<IActionResult> CheckCode(string code)
         {
-            var student = await _studentService.GetByStudentCodeAsync(code);
-            if (student == null)
+            var cleanKey = (code ?? string.Empty).Trim();
+            var student = await _studentService.GetByStudentCodeAsync(cleanKey);
+            if (student != null)
             {
-                return NotFound(new { exists = false, message = "Estudiante no registrado." });
+                return Ok(new { exists = true, student });
             }
-            return Ok(new { exists = true, student });
+
+            var person = await _personService.FindByKeyAsync(cleanKey);
+            if (person != null)
+            {
+                var unifiedStudent = new Student
+                {
+                    Id = person.Id,
+                    StudentCode = person.LookupKey,
+                    DocumentNumber = person.DocumentNumber ?? string.Empty,
+                    FirstName = person.FirstName ?? string.Empty,
+                    LastName = person.LastName ?? string.Empty,
+                    Career = !string.IsNullOrWhiteSpace(person.Career) ? person.Career : (person.Program ?? string.Empty),
+                    Faculty = person.Faculty ?? string.Empty,
+                    Email = person.Email ?? string.Empty,
+                    Phone = person.Phone ?? string.Empty,
+                    TotalVisits = person.TotalVisits,
+                    LastVisitAt = person.LastVisitAt,
+                    CreatedAt = person.CreatedAt
+                };
+                return Ok(new { exists = true, student = unifiedStudent });
+            }
+
+            return NotFound(new { exists = false, message = "Estudiante o persona no registrada." });
         }
 
         [HttpGet("{id}")]

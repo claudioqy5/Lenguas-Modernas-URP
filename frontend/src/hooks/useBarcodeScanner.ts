@@ -8,8 +8,8 @@ interface BarcodeScannerOptions {
 
 export function useBarcodeScanner({
   onScan,
-  minChars = 6,
-  maxIntervalMs = 70
+  minChars = 5,
+  maxIntervalMs = 85
 }: BarcodeScannerOptions) {
   const bufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
@@ -19,9 +19,14 @@ export function useBarcodeScanner({
       // Ignore functional modifier keys
       if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-      // Check if user is actively focusing an input other than the quick code input
-      const target = e.target as HTMLElement;
-      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+      // Check if user is actively focusing an input other than the kiosk code input
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        // If focusing another input (e.g. inside NewStudentModal or LibrarianLoginModal), do NOT intercept
+        if (target.id !== 'kiosk-code-input') {
+          return;
+        }
+      }
 
       const now = performance.now();
       const timeDiff = now - lastKeyTimeRef.current;
