@@ -105,103 +105,88 @@ export const KPICards: React.FC<KPICardsProps> = ({
   const isOverCapacity = currentOccupancy > maxCapacity;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isPeriodMode ? 'repeat(auto-fit, minmax(240px, 1fr))' : 'repeat(5, 1fr)', gap: '16px', marginBottom: '28px' }}>
-      <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isPeriodMode ? 'repeat(auto-fit, minmax(220px, 1fr))' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
               Usuarios Registrados
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px', lineHeight: 1.1 }}>
               {summary?.totalRegisteredStudents ?? studentsCount}
             </div>
           </div>
-          <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
-            <Users size={18} />
+          <div style={{ padding: '7px', borderRadius: '8px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={17} />
           </div>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '8px' }}>
-          Comunidad Universitaria
         </div>
       </div>
 
-      <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
               {card2Title}
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--urp-green-primary)', marginTop: '4px' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--urp-green-primary)', marginTop: '2px', lineHeight: 1.1 }}>
               {card2Value}
             </div>
           </div>
-          <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-            <Clock size={18} />
+          <div style={{ padding: '7px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Clock size={17} />
           </div>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--urp-green-primary)', fontWeight: 600, marginTop: '8px' }}>
-          {card2Subtitle}
         </div>
       </div>
 
-      <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
               {card3Title}
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--urp-gold-primary)', marginTop: '4px' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--urp-gold-primary)', marginTop: '2px', lineHeight: 1.1 }}>
               {card3Value}
             </div>
           </div>
-          <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-            <Calendar size={18} />
+          <div style={{ padding: '7px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Calendar size={17} />
           </div>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--urp-gold-primary)', fontWeight: 600, marginTop: '8px' }}>
-          {card3Subtitle}
         </div>
       </div>
 
       {!isPeriodMode && (
         <>
           {/* Aforo Actual Widget */}
-          <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   Aforo Actual
                 </div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', marginTop: '4px' }}>
-                  {currentOccupancy} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/ {maxCapacity}</span>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', marginTop: '2px', lineHeight: 1.1 }}>
+                  {currentOccupancy} <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {maxCapacity}</span>
                 </div>
               </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: isOverCapacity ? '#fef2f2' : 'var(--urp-green-light)', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)' }}>
-                <Users size={18} />
+              <div style={{ padding: '7px', borderRadius: '8px', background: isOverCapacity ? '#fef2f2' : 'var(--urp-green-light)', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={17} />
               </div>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', fontWeight: 600, marginTop: '8px' }}>
-              {isOverCapacity ? `Sobrecarga: ${currentOccupancy - maxCapacity}` : `${maxCapacity - currentOccupancy} libres`}
             </div>
           </div>
 
           {/* Unique Users of the selected Date */}
-          <div className="glass-panel" style={{ padding: '18px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                   Usuarios Únicos
                 </div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-purple)', marginTop: '4px' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-purple)', marginTop: '2px', lineHeight: 1.1 }}>
                   {uniqueUsersCount}
                 </div>
               </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: '#f5f3ff', color: 'var(--accent-purple)' }}>
-                <UserCheck size={18} />
+              <div style={{ padding: '7px', borderRadius: '8px', background: '#f5f3ff', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UserCheck size={17} />
               </div>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--accent-purple)', fontWeight: 600, marginTop: '8px' }}>
-              {formattedDateLabel ? `Sin reingresos (${formattedDateLabel})` : 'Sin contar reingresos'}
             </div>
           </div>
         </>

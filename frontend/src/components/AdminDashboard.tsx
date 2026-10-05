@@ -467,11 +467,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             position: 'sticky',
             top: 0,
             zIndex: 90,
-            padding: '16px 32px',
+            padding: '12px 32px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            minHeight: '70px'
+            minHeight: '60px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
@@ -838,7 +838,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </header>
 
-        <main style={{ padding: '32px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1, background: '#ffffff' }}>
+        <main style={{ padding: '18px 32px 24px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1, background: '#ffffff' }}>
           {/* KPI Cards */}
           {(activeTab === 'inicio' || activeTab === 'historico') && (() => {
             const currentRecords = activeTab === 'inicio'
