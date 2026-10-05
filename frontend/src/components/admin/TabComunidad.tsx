@@ -60,6 +60,92 @@ const DEFAULT_DOCTORADOS = [
   "Ciencia Política y Relaciones Internacionales"
 ];
 
+export const unifyCommunityMembers = (students: Student[], persons: LibraryPerson[]): UnifiedCommunityMember[] => {
+  const list: UnifiedCommunityMember[] = [];
+  const keyIndexMap = new Map<string, number>();
+
+  // Paso A: Agregar LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
+  (persons || []).forEach(p => {
+    const member: UnifiedCommunityMember = {
+      id: p.id,
+      originalPerson: p,
+      personType: p.personType || 'Visitante',
+      code: (p.code || '').trim(),
+      documentNumber: (p.documentNumber || '').trim(),
+      fullName: p.fullName?.trim() || `${p.lastName || ''} ${p.firstName || ''}`.trim() || '—',
+      faculty: (p.faculty || '').trim(),
+      career: (p.career || '').trim(),
+      program: (p.program || '').trim(),
+      email: (p.email || '').trim(),
+      phone: (p.phone || '').trim(),
+      totalVisits: p.totalVisits || 0,
+      lastVisitAt: p.lastVisitAt
+    };
+
+    const idx = list.length;
+    list.push(member);
+
+    if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
+    if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
+    if (p.id) keyIndexMap.set(`id:${p.id}`, idx);
+  });
+
+  // Paso B: Agregar o fusionar Students
+  (students || []).forEach(s => {
+    const codeKey = s.studentCode ? `code:${s.studentCode.trim().toLowerCase()}` : '';
+    const docKey = s.documentNumber ? `doc:${s.documentNumber.trim().toLowerCase()}` : '';
+    const idKey = s.id ? `id:${s.id}` : '';
+
+    const existingIdx = 
+      (codeKey && keyIndexMap.has(codeKey)) ? keyIndexMap.get(codeKey) :
+      (docKey && keyIndexMap.has(docKey)) ? keyIndexMap.get(docKey) :
+      (idKey && keyIndexMap.has(idKey)) ? keyIndexMap.get(idKey) :
+      undefined;
+
+    if (existingIdx !== undefined) {
+      const existing = list[existingIdx];
+      if (!existing.originalStudent) existing.originalStudent = s;
+      if (!existing.faculty && s.faculty) existing.faculty = s.faculty.trim();
+      if (!existing.career && s.career) existing.career = s.career.trim();
+      if (!existing.code && s.studentCode) existing.code = s.studentCode.trim();
+      if (!existing.documentNumber && s.documentNumber) existing.documentNumber = s.documentNumber.trim();
+      if (!existing.email && s.email) existing.email = s.email.trim();
+      if (!existing.phone && s.phone) existing.phone = s.phone.trim();
+      if ((s.totalVisits || 0) > (existing.totalVisits || 0)) {
+        existing.totalVisits = s.totalVisits;
+      }
+      if (!existing.lastVisitAt && s.lastVisitAt) {
+        existing.lastVisitAt = s.lastVisitAt;
+      }
+    } else {
+      const member: UnifiedCommunityMember = {
+        id: s.id,
+        originalStudent: s,
+        personType: 'Alumno',
+        code: (s.studentCode || '').trim(),
+        documentNumber: (s.documentNumber || '').trim(),
+        fullName: s.fullName?.trim() || `${s.lastName || ''} ${s.firstName || ''}`.trim() || '—',
+        faculty: (s.faculty || '').trim(),
+        career: (s.career || '').trim(),
+        program: '',
+        email: (s.email || '').trim(),
+        phone: (s.phone || '').trim(),
+        totalVisits: s.totalVisits || 0,
+        lastVisitAt: s.lastVisitAt
+      };
+
+      const idx = list.length;
+      list.push(member);
+
+      if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
+      if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
+      if (s.id) keyIndexMap.set(`id:${s.id}`, idx);
+    }
+  });
+
+  return list;
+};
+
 export const TabComunidad: React.FC<TabComunidadProps> = ({
   students,
   persons,
@@ -93,89 +179,7 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
 
   // 1. Unificar todos los usuarios (Students + LibraryPersons) con deduplicación inteligente
   const combinedMembers = useMemo<UnifiedCommunityMember[]>(() => {
-    const list: UnifiedCommunityMember[] = [];
-    const keyIndexMap = new Map<string, number>();
-
-    // Paso A: Agregar LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
-    persons.forEach(p => {
-      const member: UnifiedCommunityMember = {
-        id: p.id,
-        originalPerson: p,
-        personType: p.personType || 'Visitante',
-        code: (p.code || '').trim(),
-        documentNumber: (p.documentNumber || '').trim(),
-        fullName: p.fullName?.trim() || `${p.lastName || ''} ${p.firstName || ''}`.trim() || '—',
-        faculty: (p.faculty || '').trim(),
-        career: (p.career || '').trim(),
-        program: (p.program || '').trim(),
-        email: (p.email || '').trim(),
-        phone: (p.phone || '').trim(),
-        totalVisits: p.totalVisits || 0,
-        lastVisitAt: p.lastVisitAt
-      };
-
-      const idx = list.length;
-      list.push(member);
-
-      if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
-      if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
-      if (p.id) keyIndexMap.set(`id:${p.id}`, idx);
-    });
-
-    // Paso B: Agregar o fusionar Students
-    students.forEach(s => {
-      const codeKey = s.studentCode ? `code:${s.studentCode.trim().toLowerCase()}` : '';
-      const docKey = s.documentNumber ? `doc:${s.documentNumber.trim().toLowerCase()}` : '';
-      const idKey = s.id ? `id:${s.id}` : '';
-
-      const existingIdx = 
-        (codeKey && keyIndexMap.has(codeKey)) ? keyIndexMap.get(codeKey) :
-        (docKey && keyIndexMap.has(docKey)) ? keyIndexMap.get(docKey) :
-        (idKey && keyIndexMap.has(idKey)) ? keyIndexMap.get(idKey) :
-        undefined;
-
-      if (existingIdx !== undefined) {
-        const existing = list[existingIdx];
-        if (!existing.originalStudent) existing.originalStudent = s;
-        if (!existing.faculty && s.faculty) existing.faculty = s.faculty.trim();
-        if (!existing.career && s.career) existing.career = s.career.trim();
-        if (!existing.code && s.studentCode) existing.code = s.studentCode.trim();
-        if (!existing.documentNumber && s.documentNumber) existing.documentNumber = s.documentNumber.trim();
-        if (!existing.email && s.email) existing.email = s.email.trim();
-        if (!existing.phone && s.phone) existing.phone = s.phone.trim();
-        if ((s.totalVisits || 0) > (existing.totalVisits || 0)) {
-          existing.totalVisits = s.totalVisits;
-        }
-        if (!existing.lastVisitAt && s.lastVisitAt) {
-          existing.lastVisitAt = s.lastVisitAt;
-        }
-      } else {
-        const member: UnifiedCommunityMember = {
-          id: s.id,
-          originalStudent: s,
-          personType: 'Alumno',
-          code: (s.studentCode || '').trim(),
-          documentNumber: (s.documentNumber || '').trim(),
-          fullName: s.fullName?.trim() || `${s.lastName || ''} ${s.firstName || ''}`.trim() || '—',
-          faculty: (s.faculty || '').trim(),
-          career: (s.career || '').trim(),
-          program: '',
-          email: (s.email || '').trim(),
-          phone: (s.phone || '').trim(),
-          totalVisits: s.totalVisits || 0,
-          lastVisitAt: s.lastVisitAt
-        };
-
-        const idx = list.length;
-        list.push(member);
-
-        if (member.code) keyIndexMap.set(`code:${member.code.toLowerCase()}`, idx);
-        if (member.documentNumber) keyIndexMap.set(`doc:${member.documentNumber.toLowerCase()}`, idx);
-        if (s.id) keyIndexMap.set(`id:${s.id}`, idx);
-      }
-    });
-
-    return list;
+    return unifyCommunityMembers(students, persons);
   }, [students, persons]);
 
   // Catálogos dinámicos para los filtros específicos

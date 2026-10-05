@@ -38,28 +38,42 @@ namespace AsistenciaLenguas.Api.Services
                         .Project(p => new { p.Code, p.DocumentNumber, p.Id })
                         .ToListAsync();
 
-                    var uniquePersonsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var s in studentDocs)
-                    {
-                        var key = !string.IsNullOrWhiteSpace(s.StudentCode) ? s.StudentCode.Trim()
-                                : (!string.IsNullOrWhiteSpace(s.DocumentNumber) ? s.DocumentNumber.Trim() : s.Id);
-                        if (!string.IsNullOrWhiteSpace(key)) uniquePersonsSet.Add(key);
-                    }
+                    var keyToPersonId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    int uniqueCount = 0;
+
                     foreach (var p in personDocs)
                     {
-                        var key = !string.IsNullOrWhiteSpace(p.Code) ? p.Code.Trim()
-                                : (!string.IsNullOrWhiteSpace(p.DocumentNumber) ? p.DocumentNumber.Trim() : p.Id);
-                        if (!string.IsNullOrWhiteSpace(key)) uniquePersonsSet.Add(key);
+                        int currentId = uniqueCount++;
+                        if (!string.IsNullOrWhiteSpace(p.Code)) keyToPersonId[$"c:{p.Code.Trim()}"] = currentId;
+                        if (!string.IsNullOrWhiteSpace(p.DocumentNumber)) keyToPersonId[$"d:{p.DocumentNumber.Trim()}"] = currentId;
+                        if (!string.IsNullOrWhiteSpace(p.Id)) keyToPersonId[$"i:{p.Id.Trim()}"] = currentId;
                     }
 
-                    if (uniquePersonsSet.Count > 0)
+                    foreach (var s in studentDocs)
                     {
-                        totalRegisteredUsers = uniquePersonsSet.Count;
+                        var codeKey = !string.IsNullOrWhiteSpace(s.StudentCode) ? $"c:{s.StudentCode.Trim()}" : null;
+                        var docKey = !string.IsNullOrWhiteSpace(s.DocumentNumber) ? $"d:{s.DocumentNumber.Trim()}" : null;
+                        var idKey = !string.IsNullOrWhiteSpace(s.Id) ? $"i:{s.Id.Trim()}" : null;
+
+                        int matchedId = -1;
+                        if (codeKey != null && keyToPersonId.TryGetValue(codeKey, out var id1)) matchedId = id1;
+                        else if (docKey != null && keyToPersonId.TryGetValue(docKey, out var id2)) matchedId = id2;
+                        else if (idKey != null && keyToPersonId.TryGetValue(idKey, out var id3)) matchedId = id3;
+
+                        if (matchedId == -1)
+                        {
+                            int currentId = uniqueCount++;
+                            if (codeKey != null) keyToPersonId[codeKey] = currentId;
+                            if (docKey != null) keyToPersonId[docKey] = currentId;
+                            if (idKey != null) keyToPersonId[idKey] = currentId;
+                        }
                     }
+
+                    totalRegisteredUsers = uniqueCount;
                 }
                 catch
                 {
-                    totalRegisteredUsers = totalStudents + totalPersons;
+                    totalRegisteredUsers = Math.Max(totalStudents, totalPersons);
                 }
 
                 var totalVisits = (int)await _context.AttendanceRecords.CountDocumentsAsync(_ => true);

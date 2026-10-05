@@ -13,7 +13,7 @@ import { KPICards } from './admin/KPICards';
 import { TabInicio, TabInicioHandle } from './admin/TabInicio';
 import { TabHistorico, TabHistoricoHandle } from './admin/TabHistorico';
 import { TabReportes } from './admin/TabReportes';
-import { TabComunidad } from './admin/TabComunidad';
+import { TabComunidad, unifyCommunityMembers } from './admin/TabComunidad';
 import { TabDifusion } from './admin/TabDifusion';
 import { TabAcademic } from './admin/TabAcademic';
 import { TabSettings } from './admin/TabSettings';
@@ -138,29 +138,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [persons, setPersons] = useState<LibraryPerson[]>([]);
 
-  // Total unique registered users across students, library persons (docentes, maestrandos, doctorandos, visitas) and records
-  const totalRegisteredUsersCount = useMemo(() => {
-    const keys = new Set<string>();
-    (students || []).forEach(s => {
-      const k = (s.studentCode || s.documentNumber || s.id || '').trim().toLowerCase();
-      if (k) keys.add(k);
-    });
-    (persons || []).forEach(p => {
-      const k = (p.code || p.documentNumber || p.id || '').trim().toLowerCase();
-      if (k) keys.add(k);
-    });
-    // Also check unique codes from attendance records as fallback
-    (records || []).forEach(r => {
-      const k = (r.studentCode || r.studentId || '').trim().toLowerCase();
-      if (k) keys.add(k);
-    });
+  // Unique community members deduplicated across Students and LibraryPersons
+  const unifiedCommunityMembers = useMemo(() => {
+    return unifyCommunityMembers(students, persons);
+  }, [students, persons]);
 
-    const summaryCount = summary?.totalRegisteredStudents || 0;
-    return Math.max(keys.size, summaryCount);
-  }, [students, persons, records, summary]);
+  // Total unique registered users across students and library persons
+  const totalRegisteredUsersCount = unifiedCommunityMembers.length;
 
   const defaultSummary: AnalyticsSummary = useMemo(() => ({
-    totalRegisteredStudents: (students || []).length + (persons || []).length,
+    totalRegisteredStudents: unifiedCommunityMembers.length,
     totalVisitsAllTime: (records || []).length,
     totalVisitsToday: 0,
     totalVisitsThisMonth: 0,
@@ -397,7 +384,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               fontWeight: 700,
               opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.2s ease'
             }}>
-              {students.length + persons.length}
+              {unifiedCommunityMembers.length}
             </span>
           </button>
 
