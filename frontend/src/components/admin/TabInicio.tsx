@@ -716,7 +716,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Real-time Usage Duration by Career / Role Card */}
-          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff', width: '100%' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff', width: '100%' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -819,8 +819,8 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
               </div>
             </div>
 
-            {/* Content Area (Height 245px) */}
-            <div style={{ height: '245px', width: '100%' }}>
+            {/* Content Area (Height 275px) */}
+            <div style={{ height: '275px', width: '100%' }}>
               {durationViewMode === 'chart' ? (
                 activeDurationByGroup.length === 0 ? (
                   <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', background: '#f8fafc', borderRadius: '12px', padding: '20px' }}>
@@ -832,7 +832,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={activeDurationByGroup}
-                      margin={{ top: 22, right: 15, left: -15, bottom: 40 }}
+                      margin={{ top: 20, right: 15, left: -15, bottom: 4 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis 
@@ -841,9 +841,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         tickLine={false} 
                         axisLine={false}
                         interval={0}
-                        height={45}
+                        height={38}
                         tick={({ x, y, payload }) => {
-                          const lines = wrapLabel(payload.value || '', 17);
+                          const lines = wrapLabel(payload.value || '', 18);
                           return (
                             <text 
                               x={x} 
@@ -857,7 +857,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                                 <tspan 
                                   key={idx} 
                                   x={x} 
-                                  dy={idx === 0 ? 12 : 11}
+                                  dy={idx === 0 ? 10 : 10}
                                 >
                                   {line}
                                 </tspan>
@@ -1071,7 +1071,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Career Distribution (Pie Chart) */}
-          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
                 <Building2 size={18} />
@@ -1085,12 +1085,12 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             </div>
 
             {sortedCareerData.length === 0 ? (
-              <div style={{ height: '245px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
+              <div style={{ height: '275px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem', gap: '8px' }}>
                 <Building2 size={32} style={{ opacity: 0.3 }} />
                 <span>No hay registros de carreras para esta fecha.</span>
               </div>
             ) : (
-              <div style={{ height: '245px', width: '100%', display: 'flex', alignItems: 'center' }}>
+              <div style={{ height: '275px', width: '100%', display: 'flex', alignItems: 'center' }}>
                 {/* Pie Chart */}
                 <div style={{ flex: '0 0 55%', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -1101,8 +1101,8 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={82}
-                        innerRadius={46}
+                        outerRadius={88}
+                        innerRadius={50}
                         paddingAngle={3}
                         label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
