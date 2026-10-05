@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
   TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User,
@@ -10,8 +10,8 @@ import {
 } from '../services/api';
 import { NewStudentModal } from './NewStudentModal';
 import { KPICards } from './admin/KPICards';
-import { TabInicio } from './admin/TabInicio';
-import { TabHistorico } from './admin/TabHistorico';
+import { TabInicio, TabInicioHandle } from './admin/TabInicio';
+import { TabHistorico, TabHistoricoHandle } from './admin/TabHistorico';
 import { TabReportes } from './admin/TabReportes';
 import { TabComunidad } from './admin/TabComunidad';
 import { TabDifusion } from './admin/TabDifusion';
@@ -43,6 +43,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCareer, setFilterCareer] = useState('ALL');
   const [filterFaculty, setFilterFaculty] = useState('ALL');
+
+  const historicoRef = useRef<TabHistoricoHandle>(null);
+  const inicioRef = useRef<TabInicioHandle>(null);
   const [inicioDate, setInicioDate] = useState(() => getTodayDateStr());
 
   const [recordsStartDate, setRecordsStartDate] = useState(() => getTodayDateStr());
@@ -615,6 +618,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 
                 <button
                   type="button"
+                  onClick={() => inicioRef.current?.exportExcel()}
                   title="Descargar reporte en formato Excel (.xlsx)"
                   style={{
                     display: 'inline-flex',
@@ -646,6 +650,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <button
                   type="button"
+                  onClick={() => inicioRef.current?.exportPDF()}
                   title="Descargar reporte en formato PDF (.pdf)"
                   style={{
                     display: 'inline-flex',
@@ -779,6 +784,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
                   type="button"
+                  onClick={() => historicoRef.current?.exportExcel()}
                   title="Descargar reporte histórico en formato Excel (.xlsx)"
                   style={{
                     display: 'inline-flex',
@@ -810,6 +816,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <button
                   type="button"
+                  onClick={() => historicoRef.current?.exportPDF()}
                   title="Descargar reporte histórico en formato PDF (.pdf)"
                   style={{
                     display: 'inline-flex',
@@ -924,12 +931,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* TAB 1: INICIO (Daily Stats) */}
           {activeTab === 'inicio' && summary && (
-            <TabInicio summary={summary} selectedDate={inicioDate} records={records} />
+            <TabInicio ref={inicioRef} summary={summary} selectedDate={inicioDate} records={records} />
           )}
 
           {/* TAB 1B: HISTORICO */}
           {activeTab === 'historico' && summary && (
             <TabHistorico 
+              ref={historicoRef}
               summary={summary}
               records={records}
               filterType={historyFilter}

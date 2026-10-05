@@ -1,9 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, LabelList } from 'recharts';
 import { Calendar, Trophy, BookOpen, Inbox, Building2, Clock, Users, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel, getRecordDateStr } from '../../utils/dateUtils';
 import { exportHistoricoReportPDF, exportHistoricoReportExcel } from '../../utils/exportReports';
+
+export interface TabHistoricoHandle {
+  exportPDF: () => void;
+  exportExcel: () => void;
+}
 
 interface TabHistoricoProps {
   summary: AnalyticsSummary;
@@ -175,13 +180,13 @@ const renderCustomTemporalBarLabel = (props: any, mode: 'visits' | 'minutes', is
   );
 };
 
-export const TabHistorico: React.FC<TabHistoricoProps> = ({ 
+export const TabHistorico = forwardRef<TabHistoricoHandle, TabHistoricoProps>(({ 
   summary, 
   records, 
   filterType = 'week', 
   filterValue = '',
   filteredRecords: propFilteredRecords 
-}) => {
+}, ref) => {
   // Mode switcher for Day of Week chart: 'visits' or 'minutes'
   const [dayMetricMode, setDayMetricMode] = useState<'visits' | 'minutes'>('visits');
 
@@ -582,10 +587,10 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
     exportHistoricoReportPDF(
       periodDescription,
       effectiveRecords,
-      peakDaysData,
+      activeTemporalData,
       topStudentsData,
       sortedCareerData,
-      reasonDistributionData,
+      sortedPersonTypeData,
       summary
     );
   };
@@ -594,12 +599,17 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
     exportHistoricoReportExcel(
       periodDescription,
       effectiveRecords,
-      peakDaysData,
+      activeTemporalData,
       topStudentsData,
       sortedCareerData,
-      reasonDistributionData
+      sortedPersonTypeData
     );
   };
+
+  useImperativeHandle(ref, () => ({
+    exportPDF: handleExportPDF,
+    exportExcel: handleExportExcel
+  }));
 
   const isEmpty = effectiveRecords && effectiveRecords.length === 0 && records && records.length > 0;
 
@@ -973,4 +983,4 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
       </div>
     </div>
   );
-};
+});

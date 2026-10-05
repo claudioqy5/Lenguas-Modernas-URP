@@ -1,9 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, LabelList } from 'recharts';
 import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass, LogOut, BarChart2, List, Timer, Users } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
 import { getRecordDateStr, getRecordHour, getTodayDateStr } from '../../utils/dateUtils';
+
+export interface TabInicioHandle {
+  exportPDF: () => void;
+  exportExcel: () => void;
+}
 
 interface TabInicioProps {
   summary: AnalyticsSummary;
@@ -175,7 +180,7 @@ const renderCustomBarLabel = (props: any) => {
   );
 };
 
-export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, records }) => {
+export const TabInicio = forwardRef<TabInicioHandle, TabInicioProps>(({ summary, selectedDate, records }, ref) => {
   // Tick state to re-evaluate relative time every 30 seconds
   const [tick, setTick] = useState(0);
   const [trafficViewMode, setTrafficViewMode] = useState<'chart' | 'entries' | 'exits'>('chart');
@@ -403,6 +408,11 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
       sortedCareerData
     );
   };
+
+  useImperativeHandle(ref, () => ({
+    exportPDF: handleExportPDF,
+    exportExcel: handleExportExcel
+  }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1175,4 +1185,4 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
       </div>
     </div>
   );
-};
+});

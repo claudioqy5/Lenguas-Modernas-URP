@@ -997,136 +997,171 @@ export function exportCommunityMembersToExcel(members: UnifiedCommunityRow[], ca
 /**
  * Exporta el reporte estadístico histórico (asistencias, días concurridos, top estudiantes, carreras y motivos) a PDF
  */
+/**
+ * Exporta el reporte estadístico histórico (asistencias, concurrencia temporal, top estudiantes, tipos de usuario y carreras) a PDF
+ */
 export function exportHistoricoReportPDF(
   periodDescription: string,
   records: AttendanceRecord[],
-  peakDaysData: { day: string; count: number }[],
-  topStudentsData: { fullName: string; visitCount: number; studentCode?: string }[],
+  temporalData: { day: string; count: number; totalMinutes?: number; formattedTime?: string }[],
+  topStudentsData: { fullName: string; visitCount: number; studentCode?: string; personType?: string }[],
   careerData: { name: string; count: number; percentage: number }[],
-  reasonData: { name: string; count: number; percentage: number }[],
+  personTypeData?: { name: string; count: number; percentage: number }[],
   summary?: AnalyticsSummary | null
 ) {
-  const doc = new jsPDF();
+  // Formato Horizontal (Landscape) para presentar limpiamente todas las columnas
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
 
   // Encabezado institucional URP Verde
   doc.setFillColor(15, 81, 66);
-  doc.rect(0, 0, 210, 28, 'F');
+  doc.rect(0, 0, pageWidth, 26, 'F');
 
   // Línea dorada institucional
   doc.setFillColor(180, 83, 9);
-  doc.rect(0, 28, 210, 2, 'F');
+  doc.rect(0, 26, pageWidth, 2, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('UNIVERSIDAD RICARDO PALMA', 14, 11);
+  doc.text('UNIVERSIDAD RICARDO PALMA', 14, 10);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text('Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo', 14, 17);
-  doc.text(`Fecha y hora de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`, 14, 23);
+  doc.text('Facultad de Humanidades y Lenguas Modernas | Biblioteca Especializada San Jerónimo', 14, 16);
+  doc.text(`Fecha y hora de emisión: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`, 14, 22);
 
   // Título del reporte
   doc.setTextColor(15, 81, 66);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('INFORME ESTADÍSTICO HISTÓRICO DE ASISTENCIAS', 14, 38);
+  doc.text('INFORME ESTADÍSTICO HISTÓRICO DE ASISTENCIAS', 14, 36);
 
   doc.setTextColor(71, 85, 105);
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Período analizado: ${periodDescription}`, 14, 44);
+  doc.text(`Período analizado: ${periodDescription.toUpperCase()}`, 14, 42);
 
   // Estadísticas del período
   const totalVisits = records.length;
   const uniqueStudents = new Set(records.map(r => r.studentCode)).size;
 
-  let peakDayStr = 'Sin afluencia';
-  let maxDayCount = 0;
-  peakDaysData.forEach(d => {
-    if (d.count > maxDayCount) {
-      maxDayCount = d.count;
-      peakDayStr = `${d.day} (${d.count} visitas)`;
+  let totalMinutesSum = 0;
+  records.forEach(r => {
+    totalMinutesSum += (r.durationMinutes || 0);
+  });
+  const totalHours = Math.floor(totalMinutesSum / 60);
+  const totalMins = totalMinutesSum % 60;
+  const totalTimeFormatted = totalHours > 0 ? `${totalHours}h ${totalMins}m` : `${totalMins} min`;
+
+  let peakTemporalStr = 'Sin afluencia';
+  let maxTemporalCount = 0;
+  (temporalData || []).forEach(d => {
+    if (d.count > maxTemporalCount) {
+      maxTemporalCount = d.count;
+      peakTemporalStr = `${d.day} (${d.count} visitas)`;
     }
   });
 
-  const topCareerStr = careerData.length > 0 ? `${careerData[0].name} (${careerData[0].count} visitas)` : 'N/A';
+  const topCareerStr = careerData && careerData.length > 0 ? `${careerData[0].name} (${careerData[0].count} visitas)` : 'N/A';
+  const topPersonTypeStr = personTypeData && personTypeData.length > 0 ? `${personTypeData[0].name} (${personTypeData[0].count} asistencias)` : 'N/A';
 
-  // Caja de métricas
+  // Caja de métricas (KPIs)
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, 47, 182, 17, 2, 2, 'FD');
+  doc.roundedRect(14, 46, pageWidth - 28, 16, 2, 2, 'FD');
 
   doc.setFontSize(8);
   doc.setTextColor(30, 41, 59);
+
   doc.setFont('helvetica', 'bold');
-  doc.text('Total Asistencias: ', 18, 54);
+  doc.text('Total Asistencias:', 18, 52);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${totalVisits}`, 45, 54);
+  doc.text(`${totalVisits}`, 48, 52);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Alumnos Únicos: ', 70, 54);
+  doc.text('Usuarios Únicos:', 70, 52);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${uniqueStudents}`, 94, 54);
+  doc.text(`${uniqueStudents}`, 98, 52);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Día con Más Visitas: ', 120, 54);
+  doc.text('Tiempo Total Acumulado:', 125, 52);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${peakDayStr}`, 148, 54);
+  doc.text(`${totalTimeFormatted}`, 168, 52);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Carrera con Mayor Afluencia: ', 18, 60);
+  doc.text('Período / Día Pico:', 205, 52);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${topCareerStr}`, 58, 60);
+  doc.text(`${peakTemporalStr}`, 235, 52);
 
-  // Sección 1: Concurrencia por Día
-  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 81, 66);
-  doc.text('Concurrencia por Día de la Semana', 14, 71);
+  doc.text('Programa con Mayor Afluencia:', 18, 58);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${topCareerStr}`, 68, 58);
 
-  const daysTableHead = peakDaysData.map(d => d.day);
-  const daysTableData = [peakDaysData.map(d => d.count.toString())];
+  doc.setFont('helvetica', 'bold');
+  doc.text('Rol con Mayor Afluencia:', 155, 58);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${topPersonTypeStr}`, 196, 58);
 
-  autoTable(doc, {
-    startY: 74,
-    head: [daysTableHead],
-    body: daysTableData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: [15, 81, 66],
-      textColor: [255, 255, 255],
-      fontSize: 7.5,
-      halign: 'center',
-      cellPadding: 2
-    },
-    bodyStyles: {
-      fontSize: 7.5,
-      halign: 'center',
-      cellPadding: 2,
-      fontStyle: 'bold'
-    },
-    margin: { left: 14, right: 14 }
-  });
+  let currentY = 67;
 
-  let currentY = (doc as any).lastAutoTable?.finalY || 88;
-
-  // Sección 2: Top Estudiantes
-  if (topStudentsData.length > 0) {
+  // Sección 1: Concurrencia Temporal en el Período
+  if (temporalData && temporalData.length > 0) {
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 81, 66);
-    doc.text('Ranking de Estudiantes Asiduos', 14, currentY + 8);
+    doc.text('1. Concurrencia Temporal en el Período', 14, currentY);
+
+    const temporalHead = temporalData.map(d => d.day);
+    const temporalVisitsRow = temporalData.map(d => `${d.count}`);
+    const temporalTimeRow = temporalData.map(d => d.formattedTime || (d.totalMinutes ? `${d.totalMinutes}m` : '0m'));
+
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [['Métrica \\ Período', ...temporalHead]],
+      body: [
+        ['Total Visitas', ...temporalVisitsRow],
+        ['Permanencia', ...temporalTimeRow]
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 81, 66],
+        textColor: [255, 255, 255],
+        fontSize: 7.2,
+        halign: 'center',
+        cellPadding: 2
+      },
+      bodyStyles: {
+        fontSize: 7,
+        halign: 'center',
+        cellPadding: 2,
+        fontStyle: 'bold'
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    currentY = (doc as any).lastAutoTable?.finalY || currentY + 20;
+  }
+
+  // Sección 2: Ranking de Usuarios Asiduos
+  if (topStudentsData && topStudentsData.length > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 81, 66);
+    doc.text('2. Ranking de Usuarios Asiduos', 14, currentY + 7);
 
     const studentsRows = topStudentsData.map((s, idx) => [
       `#${idx + 1}`,
+      s.studentCode || '—',
       s.fullName,
-      `${s.visitCount} ingresos`
+      s.personType || 'Alumno',
+      `${s.visitCount} visitas`
     ]);
 
     autoTable(doc, {
-      startY: currentY + 11,
-      head: [['Puesto', 'Estudiante', 'Total de Ingresos']],
+      startY: currentY + 10,
+      head: [['Puesto', 'Código / DNI', 'Nombre Completo', 'Tipo / Rol', 'Total Asistencias']],
       body: studentsRows,
       theme: 'striped',
       headStyles: {
@@ -1145,42 +1180,48 @@ export function exportHistoricoReportPDF(
       margin: { left: 14, right: 14 }
     });
 
-    currentY = (doc as any).lastAutoTable?.finalY || currentY + 30;
+    currentY = (doc as any).lastAutoTable?.finalY || currentY + 25;
   }
 
-  // Sección 3: Listado de Asistencias del Período
+  // Sección 3: Listado de Registros en el Período
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 81, 66);
-  doc.text('Registros de Asistencia en el Período', 14, currentY + 8);
+  doc.text('3. Registros de Asistencia del Período', 14, currentY + 7);
 
   const tableData = records.length === 0 ? [
-    ['-', '-', '-', 'No se registraron asistencias en este período.', '-', '-', '-', '-']
-  ] : records.map((r, i) => [
-    (i + 1).toString(),
-    r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-    r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
-    r.studentCode,
-    r.studentName,
-    r.career,
-    r.visitReason,
-    r.entryMethod === 'Barcode' ? 'Lector' : 'Manual'
-  ]);
+    ['-', '-', '-', '-', '-', '-', '-', '-', '-', 'No se encontraron asistencias registradas en este período.']
+  ] : records.map((r, i) => {
+    const ee = getAttendanceEntryExit(r);
+    return [
+      (i + 1).toString(),
+      ee.dateFormatted,
+      ee.entrada,
+      ee.salida,
+      ee.duracion,
+      ee.estado,
+      r.personType || 'Alumno',
+      r.studentCode,
+      r.studentName,
+      (r as any).program || r.career || 'Sin Carrera'
+    ];
+  });
 
   autoTable(doc, {
-    startY: currentY + 11,
-    head: [['#', 'Fecha', 'Hora', 'Código', 'Estudiante', 'Carrera', 'Motivo', 'Método']],
+    startY: currentY + 10,
+    head: [['#', 'Fecha', 'Hora Ing.', 'Hora Sal.', 'Estadía', 'Estado', 'Tipo Usuario', 'Código / DNI', 'Nombres y Apellidos', 'Programa / Carrera']],
     body: tableData,
     theme: 'striped',
     headStyles: {
       fillColor: [15, 81, 66],
       textColor: [255, 255, 255],
-      fontSize: 7.5,
+      fontSize: 7.2,
       fontStyle: 'bold'
     },
     bodyStyles: {
-      fontSize: 7.2,
-      textColor: [30, 41, 59]
+      fontSize: 7,
+      textColor: [30, 41, 59],
+      cellPadding: 1.8
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252]
@@ -1188,34 +1229,52 @@ export function exportHistoricoReportPDF(
     margin: { left: 14, right: 14 }
   });
 
+  // Numeración de páginas institucional
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Sistema de Control de Asistencia - Biblioteca Especializada San Jerónimo | URP', 14, 204);
+    doc.text(`Página ${i} de ${pageCount}`, pageWidth - 30, 204);
+  }
+
   const safeFilename = periodDescription.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
   doc.save(`Reporte_Historico_URP_${safeFilename}.pdf`);
 }
 
 /**
- * Exporta el reporte estadístico histórico a Excel
+ * Exporta el reporte estadístico histórico a Excel con hojas múltiples detalladas
  */
 export function exportHistoricoReportExcel(
   periodDescription: string,
   records: AttendanceRecord[],
-  peakDaysData: { day: string; count: number }[],
-  topStudentsData: { fullName: string; visitCount: number; studentCode?: string }[],
+  temporalData: { day: string; count: number; totalMinutes?: number; formattedTime?: string }[],
+  topStudentsData: { fullName: string; visitCount: number; studentCode?: string; personType?: string }[],
   careerData: { name: string; count: number; percentage: number }[],
-  reasonData: { name: string; count: number; percentage: number }[]
+  personTypeData?: { name: string; count: number; percentage: number }[]
 ) {
   const wb = XLSX.utils.book_new();
 
   // Hoja 1: Asistencias del Período
-  const attendanceRows = records.map((r, i) => ({
-    'N°': i + 1,
-    'Fecha': r.dateString || (r.timestamp ? r.timestamp.split('T')[0] : '—'),
-    'Hora': r.timeString || (r.timestamp ? r.timestamp.split('T')[1]?.slice(0, 8) : '—'),
-    'Código Estudiante': r.studentCode,
-    'Estudiante': r.studentName,
-    'Carrera': r.career,
-    'Motivo de Visita': r.visitReason,
-    'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
-  }));
+  const attendanceRows = records.map((r, i) => {
+    const ee = getAttendanceEntryExit(r);
+    return {
+      'N°': i + 1,
+      'Fecha': ee.dateFormatted,
+      'Hora Ingreso': ee.entrada,
+      'Hora Salida': ee.salida,
+      'Permanencia': ee.duracion,
+      'Estado': ee.estado,
+      'Tipo de Usuario': r.personType || 'Alumno',
+      'Código / DNI': r.studentCode,
+      'Estudiante / Usuario': r.studentName,
+      'Programa / Carrera': (r as any).program || r.career || 'Sin Carrera',
+      'Motivo de Visita': r.visitReason,
+      'Método de Ingreso': r.entryMethod === 'Barcode' ? 'Lector de Barras' : 'Manual'
+    };
+  });
 
   const wsAttendance = XLSX.utils.json_to_sheet(
     attendanceRows.length > 0 ? attendanceRows : [{ 'Mensaje': `No se encontraron asistencias registradas en ${periodDescription}` }]
@@ -1224,58 +1283,66 @@ export function exportHistoricoReportExcel(
     { wch: 6 },
     { wch: 12 },
     { wch: 12 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 14 },
     { wch: 16 },
+    { wch: 16 },
+    { wch: 32 },
     { wch: 30 },
-    { wch: 28 },
     { wch: 22 },
     { wch: 18 }
   ];
   XLSX.utils.book_append_sheet(wb, wsAttendance, 'Asistencias_Periodo');
 
-  // Hoja 2: Días con Más Visitas
-  const daysRows = peakDaysData.map(d => ({
-    'Día de la Semana': d.day,
-    'Cantidad de Visitas': d.count
+  // Hoja 2: Concurrencia Temporal
+  const temporalRows = (temporalData || []).map(d => ({
+    'Período / Día': d.day,
+    'Cantidad de Visitas': d.count,
+    'Permanencia Total': d.formattedTime || (d.totalMinutes ? `${d.totalMinutes} min` : '0 min'),
+    'Minutos Totales': d.totalMinutes || 0
   }));
-  const wsDays = XLSX.utils.json_to_sheet(daysRows);
-  wsDays['!cols'] = [{ wch: 18 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsDays, 'Dias_Concurrencia');
+  const wsTemporal = XLSX.utils.json_to_sheet(temporalRows.length > 0 ? temporalRows : [{ 'Mensaje': 'Sin datos temporales' }]);
+  wsTemporal['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsTemporal, 'Concurrencia_Temporal');
 
-  // Hoja 3: Ranking de Estudiantes
-  const studentsRows = topStudentsData.map((s, idx) => ({
+  // Hoja 3: Ranking de Usuarios
+  const studentsRows = (topStudentsData || []).map((s, idx) => ({
     'Puesto': idx + 1,
-    'Estudiante': s.fullName,
+    'Código / DNI': s.studentCode || '—',
+    'Usuario': s.fullName,
+    'Tipo / Rol': s.personType || 'Alumno',
     'Total Visitas': s.visitCount
   }));
   const wsStudents = XLSX.utils.json_to_sheet(
     studentsRows.length > 0 ? studentsRows : [{ 'Mensaje': 'Sin datos de ranking' }]
   );
-  wsStudents['!cols'] = [{ wch: 10 }, { wch: 32 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, wsStudents, 'Ranking_Estudiantes');
+  wsStudents['!cols'] = [{ wch: 10 }, { wch: 16 }, { wch: 32 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsStudents, 'Ranking_Usuarios');
 
-  // Hoja 4: Afluencia por Carrera
-  const careerRows = careerData.map(c => ({
-    'Carrera': c.name,
+  // Hoja 4: Afluencia por Tipo de Usuario
+  if (personTypeData && personTypeData.length > 0) {
+    const personTypeRows = personTypeData.map(p => ({
+      'Tipo de Usuario': p.name,
+      'Total Asistencias': p.count,
+      'Porcentaje (%)': `${p.percentage}%`
+    }));
+    const wsPersonType = XLSX.utils.json_to_sheet(personTypeRows);
+    wsPersonType['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsPersonType, 'Afluencia_Tipo_Usuario');
+  }
+
+  // Hoja 5: Afluencia por Programa / Carrera
+  const careerRows = (careerData || []).map(c => ({
+    'Programa / Carrera': c.name,
     'Total Asistencias': c.count,
     'Porcentaje (%)': `${c.percentage}%`
   }));
   const wsCareer = XLSX.utils.json_to_sheet(
-    careerRows.length > 0 ? careerRows : [{ 'Carrera': 'Sin registros', 'Total Asistencias': 0, 'Porcentaje (%)': '0%' }]
+    careerRows.length > 0 ? careerRows : [{ 'Programa / Carrera': 'Sin registros', 'Total Asistencias': 0, 'Porcentaje (%)': '0%' }]
   );
-  wsCareer['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, wsCareer, 'Afluencia_Carreras');
-
-  // Hoja 5: Motivos de Visita
-  const reasonRows = reasonData.map(m => ({
-    'Motivo': m.name,
-    'Total Visitas': m.count,
-    'Porcentaje (%)': `${m.percentage}%`
-  }));
-  const wsReason = XLSX.utils.json_to_sheet(
-    reasonRows.length > 0 ? reasonRows : [{ 'Motivo': 'Sin registros', 'Total Visitas': 0, 'Porcentaje (%)': '0%' }]
-  );
-  wsReason['!cols'] = [{ wch: 30 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, wsReason, 'Motivos_Visita');
+  wsCareer['!cols'] = [{ wch: 32 }, { wch: 18 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsCareer, 'Afluencia_Programas');
 
   const safeFilename = periodDescription.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
   XLSX.writeFile(wb, `Reporte_Historico_URP_${safeFilename}.xlsx`);
