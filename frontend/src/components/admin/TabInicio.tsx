@@ -158,6 +158,23 @@ const CustomDurationTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+const renderCustomBarLabel = (props: any) => {
+  const { x, y, width, value } = props;
+  if (!value || isNaN(Number(x)) || isNaN(Number(y))) return null;
+  return (
+    <text
+      x={Number(x) + Number(width) / 2}
+      y={Number(y) - 6}
+      fill="#334155"
+      textAnchor="middle"
+      fontSize={10}
+      fontWeight={700}
+    >
+      {value}
+    </text>
+  );
+};
+
 export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, records }) => {
   // Tick state to re-evaluate relative time every 30 seconds
   const [tick, setTick] = useState(0);
@@ -395,7 +412,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           
-          <div id="chart-card-traffic" className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -519,7 +536,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
             <div style={{ height: '245px', width: '100%' }}>
               {trafficViewMode === 'chart' && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={combinedTrafficData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
+                  <AreaChart key={`traffic-chart-${selectedDate || 'today'}`} data={combinedTrafficData} margin={{ top: 10, right: 25, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="trafficEntriesGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#0f5142" stopOpacity={0.45} />
@@ -548,6 +565,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                       strokeWidth={2.5} 
                       fillOpacity={1} 
                       fill="url(#trafficEntriesGrad)" 
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
                     />
                     <Area 
                       type="monotone" 
@@ -557,6 +577,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                       strokeWidth={2.5} 
                       fillOpacity={1} 
                       fill="url(#trafficExitsGrad)" 
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -716,7 +739,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Real-time Usage Duration by Career / Role Card */}
-          <div id="chart-card-duration" className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff', width: '100%' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff', width: '100%' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -831,6 +854,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
+                      key={`duration-bar-chart-${selectedDate || 'today'}`}
                       data={activeDurationByGroup}
                       margin={{ top: 20, right: 15, left: -15, bottom: 4 }}
                     >
@@ -889,13 +913,14 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         dataKey="totalMinutes" 
                         radius={[6, 6, 0, 0]} 
                         maxBarSize={44}
-                        isAnimationActive={false}
+                        isAnimationActive={true}
+                        animationBegin={150}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
                       >
                         <LabelList 
                           dataKey="formattedTime" 
-                          position="top" 
-                          offset={6}
-                          style={{ fontSize: '10px', fontWeight: 700, fill: '#334155' }} 
+                          content={renderCustomBarLabel}
                         />
                         {activeDurationByGroup.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
@@ -1002,7 +1027,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* Person Type Distribution (Pie Chart) */}
-          <div id="chart-card-roles" className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
                 <PieChartIcon size={18} />
@@ -1025,7 +1050,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 {/* Pie Chart */}
                 <div style={{ flex: '0 0 55%', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart key={`roles-pie-chart-${selectedDate || 'today'}`}>
                       <Pie
                         data={sortedPersonTypeData}
                         dataKey="count"
@@ -1037,6 +1062,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         paddingAngle={3}
                         label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
+                        isAnimationActive={true}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
                       >
                         {sortedPersonTypeData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
@@ -1071,7 +1099,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Career Distribution (Pie Chart) */}
-          <div id="chart-card-careers" className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff' }}>
+          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
                 <Building2 size={18} />
@@ -1094,7 +1122,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 {/* Pie Chart */}
                 <div style={{ flex: '0 0 55%', height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart key={`careers-pie-chart-${selectedDate || 'today'}`}>
                       <Pie
                         data={sortedCareerData}
                         dataKey="count"
@@ -1106,6 +1134,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         paddingAngle={3}
                         label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
+                        isAnimationActive={true}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
                       >
                         {sortedCareerData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />

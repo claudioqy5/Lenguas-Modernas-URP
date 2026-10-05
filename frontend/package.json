@@ -21,7 +21,6 @@
     "@types/three": "^0.186.0",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^13.4.4",
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.48.0",
