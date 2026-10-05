@@ -557,32 +557,6 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
-            {/* Mini-resumen de totales y picos */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: '12px',
-              paddingTop: '10px',
-              borderTop: '1px solid #f1f5f9',
-              fontSize: '0.78rem',
-              color: 'var(--text-muted)',
-              flexWrap: 'wrap',
-              gap: '8px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b45309' }} />
-                <span>Pico de Visitas: <strong style={{ color: 'var(--text-main)' }}>{peakVisitsDay.day} ({peakVisitsDay.count} visitas)</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0f5142' }} />
-                <span>Mayor Permanencia: <strong style={{ color: 'var(--text-main)' }}>{peakMinutesDay.day} ({peakMinutesDay.formattedTime})</strong></span>
-              </div>
-              <div>
-                <span>Total del Período: <strong style={{ color: '#0f5142' }}>{totalPeriodVisits} visitas</strong> • <strong style={{ color: '#b45309' }}>{totalPeriodHoursFormatted}</strong></span>
-              </div>
-            </div>
           </div>
 
           {/* Card 2: Ranking de Usuarios Asiduos */}

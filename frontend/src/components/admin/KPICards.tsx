@@ -61,26 +61,62 @@ export const KPICards: React.FC<KPICardsProps> = ({
     card2Subtitle = `Reporte Diario (${formattedDateLabel})`;
   }
 
-  // Calculate Average Duration
-  let avgDurationMinutes = 0;
-  if (records && records.length > 0) {
-    const completedVisits = records.filter(r => r.durationMinutes && r.durationMinutes > 0);
-    if (completedVisits.length > 0) {
-      const totalDuration = completedVisits.reduce((acc, r) => acc + r.durationMinutes, 0);
-      avgDurationMinutes = Math.round(totalDuration / completedVisits.length);
+  // Extrae o calcula con precisión los minutos de permanencia de un registro
+  const getRecordMinutes = (r: AttendanceRecord): number => {
+    if (typeof r.durationMinutes === 'number' && r.durationMinutes > 0) {
+      return r.durationMinutes;
     }
-  }
+    if (r.checkOutTimestamp || r.checkOutTimeString) {
+      const entryDate = r.timestamp 
+        ? new Date(r.timestamp) 
+        : (r.dateString && r.timeString ? new Date(`${r.dateString}T${r.timeString}`) : null);
+      const exitDate = r.checkOutTimestamp 
+        ? new Date(r.checkOutTimestamp) 
+        : (r.dateString && r.checkOutTimeString ? new Date(`${r.dateString}T${r.checkOutTimeString}`) : null);
+
+      if (entryDate && exitDate && !isNaN(entryDate.getTime()) && !isNaN(exitDate.getTime())) {
+        const diffMs = exitDate.getTime() - entryDate.getTime();
+        if (diffMs > 0) {
+          return Math.max(1, Math.round(diffMs / 60000));
+        }
+      }
+    }
+    if (r.isActive) {
+      const dateStr = r.dateString || (r.timestamp ? new Date(r.timestamp).toISOString().slice(0, 10) : '');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (dateStr === todayStr) {
+        const entryDate = r.timestamp 
+          ? new Date(r.timestamp) 
+          : (r.dateString && r.timeString ? new Date(`${r.dateString}T${r.timeString}`) : null);
+        if (entryDate && !isNaN(entryDate.getTime())) {
+          const diffMs = Date.now() - entryDate.getTime();
+          if (diffMs > 0) {
+            return Math.min(480, Math.max(1, Math.floor(diffMs / 60000)));
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  // Calculate Total Duration
+  const totalDurationMinutes = React.useMemo(() => {
+    if (!records || records.length === 0) return 0;
+    return records.reduce((acc, r) => acc + getRecordMinutes(r), 0);
+  }, [records]);
 
   // Format the duration string
   const formatDuration = (minutes: number) => {
-    if (minutes === 0) return '0 min';
-    if (minutes < 60) return `${minutes} min`;
+    if (!minutes || minutes <= 0) return '0 min';
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (h > 0) {
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${m} min`;
   };
 
-  const avgDurationStr = formatDuration(avgDurationMinutes);
+  const totalDurationStr = formatDuration(totalDurationMinutes);
 
   // Calculate unique users count for the selected records/day or period
   const uniqueUsersCount = React.useMemo(() => {
@@ -94,13 +130,29 @@ export const KPICards: React.FC<KPICardsProps> = ({
     return uniqueKeys.size;
   }, [records, periodType, periodUniqueStudentsCount]);
 
-  // Determine Card 3 Title & Subtitle based on mode
+  // Determine Card 4 (Tiempo Total) Title & Subtitle based on mode
   const isPeriodMode = Boolean(periodType);
-  const card3Title = 'Tiempo Prom. de Estadía';
-  const card3Value = avgDurationStr;
-  const card3Subtitle = isPeriodMode 
-    ? `Promedio de estadía (${periodLabel || 'Período'})` 
-    : (formattedDateLabel ? `Promedio del ${formattedDateLabel}` : 'Promedio de hoy');
+  let card4Title = 'Tiempo Total de Estadía';
+  let card4Subtitle = 'Suma total de permanencia';
+
+  if (periodType) {
+    if (periodType === 'week') {
+      card4Title = 'Tiempo Total de la Semana';
+      card4Subtitle = periodLabel ? `${periodLabel}` : 'Total de la semana';
+    } else if (periodType === 'month') {
+      card4Title = 'Tiempo Total del Mes';
+      card4Subtitle = periodLabel ? `${periodLabel}` : 'Total del mes';
+    } else if (periodType === 'year') {
+      card4Title = 'Tiempo Total del Año';
+      card4Subtitle = periodLabel ? `Año ${periodLabel}` : 'Total del año';
+    } else {
+      card4Title = 'Tiempo Total Histórico';
+      card4Subtitle = 'Historial acumulado completo';
+    }
+  } else if (formattedDateLabel) {
+    card4Title = 'Tiempo Total del Día';
+    card4Subtitle = `Reporte del ${formattedDateLabel}`;
+  }
 
   const currentOccupancy = summary?.currentOccupancy || 0;
   const maxCapacity = summary?.maxCapacity || 50;
@@ -160,15 +212,15 @@ export const KPICards: React.FC<KPICardsProps> = ({
         </div>
       </div>
 
-      {/* 4. Tiempo Prom. de Estadía */}
+      {/* 4. Tiempo Total de Estadía */}
       <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-              {card3Title}
+              {card4Title}
             </div>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--urp-gold-primary)', marginTop: '2px', lineHeight: 1.1 }}>
-              {card3Value}
+              {totalDurationStr}
             </div>
           </div>
           <div style={{ padding: '7px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
