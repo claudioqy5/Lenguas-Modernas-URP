@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Calendar, Clock, ArrowLeft, LogOut, 
   TrendingUp, Landmark, RotateCcw, Send, GraduationCap, User,
-  Briefcase, MapPin, Building2, Award, FileSpreadsheet, FileText
+  Briefcase, MapPin, Building2, Award, FileSpreadsheet, FileText, Loader2
 } from 'lucide-react';
 import { 
   api, AnalyticsSummary, AttendanceRecord, Student, AuthSession, LibraryPerson,
@@ -21,6 +21,7 @@ import {
   getISOWeekFromDateStr, getCurrentWeek, getCurrentMonth, 
   formatWeekLabel, formatMonthLabel, getTodayDateStr, getRecordDateStr
 } from '../utils/dateUtils';
+import { exportInicioSectionPDF, exportInicioSectionExcel } from '../utils/exportReports';
 
 interface AdminDashboardProps {
   session: AuthSession;
@@ -134,6 +135,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [historicoFilteredRecords]);
 
   const [persons, setPersons] = useState<LibraryPerson[]>([]);
+
+  const [isExportingInicioPDF, setIsExportingInicioPDF] = useState(false);
+  const [isExportingInicioExcel, setIsExportingInicioExcel] = useState(false);
+
+  const handleExportExcelInicio = () => {
+    setIsExportingInicioExcel(true);
+    try {
+      exportInicioSectionExcel({
+        selectedDate: inicioDate,
+        records: records || [],
+        summary,
+        students,
+        persons
+      });
+    } catch (err) {
+      console.error('Error al exportar Excel de Inicio:', err);
+      alert('Ocurrió un error al generar el archivo Excel.');
+    } finally {
+      setIsExportingInicioExcel(false);
+    }
+  };
+
+  const handleExportPDFInicio = async () => {
+    setIsExportingInicioPDF(true);
+    try {
+      await exportInicioSectionPDF({
+        selectedDate: inicioDate,
+        records: records || [],
+        summary,
+        students,
+        persons
+      });
+    } catch (err) {
+      console.error('Error al exportar PDF de Inicio:', err);
+      alert('Ocurrió un error al generar el reporte PDF.');
+    } finally {
+      setIsExportingInicioPDF(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -615,7 +655,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 
                 <button
                   type="button"
-                  title="Descargar reporte en formato Excel (.xlsx)"
+                  onClick={handleExportExcelInicio}
+                  disabled={isExportingInicioExcel}
+                  title="Descargar reporte completo en formato Excel (.xlsx)"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -627,26 +669,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     color: '#15803d',
                     fontWeight: 600,
                     fontSize: '0.82rem',
-                    cursor: 'pointer',
+                    cursor: isExportingInicioExcel ? 'wait' : 'pointer',
+                    opacity: isExportingInicioExcel ? 0.7 : 1,
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#15803d';
-                    e.currentTarget.style.color = '#ffffff';
+                    if (!isExportingInicioExcel) {
+                      e.currentTarget.style.background = '#15803d';
+                      e.currentTarget.style.color = '#ffffff';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#f0fdf4';
-                    e.currentTarget.style.color = '#15803d';
+                    if (!isExportingInicioExcel) {
+                      e.currentTarget.style.background = '#f0fdf4';
+                      e.currentTarget.style.color = '#15803d';
+                    }
                   }}
                 >
-                  <FileSpreadsheet size={14} />
-                  <span>Excel</span>
+                  {isExportingInicioExcel ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <FileSpreadsheet size={14} />
+                  )}
+                  <span>{isExportingInicioExcel ? 'Generando...' : 'Excel'}</span>
                 </button>
 
                 <button
                   type="button"
-                  title="Descargar reporte en formato PDF (.pdf)"
+                  onClick={handleExportPDFInicio}
+                  disabled={isExportingInicioPDF}
+                  title="Descargar reporte con gráficos en formato PDF (.pdf)"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -658,21 +711,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     color: '#dc2626',
                     fontWeight: 600,
                     fontSize: '0.82rem',
-                    cursor: 'pointer',
+                    cursor: isExportingInicioPDF ? 'wait' : 'pointer',
+                    opacity: isExportingInicioPDF ? 0.7 : 1,
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#dc2626';
-                    e.currentTarget.style.color = '#ffffff';
+                    if (!isExportingInicioPDF) {
+                      e.currentTarget.style.background = '#dc2626';
+                      e.currentTarget.style.color = '#ffffff';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#fef2f2';
-                    e.currentTarget.style.color = '#dc2626';
+                    if (!isExportingInicioPDF) {
+                      e.currentTarget.style.background = '#fef2f2';
+                      e.currentTarget.style.color = '#dc2626';
+                    }
                   }}
                 >
-                  <FileText size={14} />
-                  <span>PDF</span>
+                  {isExportingInicioPDF ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <FileText size={14} />
+                  )}
+                  <span>{isExportingInicioPDF ? 'Generando...' : 'PDF'}</span>
                 </button>
                 
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Fecha:</span>

@@ -395,7 +395,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           
-          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
+          <div id="chart-card-traffic" className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -716,7 +716,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Real-time Usage Duration by Career / Role Card */}
-          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff', width: '100%' }}>
+          <div id="chart-card-duration" className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff', width: '100%' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1002,7 +1002,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           {/* Person Type Distribution (Pie Chart) */}
-          <div className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
+          <div id="chart-card-roles" className="glass-panel" style={{ padding: '18px 20px', background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
                 <PieChartIcon size={18} />
@@ -1071,7 +1071,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           </div>
 
           {/* Career Distribution (Pie Chart) */}
-          <div className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff' }}>
+          <div id="chart-card-careers" className="glass-panel" style={{ padding: '18px 20px 14px', background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
                 <Building2 size={18} />
