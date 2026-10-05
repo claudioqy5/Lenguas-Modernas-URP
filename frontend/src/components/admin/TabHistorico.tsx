@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { Calendar, Trophy, BookOpen, Inbox, Building2, FileSpreadsheet, FileText } from 'lucide-react';
+import { Calendar, Trophy, BookOpen, Inbox, Building2 } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { getISOWeekFromDateStr, formatMonthLabel, formatWeekLabel, getRecordDateStr } from '../../utils/dateUtils';
 import { exportHistoricoReportPDF, exportHistoricoReportExcel } from '../../utils/exportReports';
@@ -98,17 +98,22 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
     ];
   }, [effectiveRecords]);
 
-  // Compute Top Students
+  // Compute Top Students / Users
   const topStudentsData = useMemo(() => {
     if (!effectiveRecords || effectiveRecords.length === 0) {
       return [];
     }
     const studentsMap: Record<string, any> = {};
     effectiveRecords.forEach(r => {
-      if (!studentsMap[r.studentCode]) {
-        studentsMap[r.studentCode] = { fullName: r.studentName, visitCount: 0 };
+      const code = r.studentCode || r.studentId || r.studentName;
+      if (!studentsMap[code]) {
+        studentsMap[code] = { 
+          fullName: r.studentName, 
+          visitCount: 0,
+          personType: r.personType || 'Alumno'
+        };
       }
-      studentsMap[r.studentCode].visitCount++;
+      studentsMap[code].visitCount++;
     });
     return Object.values(studentsMap)
       .sort((a, b) => b.visitCount - a.visitCount)
@@ -133,15 +138,30 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
     })).sort((a, b) => b.count - a.count);
   }, [effectiveRecords]);
 
-  // Compute Career Distribution dynamically based on effectiveRecords
+  // Compute Career / Program / Role Distribution dynamically based on effectiveRecords
   const careerDistributionData = useMemo(() => {
     if (!effectiveRecords || effectiveRecords.length === 0) {
       return [];
     }
     const careerMap: Record<string, number> = {};
     effectiveRecords.forEach(r => {
-      const c = r.career || 'Sin Carrera';
-      careerMap[c] = (careerMap[c] || 0) + 1;
+      let groupName = r.career?.trim();
+      const prog = ((r as any).program || '').trim();
+      const pType = r.personType?.trim() || 'Alumno';
+
+      if (prog && prog !== 'General' && (!groupName || groupName === 'General' || pType === 'Maestrando' || pType === 'Doctorando')) {
+        groupName = prog;
+      }
+      if (!groupName || groupName === 'General' || groupName === 'Sin Carrera') {
+        if (pType === 'Docente') groupName = 'Docentes';
+        else if (pType === 'Visitante') groupName = 'Visitantes';
+        else if (pType === 'Administrativo') groupName = 'Administrativos';
+        else if (pType === 'Maestrando') groupName = prog || 'Maestrías (Posgrado)';
+        else if (pType === 'Doctorando') groupName = prog || 'Doctorados (Posgrado)';
+        else groupName = 'Comunidad General';
+      }
+
+      careerMap[groupName] = (careerMap[groupName] || 0) + 1;
     });
 
     const total = effectiveRecords.length;
@@ -193,97 +213,23 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px' }}>
         {/* Peak Days Chart */}
         <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            flexWrap: 'wrap', 
-            gap: '12px', 
-            marginBottom: '18px' 
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <Calendar size={18} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Días de la Semana con Más Visitas
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  Comparativa de concurrencia de Lunes a Sábado en {periodDescription}
-                </p>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+              <Calendar size={18} />
             </div>
-
-            {/* Export Buttons in Top-Right Corner */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={handleExportExcel}
-                title={`Descargar reporte histórico (${periodDescription}) en formato Excel (.xlsx)`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 13px',
-                  borderRadius: '8px',
-                  border: '1px solid #16a34a',
-                  background: '#f0fdf4',
-                  color: '#15803d',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#15803d';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f0fdf4';
-                  e.currentTarget.style.color = '#15803d';
-                }}
-              >
-                <FileSpreadsheet size={15} />
-                <span>Excel</span>
-              </button>
-
-              <button
-                onClick={handleExportPDF}
-                title={`Descargar reporte histórico (${periodDescription}) en formato PDF (.pdf)`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 13px',
-                  borderRadius: '8px',
-                  border: '1px solid #dc2626',
-                  background: '#fef2f2',
-                  color: '#dc2626',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#dc2626';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#fef2f2';
-                  e.currentTarget.style.color = '#dc2626';
-                }}
-              >
-                <FileText size={15} />
-                <span>PDF</span>
-              </button>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                Días de la Semana con Más Visitas
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Comparativa de concurrencia de Lunes a Sábado en {periodDescription}
+              </p>
             </div>
           </div>
 
           <div style={{ height: '270px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={peakDaysData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart key={`peak-days-chart-${filterType}-${filterValue}`} data={peakDaysData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="day" stroke="#64748b" fontSize={11} />
                 <YAxis stroke="#64748b" fontSize={11} />
@@ -292,7 +238,13 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                   contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
                   formatter={(val: any) => [`${val} visitas`, 'Total']}
                 />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                <Bar 
+                  dataKey="count" 
+                  radius={[6, 6, 0, 0]}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
                   {peakDaysData.map((entry, index) => {
                     const maxVal = Math.max(...peakDaysData.map(d => d.count), 0);
                     const isPeak = maxVal > 0 && entry.count === maxVal;
@@ -317,24 +269,24 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Afluencia por Carrera
+                Afluencia por Carrera / Programa
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Distribución de estudiantes según facultad/carrera en {periodDescription}
+                Distribución de usuarios según programa académico o rol en {periodDescription}
               </p>
             </div>
           </div>
 
           {sortedCareerData.length === 0 ? (
             <div style={{ height: '270px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
-              No hay registros de carreras en este período.
+              No hay registros de carreras o programas en este período.
             </div>
           ) : (
             <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
               {/* Pie Chart */}
               <div style={{ flex: '0 0 55%', height: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <PieChart key={`career-pie-chart-${filterType}-${filterValue}`}>
                     <Pie
                       data={sortedCareerData}
                       dataKey="count"
@@ -346,6 +298,9 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                       paddingAngle={3}
                       label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                       labelLine={false}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
                     >
                       {sortedCareerData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
@@ -390,15 +345,16 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Ranking de Estudiantes Asiduos
+                Ranking de Usuarios Asiduos
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Alumnos con mayor cantidad de ingresos en {periodDescription}</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Usuarios con mayor cantidad de visitas en {periodDescription}</p>
             </div>
           </div>
 
           <div style={{ height: '300px', width: '100%', marginTop: '10px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
+                key={`top-students-chart-${filterType}-${filterValue}`}
                 data={topStudentsData} 
                 layout="vertical"
                 margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
@@ -411,7 +367,14 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
                   contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
                   formatter={(val: any) => [`${val} visitas`, 'Total']}
                 />
-                <Bar dataKey="visitCount" radius={[0, 6, 6, 0]} barSize={24}>
+                <Bar 
+                  dataKey="visitCount" 
+                  radius={[0, 6, 6, 0]} 
+                  barSize={24}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
                   {topStudentsData.map((_, index) => {
                     const solidColors = ['#b45309', '#475569', '#0f5142', '#64748b', '#94a3b8'];
                     return (

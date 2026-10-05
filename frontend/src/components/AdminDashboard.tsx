@@ -776,8 +776,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
             
             {activeTab === 'historico' && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)' }}>Período:</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  title="Descargar reporte histórico en formato Excel (.xlsx)"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #16a34a',
+                    background: '#f0fdf4',
+                    color: '#15803d',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#15803d';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#f0fdf4';
+                    e.currentTarget.style.color = '#15803d';
+                  }}
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  title="Descargar reporte histórico en formato PDF (.pdf)"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #dc2626',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#dc2626';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#fef2f2';
+                    e.currentTarget.style.color = '#dc2626';
+                  }}
+                >
+                  <FileText size={14} />
+                  <span>PDF</span>
+                </button>
+
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Período:</span>
                 <select 
                   className="input-futuristic" 
                   style={{ padding: '8px 14px', fontSize: '0.85rem' }}
