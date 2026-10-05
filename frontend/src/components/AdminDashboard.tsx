@@ -138,6 +138,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [persons, setPersons] = useState<LibraryPerson[]>([]);
 
+  // Total unique registered users across students, library persons (docentes, maestrandos, doctorandos, visitas) and records
+  const totalRegisteredUsersCount = useMemo(() => {
+    const keys = new Set<string>();
+    (students || []).forEach(s => {
+      const k = (s.studentCode || s.documentNumber || s.id || '').trim().toLowerCase();
+      if (k) keys.add(k);
+    });
+    (persons || []).forEach(p => {
+      const k = (p.code || p.documentNumber || p.id || '').trim().toLowerCase();
+      if (k) keys.add(k);
+    });
+    // Also check unique codes from attendance records as fallback
+    (records || []).forEach(r => {
+      const k = (r.studentCode || r.studentId || '').trim().toLowerCase();
+      if (k) keys.add(k);
+    });
+
+    const summaryCount = summary?.totalRegisteredStudents || 0;
+    return Math.max(keys.size, summaryCount);
+  }, [students, persons, records, summary]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -918,6 +939,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <KPICards 
                 summary={summary} 
                 studentsCount={(students || []).length}
+                totalUsersCount={totalRegisteredUsersCount}
                 selectedDate={activeTab === 'inicio' ? inicioDate : undefined}
                 selectedDateVisitsCount={activeTab === 'inicio' ? currentRecords?.length : undefined}
                 periodType={activeTab === 'historico' ? (historyFilter as any) : undefined}

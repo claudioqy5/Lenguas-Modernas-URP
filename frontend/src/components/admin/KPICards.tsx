@@ -5,6 +5,7 @@ import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 interface KPICardsProps {
   summary: AnalyticsSummary | null;
   studentsCount: number;
+  totalUsersCount?: number;
   selectedDate?: string;
   selectedDateVisitsCount?: number;
   // Historical period props
@@ -18,6 +19,7 @@ interface KPICardsProps {
 export const KPICards: React.FC<KPICardsProps> = ({ 
   summary, 
   studentsCount,
+  totalUsersCount,
   selectedDate,
   selectedDateVisitsCount,
   periodType,
@@ -169,7 +171,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
               Usuarios Registrados
             </div>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px', lineHeight: 1.1 }}>
-              {summary?.totalRegisteredStudents ?? studentsCount}
+              {totalUsersCount ?? (summary?.totalRegisteredStudents ?? studentsCount)}
             </div>
           </div>
           <div style={{ padding: '7px', borderRadius: '8px', background: 'var(--accent-blue-light)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

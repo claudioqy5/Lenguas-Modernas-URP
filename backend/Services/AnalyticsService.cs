@@ -23,7 +23,27 @@ namespace AsistenciaLenguas.Api.Services
 
         public async Task<AnalyticsSummaryDto> GetSummaryAsync()
         {
-            var totalStudents = (int)await _context.Students.CountDocumentsAsync(_ => true);
+            var studentCodes = await _context.Students.Find(_ => true)
+                .Project(s => !string.IsNullOrWhiteSpace(s.StudentCode) ? s.StudentCode : (!string.IsNullOrWhiteSpace(s.DocumentNumber) ? s.DocumentNumber : s.Id))
+                .ToListAsync();
+            var personCodes = await _context.LibraryPersons.Find(_ => true)
+                .Project(p => !string.IsNullOrWhiteSpace(p.Code) ? p.Code : (!string.IsNullOrWhiteSpace(p.DocumentNumber) ? p.DocumentNumber : p.Id))
+                .ToListAsync();
+
+            var uniquePersonsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var code in studentCodes.Where(c => !string.IsNullOrWhiteSpace(c)))
+            {
+                uniquePersonsSet.Add(code.Trim());
+            }
+            foreach (var code in personCodes.Where(c => !string.IsNullOrWhiteSpace(c)))
+            {
+                uniquePersonsSet.Add(code.Trim());
+            }
+
+            var totalRegisteredUsers = uniquePersonsSet.Count > 0 
+                ? uniquePersonsSet.Count 
+                : (int)(await _context.Students.CountDocumentsAsync(_ => true) + await _context.LibraryPersons.CountDocumentsAsync(_ => true));
+
             var totalVisits = (int)await _context.AttendanceRecords.CountDocumentsAsync(_ => true);
 
             var now = DateTime.UtcNow;
@@ -131,7 +151,7 @@ namespace AsistenciaLenguas.Api.Services
 
             return new AnalyticsSummaryDto
             {
-                TotalRegisteredStudents = totalStudents,
+                TotalRegisteredStudents = totalRegisteredUsers,
                 TotalVisitsAllTime = totalVisits,
                 TotalVisitsToday = totalToday,
                 TotalVisitsThisMonth = totalMonth,
