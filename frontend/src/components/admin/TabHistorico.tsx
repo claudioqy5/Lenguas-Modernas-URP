@@ -649,7 +649,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Afluencia por Tipo
+                  Afluencia por Tipo de Usuario
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                   Distribución de usuarios según su rol en {periodDescription}
@@ -723,7 +723,7 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Afluencia por Carrera / Programa
+                  Afluencia por Programa Académico
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                   Distribución de usuarios según programa académico o rol en {periodDescription}
