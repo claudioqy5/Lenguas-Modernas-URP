@@ -649,55 +649,7 @@ export function App() {
             </button>
           </form>
 
-          {/* Registration link / pill */}
-          <div style={{ marginTop: '18px', textAlign: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setUnregisteredCode('');
-                setShowNewStudentModal(true);
-              }}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '30px',
-                padding: '8px 20px',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                color: '#475569'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--urp-green-primary)';
-                e.currentTarget.style.background = 'var(--urp-green-light)';
-                e.currentTarget.style.color = 'var(--urp-green-primary)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 81, 66, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.background = '#f8fafc';
-                e.currentTarget.style.color = '#475569';
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <span>¿Eres estudiante nuevo?</span>
-              <span style={{ 
-                color: 'var(--urp-green-primary)', 
-                fontWeight: 700, 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '4px' 
-              }}>
-                Regístrate aquí <ArrowRight size={14} />
-              </span>
-            </button>
-          </div>
+
         </div>
       </main>
 
