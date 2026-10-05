@@ -244,7 +244,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
       } else {
         const res = await api.registerPerson(payload as any);
         if (res.success && res.person) {
-          onSuccess(res.person, { success: true } as any); // Mock checkin success if needed
+          onSuccess(res.person);
         } else {
           setError(res.message || 'Error al guardar el registro.');
         }
