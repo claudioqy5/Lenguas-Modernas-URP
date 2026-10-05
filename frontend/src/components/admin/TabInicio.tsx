@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, LabelList } from 'recharts';
 import { Clock, Building2, Activity, User, FileSpreadsheet, FileText, PieChart as PieChartIcon, Hourglass, LogOut, BarChart2, List, Timer, Users } from 'lucide-react';
 import { AnalyticsSummary, AttendanceRecord } from '../../services/api';
 import { exportDailyReportPDF, exportDailyReportExcel } from '../../utils/exportReports';
@@ -1057,46 +1057,68 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      layout="vertical"
                       data={activeDurationByGroup}
-                      margin={{ top: 5, right: 30, left: 10, bottom: 0 }}
+                      margin={{ top: 20, right: 15, left: -15, bottom: 25 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis 
-                        type="number" 
-                        stroke="#64748b" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false}
-                        tickFormatter={(min) => `${min}m`} 
-                      />
-                      <YAxis 
-                        type="category" 
                         dataKey="name" 
                         stroke="#64748b" 
                         fontSize={11} 
                         tickLine={false} 
                         axisLine={false}
-                        width={135} 
-                        tick={({ x, y, payload }) => (
-                          <text x={x} y={y} dy={4} textAnchor="end" fill="#334155" fontSize={11} fontWeight={600}>
-                            {payload.value.length > 17 ? `${payload.value.slice(0, 16)}…` : payload.value}
-                          </text>
-                        )}
+                        interval={0}
+                        tick={({ x, y, payload }) => {
+                          const val = payload.value || '';
+                          const displayVal = val.length > 14 ? `${val.slice(0, 13)}…` : val;
+                          return (
+                            <text 
+                              x={x} 
+                              y={y} 
+                              dy={14} 
+                              textAnchor="middle" 
+                              fill="#475569" 
+                              fontSize={10.5} 
+                              fontWeight={600}
+                            >
+                              {displayVal}
+                            </text>
+                          );
+                        }}
+                      />
+                      <YAxis 
+                        stroke="#64748b" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false}
+                        allowDecimals={false}
+                        tickFormatter={(min) => {
+                          if (min >= 60) {
+                            const h = Math.floor(min / 60);
+                            const m = min % 60;
+                            return m > 0 ? `${h}h${m}m` : `${h}h`;
+                          }
+                          return `${min}m`;
+                        }}
                       />
                       <Tooltip
                         contentStyle={{ 
                           background: '#ffffff', 
                           border: '1px solid #e2e8f0', 
                           borderRadius: '10px', 
-                          boxShadow: '0 6px 16px rgba(0,0,0,0.08)' 
+                          boxShadow: '0 8px 20px rgba(0,0,0,0.1)' 
                         }}
-                        formatter={(val, _name, props) => [
+                        formatter={(val: any, _name: string, props: any) => [
                           `${props.payload.formattedTime} acumulados (${props.payload.userCount} ${props.payload.userCount === 1 ? 'persona activa' : 'personas activas'})`,
-                          'Tiempo en sala'
+                          props.payload.name
                         ]}
                       />
-                      <Bar dataKey="totalMinutes" radius={[0, 8, 8, 0]} maxBarSize={24}>
+                      <Bar dataKey="totalMinutes" radius={[6, 6, 0, 0]} maxBarSize={44}>
+                        <LabelList 
+                          dataKey="formattedTime" 
+                          position="top" 
+                          style={{ fontSize: '10px', fontWeight: 700, fill: '#334155' }} 
+                        />
                         {activeDurationByGroup.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
                         ))}

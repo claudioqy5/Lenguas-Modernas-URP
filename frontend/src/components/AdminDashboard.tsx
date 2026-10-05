@@ -612,46 +612,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {activeTab === 'inicio' && (
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'nowrap' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Fecha:</span>
-                <input 
-                  type="date" 
-                  className="input-futuristic" 
-                  style={{ padding: '8px 14px', fontSize: '0.85rem', width: 'auto' }} 
-                  value={inicioDate}
-                  onChange={(e) => setInicioDate(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setInicioDate(getTodayDateStr())}
-                  title="Restablecer al día de hoy"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '7px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #0f5142',
-                    background: 'var(--urp-green-light)',
-                    color: 'var(--urp-green-primary)',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--urp-green-primary)';
-                    e.currentTarget.style.color = '#ffffff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--urp-green-light)';
-                    e.currentTarget.style.color = 'var(--urp-green-primary)';
-                  }}
-                >
-                  <RotateCcw size={13} />
-                  <span>Hoy</span>
-                </button>
-
+                
                 <button
                   type="button"
                   title="Descargar reporte en formato Excel (.xlsx)"
@@ -713,6 +674,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <FileText size={14} />
                   <span>PDF</span>
                 </button>
+                
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-subtle)', whiteSpace: 'nowrap' }}>Fecha:</span>
+                <input 
+                  type="date" 
+                  className="input-futuristic" 
+                  style={{ padding: '8px 14px', fontSize: '0.85rem', width: 'auto' }} 
+                  value={inicioDate}
+                  onChange={(e) => setInicioDate(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setInicioDate(getTodayDateStr())}
+                  title="Restablecer al día de hoy"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '7px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #0f5142',
+                    background: 'var(--urp-green-light)',
+                    color: 'var(--urp-green-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-primary)';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--urp-green-light)';
+                    e.currentTarget.style.color = 'var(--urp-green-primary)';
+                  }}
+                >
+                  <RotateCcw size={13} />
+                  <span>Hoy</span>
+                </button>
+
+                
               </div>
             )}
             
