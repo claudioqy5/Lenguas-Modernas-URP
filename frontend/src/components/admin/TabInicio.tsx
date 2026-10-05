@@ -84,6 +84,54 @@ const getRelativeTimeString = (timestamp?: string, dateString?: string, timeStri
   return `hace ${diffYears} años`;
 };
 
+const wrapLabel = (text: string, maxCharsPerLine = 17): string[] => {
+  if (!text) return [];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const w of words) {
+    if (!current) {
+      current = w;
+    } else if ((current + ' ' + w).length <= maxCharsPerLine) {
+      current += ' ' + w;
+    } else {
+      lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+};
+
+const CustomDurationTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ 
+        background: '#ffffff', 
+        border: '1px solid #e2e8f0', 
+        borderRadius: '10px', 
+        padding: '10px 14px', 
+        boxShadow: '0 8px 20px rgba(0,0,0,0.1)' 
+      }}>
+        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.85rem', marginBottom: '4px' }}>
+          {data.name}
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontWeight: 700, color: 'var(--urp-green-primary)' }}>{data.formattedTime}</span>
+          <span>acumulados</span>
+          <span style={{ color: '#cbd5e1' }}>•</span>
+          <span style={{ fontWeight: 600, color: '#334155' }}>
+            {data.userCount} {data.userCount === 1 ? 'persona activa' : 'personas activas'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, records }) => {
   // Tick state to re-evaluate relative time every 30 seconds
   const [tick, setTick] = useState(0);
@@ -752,30 +800,36 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={activeDurationByGroup}
-                      margin={{ top: 20, right: 15, left: -15, bottom: 25 }}
+                      margin={{ top: 22, right: 15, left: -15, bottom: 40 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis 
                         dataKey="name" 
                         stroke="#64748b" 
-                        fontSize={11} 
                         tickLine={false} 
                         axisLine={false}
                         interval={0}
+                        height={45}
                         tick={({ x, y, payload }) => {
-                          const val = payload.value || '';
-                          const displayVal = val.length > 14 ? `${val.slice(0, 13)}…` : val;
+                          const lines = wrapLabel(payload.value || '', 17);
                           return (
                             <text 
                               x={x} 
                               y={y} 
-                              dy={14} 
                               textAnchor="middle" 
                               fill="#475569" 
-                              fontSize={10.5} 
+                              fontSize={9.5} 
                               fontWeight={600}
                             >
-                              {displayVal}
+                              {lines.map((line, idx) => (
+                                <tspan 
+                                  key={idx} 
+                                  x={x} 
+                                  dy={idx === 0 ? 12 : 11}
+                                >
+                                  {line}
+                                </tspan>
+                              ))}
                             </text>
                           );
                         }}
@@ -796,21 +850,19 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                         }}
                       />
                       <Tooltip
-                        contentStyle={{ 
-                          background: '#ffffff', 
-                          border: '1px solid #e2e8f0', 
-                          borderRadius: '10px', 
-                          boxShadow: '0 8px 20px rgba(0,0,0,0.1)' 
-                        }}
-                        formatter={(val: any, _name: string, props: any) => [
-                          `${props.payload.formattedTime} acumulados (${props.payload.userCount} ${props.payload.userCount === 1 ? 'persona activa' : 'personas activas'})`,
-                          props.payload.name
-                        ]}
+                        cursor={false}
+                        content={<CustomDurationTooltip />}
                       />
-                      <Bar dataKey="totalMinutes" radius={[6, 6, 0, 0]} maxBarSize={44}>
+                      <Bar 
+                        dataKey="totalMinutes" 
+                        radius={[6, 6, 0, 0]} 
+                        maxBarSize={44}
+                        isAnimationActive={false}
+                      >
                         <LabelList 
                           dataKey="formattedTime" 
                           position="top" 
+                          offset={6}
                           style={{ fontSize: '10px', fontWeight: 700, fill: '#334155' }} 
                         />
                         {activeDurationByGroup.map((entry, index) => (
