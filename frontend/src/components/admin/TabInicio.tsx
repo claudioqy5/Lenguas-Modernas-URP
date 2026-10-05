@@ -104,6 +104,24 @@ const wrapLabel = (text: string, maxCharsPerLine = 17): string[] => {
   return lines;
 };
 
+const getRecordExitHour = (r: { checkOutTimeString?: string; checkOutTimestamp?: string }): number | null => {
+  if (r.checkOutTimeString && r.checkOutTimeString.includes(':')) {
+    const h = parseInt(r.checkOutTimeString.split(':')[0], 10);
+    if (!isNaN(h)) return h;
+  }
+  if (r.checkOutTimestamp) {
+    try {
+      const date = new Date(r.checkOutTimestamp);
+      if (!isNaN(date.getTime())) {
+        const hourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', hour: 'numeric', hour12: false }).format(date);
+        const parsed = parseInt(hourStr, 10);
+        return parsed === 24 ? 0 : parsed;
+      }
+    } catch {}
+  }
+  return null;
+};
+
 const CustomDurationTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -118,13 +136,21 @@ const CustomDurationTooltip = ({ active, payload }: any) => {
         <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.85rem', marginBottom: '4px' }}>
           {data.name}
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, color: 'var(--urp-green-primary)' }}>{data.formattedTime}</span>
           <span>acumulados</span>
           <span style={{ color: '#cbd5e1' }}>•</span>
           <span style={{ fontWeight: 600, color: '#334155' }}>
-            {data.userCount} {data.userCount === 1 ? 'persona activa' : 'personas activas'}
+            {data.userCount} {data.userCount === 1 ? 'visita' : 'visitas'}
           </span>
+          {data.activeCount > 0 && (
+            <>
+              <span style={{ color: '#cbd5e1' }}>•</span>
+              <span style={{ color: '#15803d', fontWeight: 600 }}>
+                {data.activeCount} en sala
+              </span>
+            </>
+          )}
         </div>
       </div>
     );
@@ -177,10 +203,10 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   const recentExits = useMemo(() => {
     if (!filteredRecords) return [];
     // Sort descending by checkOutTimestamp (most recent first)
-    const checkedOut = filteredRecords.filter(r => r.checkOutTimestamp && r.durationMinutes > 0);
+    const checkedOut = filteredRecords.filter(r => Boolean(r.checkOutTimestamp || r.checkOutTimeString));
     return checkedOut.sort((a, b) => {
-      const timeA = new Date(a.checkOutTimestamp!).getTime();
-      const timeB = new Date(b.checkOutTimestamp!).getTime();
+      const timeA = a.checkOutTimestamp ? new Date(a.checkOutTimestamp).getTime() : 0;
+      const timeB = b.checkOutTimestamp ? new Date(b.checkOutTimestamp).getTime() : 0;
       return timeB - timeA;
     });
   }, [filteredRecords]);
@@ -202,9 +228,9 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
           entriesMap[entryHour] = (entriesMap[entryHour] || 0) + 1;
         }
         // Salidas
-        if (r.checkOutTimestamp && r.durationMinutes > 0) {
-          const exitHour = new Date(r.checkOutTimestamp).getHours();
-          if (exitHour >= 8 && exitHour <= 22) {
+        if (r.checkOutTimestamp || r.checkOutTimeString) {
+          const exitHour = getRecordExitHour(r);
+          if (exitHour !== null && exitHour >= 8 && exitHour <= 22) {
             exitsMap[exitHour] = (exitsMap[exitHour] || 0) + 1;
           }
         }
@@ -229,57 +255,62 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   // Active users currently in library
   const activeRecords = useMemo(() => {
     if (!filteredRecords) return [];
-    return filteredRecords.filter(r => r.isActive === true || (r.isActive === undefined && !r.checkOutTimestamp));
+    return filteredRecords.filter(r => r.isActive === true || (r.isActive === undefined && !r.checkOutTimestamp && !r.checkOutTimeString));
   }, [filteredRecords]);
 
-  // Aggregate active duration by career/program/role
+  // Aggregate duration by career/program/role for the selected date
   const activeDurationByGroup = useMemo(() => {
     if (!filteredRecords || filteredRecords.length === 0) return [];
     const isToday = !selectedDate || selectedDate === getTodayDateStr();
-    const map: Record<string, { totalMinutes: number; userCount: number; personType: string }> = {};
+    const map: Record<string, { totalMinutes: number; userCount: number; activeCount: number; personType: string }> = {};
     const now = new Date().getTime();
 
     filteredRecords.forEach(r => {
-      const isActiveUser = r.isActive === true || (r.isActive === undefined && !r.checkOutTimestamp);
+      const isActiveUser = r.isActive === true || (r.isActive === undefined && !r.checkOutTimestamp && !r.checkOutTimeString);
 
       let minutes = 0;
-      if (isToday) {
-        if (isActiveUser) {
-          const entryTime = r.timestamp 
-            ? new Date(r.timestamp).getTime() 
-            : (r.dateString && r.timeString ? new Date(`${r.dateString}T${r.timeString}`).getTime() : 0);
-          if (entryTime > 0 && !isNaN(entryTime)) {
-            minutes = Math.max(1, Math.floor((now - entryTime) / 60000));
-          } else {
-            minutes = 1;
-          }
+      if (isActiveUser) {
+        const entryTime = r.timestamp 
+          ? new Date(r.timestamp).getTime() 
+          : (r.dateString && r.timeString ? new Date(`${r.dateString}T${r.timeString}`).getTime() : 0);
+        if (entryTime > 0 && !isNaN(entryTime)) {
+          minutes = Math.max(1, Math.floor((now - entryTime) / 60000));
+        } else {
+          minutes = 1;
         }
       } else {
         minutes = r.durationMinutes || 0;
+        if (minutes === 0 && r.timestamp && r.checkOutTimestamp) {
+          const diff = Math.floor((new Date(r.checkOutTimestamp).getTime() - new Date(r.timestamp).getTime()) / 60000);
+          if (diff > 0) minutes = diff;
+        }
       }
 
-      if (minutes > 0 && (isToday ? isActiveUser : true)) {
+      if (minutes > 0) {
         let groupName = '';
         const pType = r.personType?.trim() || '';
-        const career = r.career?.trim() || '';
+        const programOrCareer = ((r as any).program || r.career || '').trim();
 
         if (pType === 'Docente') {
           groupName = 'Docentes';
         } else if (pType === 'Visitante') {
           groupName = 'Visitantes';
-        } else if (career && career !== 'Sin Carrera') {
-          groupName = career;
+        } else if (programOrCareer && programOrCareer !== 'Sin Carrera') {
+          groupName = programOrCareer;
         } else if (pType && pType !== 'Alumno') {
           groupName = pType;
         } else {
-          groupName = career || 'Comunidad General';
+          groupName = 'Comunidad General';
         }
 
         if (!map[groupName]) {
-          map[groupName] = { totalMinutes: 0, userCount: 0, personType: pType };
+          map[groupName] = { totalMinutes: 0, userCount: 0, activeCount: 0, personType: pType };
         }
         map[groupName].totalMinutes += minutes;
         map[groupName].userCount += 1;
+        if (isActiveUser) {
+          map[groupName].activeCount += 1;
+        }
       }
     });
 
@@ -291,6 +322,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
         name,
         totalMinutes: data.totalMinutes,
         userCount: data.userCount,
+        activeCount: data.activeCount,
         formattedTime
       };
     }).sort((a, b) => b.totalMinutes - a.totalMinutes);
@@ -941,7 +973,7 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   <span>{record.personType || 'Alumno'}</span>
                                   <span style={{ color: '#cbd5e1' }}>•</span>
-                                  <span style={{ fontWeight: 600 }}>{record.career || 'Sin Carrera'}</span>
+                                  <span style={{ fontWeight: 600 }}>{(record as any).program || record.career || 'Sin Carrera'}</span>
                                 </div>
                               </div>
                             </div>
