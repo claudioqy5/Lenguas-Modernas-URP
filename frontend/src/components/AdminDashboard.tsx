@@ -188,7 +188,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const prevBgColor = document.body.style.backgroundColor;
     const prevBgImage = document.body.style.backgroundImage;
 
-    document.body.style.backgroundColor = '#ffffff';
+    document.body.style.backgroundColor = '#f1f5f9';
     document.body.style.backgroundImage = 'none';
 
     return () => {
@@ -198,7 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, []);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: '#ffffff', color: 'var(--text-main)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: '#f1f5f9', color: 'var(--text-main)' }}>
       {/* Sidebar Navigation */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
@@ -458,7 +458,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#ffffff', minHeight: '100vh' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#f1f5f9', minHeight: '100vh' }}>
         {/* Top Header */}
         <header 
           style={{ 
@@ -838,7 +838,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </header>
 
-        <main style={{ padding: '18px 32px 24px', width: '100%', maxWidth: '95%', margin: '0 auto', flex: 1, background: '#ffffff' }}>
+        <main style={{ padding: '20px 32px 28px', width: '100%', flex: 1, background: '#f1f5f9' }}>
           {/* KPI Cards */}
           {(activeTab === 'inicio' || activeTab === 'historico') && (() => {
             const currentRecords = activeTab === 'inicio'
