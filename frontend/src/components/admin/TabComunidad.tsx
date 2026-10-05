@@ -16,9 +16,9 @@ export interface UnifiedCommunityMember {
   career: string;
   program: string;
   email: string;
-  phone: string;
   totalVisits: number;
   lastVisitAt?: string;
+  createdAt?: string;
 }
 
 interface TabComunidadProps {
@@ -76,10 +76,10 @@ export const unifyCommunityMembers = (students: Student[], persons: LibraryPerso
       faculty: (p.faculty || '').trim(),
       career: (p.career || '').trim(),
       program: (p.program || '').trim(),
-      email: (p.email || '').trim(),
       phone: (p.phone || '').trim(),
       totalVisits: p.totalVisits || 0,
-      lastVisitAt: p.lastVisitAt
+      lastVisitAt: p.lastVisitAt,
+      createdAt: p.createdAt
     };
 
     const idx = list.length;
@@ -117,6 +117,9 @@ export const unifyCommunityMembers = (students: Student[], persons: LibraryPerso
       if (!existing.lastVisitAt && s.lastVisitAt) {
         existing.lastVisitAt = s.lastVisitAt;
       }
+      if (!existing.createdAt && s.createdAt) {
+        existing.createdAt = s.createdAt;
+      }
     } else {
       const member: UnifiedCommunityMember = {
         id: s.id,
@@ -128,10 +131,10 @@ export const unifyCommunityMembers = (students: Student[], persons: LibraryPerso
         faculty: (s.faculty || '').trim(),
         career: (s.career || '').trim(),
         program: '',
-        email: (s.email || '').trim(),
         phone: (s.phone || '').trim(),
         totalVisits: s.totalVisits || 0,
-        lastVisitAt: s.lastVisitAt
+        lastVisitAt: s.lastVisitAt,
+        createdAt: s.createdAt
       };
 
       const idx = list.length;
@@ -255,6 +258,10 @@ export const TabComunidad: React.FC<TabComunidadProps> = ({
       }
 
       return true;
+    }).sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
     });
   }, [combinedMembers, activePersonType, filterFaculty, filterCareer, filterProgram, searchTerm]);
 
