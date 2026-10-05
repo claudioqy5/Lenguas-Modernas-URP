@@ -88,7 +88,6 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
   // Tick state to re-evaluate relative time every 30 seconds
   const [tick, setTick] = useState(0);
   const [trafficViewMode, setTrafficViewMode] = useState<'chart' | 'entries' | 'exits'>('chart');
-  const [trafficGranularity, setTrafficGranularity] = useState<'15m' | '30m' | '1h'>('15m');
   const [durationViewMode, setDurationViewMode] = useState<'chart' | 'users'>('chart');
 
   useEffect(() => {
@@ -138,132 +137,46 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
     });
   }, [filteredRecords]);
 
-  // Extract minute of the day (0-1439) for high-precision traffic plotting
-  const getRecordMinuteOfDay = (timeStr?: string, timestamp?: string, fallbackHour?: number): number | null => {
-    if (timeStr && timeStr.includes(':')) {
-      const parts = timeStr.split(':');
-      const h = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      if (!isNaN(h) && !isNaN(m)) {
-        return h * 60 + m;
-      }
-    }
-    if (timestamp) {
-      try {
-        const d = new Date(timestamp);
-        if (!isNaN(d.getTime())) {
-          const timeParts = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/Lima',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: false
-          }).format(d).split(':');
-          const h = parseInt(timeParts[0], 10) % 24;
-          const m = parseInt(timeParts[1], 10);
-          if (!isNaN(h) && !isNaN(m)) {
-            return h * 60 + m;
-          }
-        }
-      } catch {}
-    }
-    if (fallbackHour !== undefined && fallbackHour !== null && !isNaN(fallbackHour)) {
-      return fallbackHour * 60;
-    }
-    return null;
-  };
-
-  // Hourly peak hours data for PDF/Excel exports
-  const peakHoursData = useMemo(() => {
+  // Combined traffic data (Ingresos y Salidas superpuestos)
+  const combinedTrafficData = useMemo(() => {
     const entriesMap: Record<number, number> = {};
+    const exitsMap: Record<number, number> = {};
     for (let h = 8; h <= 22; h++) {
       entriesMap[h] = 0;
-    }
-    if (filteredRecords && filteredRecords.length > 0) {
-      filteredRecords.forEach(r => {
-        const h = getRecordHour(r);
-        if (h !== null && h >= 8 && h <= 22) {
-          entriesMap[h] = (entriesMap[h] || 0) + 1;
-        }
-      });
-    }
-    return Object.keys(entriesMap).map(hStr => {
-      const h = parseInt(hStr, 10);
-      return {
-        hour: h,
-        label: `${h.toString().padStart(2, '0')}:00`,
-        count: entriesMap[h]
-      };
-    });
-  }, [filteredRecords]);
-
-  // Combined traffic data (Ingresos y Salidas superpuestos con resolución exacta 15m/30m/1h)
-  const combinedTrafficData = useMemo(() => {
-    const step = trafficGranularity === '15m' ? 15 : (trafficGranularity === '30m' ? 30 : 60);
-    const startMin = 8 * 60; // 08:00
-    const endMin = 22 * 60;  // 22:00
-
-    const slotMap: Record<number, {
-      minute: number;
-      label: string;
-      hour: number;
-      entries: number;
-      exits: number;
-      entryRecords: AttendanceRecord[];
-      exitRecords: AttendanceRecord[];
-    }> = {};
-
-    for (let m = startMin; m <= endMin; m += step) {
-      const h = Math.floor(m / 60);
-      const min = m % 60;
-      const label = `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-      slotMap[m] = {
-        minute: m,
-        label,
-        hour: h,
-        entries: 0,
-        exits: 0,
-        entryRecords: [],
-        exitRecords: []
-      };
+      exitsMap[h] = 0;
     }
 
     if (filteredRecords && filteredRecords.length > 0) {
       filteredRecords.forEach(r => {
         // Ingresos
-        const entryMinute = getRecordMinuteOfDay(r.timeString, r.timestamp, getRecordHour(r));
-        if (entryMinute !== null && entryMinute >= startMin - step / 2 && entryMinute <= endMin + step / 2) {
-          const slotMin = Math.min(endMin, Math.max(startMin, Math.round(entryMinute / step) * step));
-          if (slotMap[slotMin]) {
-            slotMap[slotMin].entries += 1;
-            slotMap[slotMin].entryRecords.push(r);
-          }
+        const entryHour = getRecordHour(r);
+        if (entryHour !== null && entryHour >= 8 && entryHour <= 22) {
+          entriesMap[entryHour] = (entriesMap[entryHour] || 0) + 1;
         }
-
         // Salidas
         if (r.checkOutTimestamp && r.durationMinutes > 0) {
-          const exitMinute = getRecordMinuteOfDay(r.checkOutTimeString, r.checkOutTimestamp);
-          if (exitMinute !== null && exitMinute >= startMin - step / 2 && exitMinute <= endMin + step / 2) {
-            const slotMin = Math.min(endMin, Math.max(startMin, Math.round(exitMinute / step) * step));
-            if (slotMap[slotMin]) {
-              slotMap[slotMin].exits += 1;
-              slotMap[slotMin].exitRecords.push(r);
-            }
+          const exitHour = new Date(r.checkOutTimestamp).getHours();
+          if (exitHour >= 8 && exitHour <= 22) {
+            exitsMap[exitHour] = (exitsMap[exitHour] || 0) + 1;
           }
         }
       });
     }
 
-    return Object.keys(slotMap)
-      .map(k => parseInt(k, 10))
-      .sort((a, b) => a - b)
-      .map(m => {
-        const item = slotMap[m];
-        return {
-          ...item,
-          count: item.entries
-        };
-      });
-  }, [filteredRecords, trafficGranularity]);
+    return Object.keys(entriesMap).map(hStr => {
+      const h = parseInt(hStr, 10);
+      const label = `${h.toString().padStart(2, '0')}:00`;
+      return {
+        hour: h,
+        label,
+        entries: entriesMap[h],
+        exits: exitsMap[h],
+        count: entriesMap[h]
+      };
+    });
+  }, [filteredRecords]);
+
+  const peakHoursData = combinedTrafficData;
 
   // Active users currently in library
   const activeRecords = useMemo(() => {
@@ -394,148 +307,6 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
     );
   };
 
-  // Custom dot for entries on the curve (only drawn when value > 0)
-  const renderEntryDot = (props: any) => {
-    const { cx, cy, value } = props;
-    if (value === undefined || value === null || value <= 0 || cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) {
-      return null;
-    }
-    return (
-      <g key={`entry-dot-${cx}-${cy}`} style={{ pointerEvents: 'none' }}>
-        <circle cx={cx} cy={cy} r={7} fill="#0f5142" fillOpacity={0.25} />
-        <circle cx={cx} cy={cy} r={4.5} fill="#0f5142" stroke="#ffffff" strokeWidth={1.8} />
-        <circle cx={cx} cy={cy} r={1.5} fill="#ffffff" />
-      </g>
-    );
-  };
-
-  // Custom dot for exits on the curve (only drawn when value > 0)
-  const renderExitDot = (props: any) => {
-    const { cx, cy, value } = props;
-    if (value === undefined || value === null || value <= 0 || cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) {
-      return null;
-    }
-    return (
-      <g key={`exit-dot-${cx}-${cy}`} style={{ pointerEvents: 'none' }}>
-        <circle cx={cx} cy={cy} r={7} fill="#b45309" fillOpacity={0.25} />
-        <circle cx={cx} cy={cy} r={4.5} fill="#b45309" stroke="#ffffff" strokeWidth={1.8} />
-        <circle cx={cx} cy={cy} r={1.5} fill="#ffffff" />
-      </g>
-    );
-  };
-
-  // Custom Tooltip with exact minute details
-  const CustomTrafficTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload || !payload.length) return null;
-    const data = payload[0]?.payload;
-    if (!data) return null;
-    const entriesCount = data.entries || 0;
-    const exitsCount = data.exits || 0;
-    const entryRecords: AttendanceRecord[] = data.entryRecords || [];
-    const exitRecords: AttendanceRecord[] = data.exitRecords || [];
-
-    return (
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '10px',
-        padding: '12px 14px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-        fontSize: '0.8rem',
-        minWidth: '220px',
-        maxWidth: '320px',
-        pointerEvents: 'none'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
-          <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.86rem' }}>
-            Horario: {label} hrs
-          </span>
-          <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-            {trafficGranularity === '15m' ? 'Ventana 15 min' : trafficGranularity === '30m' ? 'Ventana 30 min' : 'Ventana 1 hora'}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {/* Ingresos */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0f5142' }} />
-              <span style={{ color: '#0f5142', fontWeight: 600 }}>Ingresos:</span>
-            </div>
-            <span style={{ fontWeight: 700, color: '#0f5142' }}>
-              {entriesCount} {entriesCount === 1 ? 'persona' : 'personas'}
-            </span>
-          </div>
-
-          {/* Salidas */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b45309' }} />
-              <span style={{ color: '#b45309', fontWeight: 600 }}>Salidas:</span>
-            </div>
-            <span style={{ fontWeight: 700, color: '#b45309' }}>
-              {exitsCount} {exitsCount === 1 ? 'persona' : 'personas'}
-            </span>
-          </div>
-        </div>
-
-        {/* Detalle puntual si hay ingresos */}
-        {entryRecords.length > 0 && (
-          <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0', fontSize: '0.74rem' }}>
-            <div style={{ fontWeight: 700, color: '#0f5142', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0f5142' }} />
-              <span>Detalle de ingresos ({entryRecords.length}):</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              {entryRecords.slice(0, 3).map((r, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', color: '#475569' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
-                    {r.studentName}
-                  </span>
-                  <span style={{ fontWeight: 600, color: '#0f5142', flexShrink: 0 }}>
-                    {r.timeString ? r.timeString.slice(0, 5) : label}
-                  </span>
-                </div>
-              ))}
-              {entryRecords.length > 3 && (
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '1px' }}>
-                  +{entryRecords.length - 3} más...
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Detalle puntual si hay salidas */}
-        {exitRecords.length > 0 && (
-          <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0', fontSize: '0.74rem' }}>
-            <div style={{ fontWeight: 700, color: '#b45309', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#b45309' }} />
-              <span>Detalle de salidas ({exitRecords.length}):</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              {exitRecords.slice(0, 3).map((r, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', color: '#475569' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
-                    {r.studentName}
-                  </span>
-                  <span style={{ fontWeight: 600, color: '#b45309', flexShrink: 0 }}>
-                    {r.checkOutTimeString ? r.checkOutTimeString.slice(0, 5) : label}
-                  </span>
-                </div>
-              ))}
-              {exitRecords.length > 3 && (
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '1px' }}>
-                  +{exitRecords.length - 3} más...
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(380px, 1fr)', gap: '24px', alignItems: 'start' }}>
@@ -564,100 +335,28 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                     {trafficViewMode === 'exits' && 'Últimas Salidas Registradas'}
                   </h3>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                    {trafficViewMode === 'chart' && (formattedDateLabel ? `Distribución comparativa para el ${formattedDateLabel} (${trafficGranularity === '15m' ? 'cada 15 min' : trafficGranularity === '30m' ? 'cada 30 min' : 'por hora'})` : `Distribución comparativa de ingresos y salidas (08:00 a 22:00 - ${trafficGranularity === '15m' ? 'cada 15 min' : trafficGranularity === '30m' ? 'cada 30 min' : 'por hora'})`)}
+                    {trafficViewMode === 'chart' && (formattedDateLabel ? `Distribución comparativa para el ${formattedDateLabel}` : 'Distribución comparativa de ingresos y salidas (08:00 a 22:00)')}
                     {trafficViewMode === 'entries' && (formattedDateLabel ? `Actividad reciente del ${formattedDateLabel}` : 'Actividad en tiempo real de hoy')}
                     {trafficViewMode === 'exits' && (formattedDateLabel ? `Salidas recientes del ${formattedDateLabel}` : 'Salidas en tiempo real de hoy')}
                   </p>
                 </div>
               </div>
 
-              {/* View Switcher, Granularity & Legends */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {/* View Switcher & Legends */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 {trafficViewMode === 'chart' && (
-                  <>
-                    {/* Legends with dots */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700, color: '#0f5142' }}>
-                        <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#0f5142', display: 'inline-block' }} />
-                        <span>Ingresos</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700, color: '#b45309' }}>
-                        <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#b45309', display: 'inline-block' }} />
-                        <span>Salidas</span>
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700, color: '#0f5142' }}>
+                      <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#0f5142', display: 'inline-block' }} />
+                      <span>Ingresos</span>
                     </div>
-
-                    {/* Granularity Selector */}
-                    <div style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center',
-                      background: '#f1f5f9', 
-                      padding: '2px', 
-                      borderRadius: '8px', 
-                      border: '1px solid #e2e8f0' 
-                    }}>
-                      <button
-                        type="button"
-                        title="Ver con resolución de 15 minutos (alta precisión)"
-                        onClick={() => setTrafficGranularity('15m')}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: trafficGranularity === '15m' ? '#ffffff' : 'transparent',
-                          color: trafficGranularity === '15m' ? 'var(--urp-green-primary)' : '#64748b',
-                          fontWeight: trafficGranularity === '15m' ? 700 : 500,
-                          fontSize: '0.74rem',
-                          cursor: 'pointer',
-                          boxShadow: trafficGranularity === '15m' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        15m
-                      </button>
-                      <button
-                        type="button"
-                        title="Ver con resolución de 30 minutos"
-                        onClick={() => setTrafficGranularity('30m')}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: trafficGranularity === '30m' ? '#ffffff' : 'transparent',
-                          color: trafficGranularity === '30m' ? 'var(--urp-green-primary)' : '#64748b',
-                          fontWeight: trafficGranularity === '30m' ? 700 : 500,
-                          fontSize: '0.74rem',
-                          cursor: 'pointer',
-                          boxShadow: trafficGranularity === '30m' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        30m
-                      </button>
-                      <button
-                        type="button"
-                        title="Ver con resolución por hora"
-                        onClick={() => setTrafficGranularity('1h')}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: trafficGranularity === '1h' ? '#ffffff' : 'transparent',
-                          color: trafficGranularity === '1h' ? 'var(--urp-green-primary)' : '#64748b',
-                          fontWeight: trafficGranularity === '1h' ? 700 : 500,
-                          fontSize: '0.74rem',
-                          cursor: 'pointer',
-                          boxShadow: trafficGranularity === '1h' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        1h
-                      </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 700, color: '#b45309' }}>
+                      <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#b45309', display: 'inline-block' }} />
+                      <span>Salidas</span>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* View Switcher */}
                 <div style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center',
@@ -752,16 +451,15 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis 
-                      dataKey="label" 
-                      stroke="#64748b" 
-                      fontSize={11} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      interval={trafficGranularity === '15m' ? 3 : (trafficGranularity === '30m' ? 1 : 0)}
-                    />
+                    <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip content={<CustomTrafficTooltip />} />
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 6px 16px rgba(0,0,0,0.08)' }} 
+                      formatter={(val: any, name: string) => [
+                        `${val} ${name === 'Ingresos' ? 'asistencias' : 'salidas'}`,
+                        name
+                      ]}
+                    />
                     <Area 
                       type="monotone" 
                       dataKey="entries" 
@@ -770,8 +468,6 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                       strokeWidth={2.5} 
                       fillOpacity={1} 
                       fill="url(#trafficEntriesGrad)" 
-                      dot={renderEntryDot}
-                      activeDot={{ r: 6, fill: '#0f5142', stroke: '#ffffff', strokeWidth: 2 }}
                     />
                     <Area 
                       type="monotone" 
@@ -781,8 +477,6 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                       strokeWidth={2.5} 
                       fillOpacity={1} 
                       fill="url(#trafficExitsGrad)" 
-                      dot={renderExitDot}
-                      activeDot={{ r: 6, fill: '#b45309', stroke: '#ffffff', strokeWidth: 2 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
