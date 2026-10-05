@@ -128,13 +128,10 @@ namespace AsistenciaLenguas.Api.Data
         public void ClearAttendanceRecords()
         {
             _database.DropCollection("AttendanceRecords");
+            _database.DropCollection("Students");
+            _database.DropCollection("LibraryPersons");
             
-            // Re-create indexes for AttendanceRecords immediately
-            var attendanceDateKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.DateString);
-            AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceDateKeys));
-
-            var attendanceStudentKeys = Builders<AttendanceRecord>.IndexKeys.Ascending(a => a.StudentCode);
-            AttendanceRecords.Indexes.CreateOne(new CreateIndexModel<AttendanceRecord>(attendanceStudentKeys));
+            InitIndexesAndSeed();
         }
 
 

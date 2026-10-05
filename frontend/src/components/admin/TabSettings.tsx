@@ -227,12 +227,12 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ session }) => {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.88rem', fontWeight: 600, color: '#7f1d1d' }}>Limpiar Asistencias</h4>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b' }}>Elimina todos los registros de asistencia manteniendo los alumnos y carreras intactos. Útil después de una demostración.</p>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.88rem', fontWeight: 600, color: '#7f1d1d' }}>Limpiar Sistema Completo</h4>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b' }}>Elimina el historial de asistencia y a TODOS los usuarios (alumnos, docentes, etc.). Solo mantiene facultades y administradores. Útil para entregar el sistema limpio.</p>
           </div>
           <button
             onClick={async () => {
-              if (window.confirm('⚠️ ¿Estás completamente seguro de querer ELIMINAR TODOS los registros de asistencia? Esta acción NO se puede deshacer y pondrá todos los gráficos y reportes a cero.')) {
+              if (window.confirm('⚠️ ¿Estás completamente seguro de querer ELIMINAR TODO EL HISTORIAL Y TODOS LOS USUARIOS? Esta acción NO se puede deshacer.')) {
                 const res = await api.clearAttendance(session.token);
                 if (res.success) {
                   alert(res.message);
