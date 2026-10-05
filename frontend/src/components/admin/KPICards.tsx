@@ -157,7 +157,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
   }
 
   const currentOccupancy = summary?.currentOccupancy || 0;
-  const maxCapacity = summary?.maxCapacity || 50;
+  const maxCapacity = summary?.maxCapacity || 100;
   const occupancyPercent = Math.min(Math.round((currentOccupancy / maxCapacity) * 100), 100);
   const isOverCapacity = currentOccupancy > maxCapacity;
 

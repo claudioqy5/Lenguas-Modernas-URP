@@ -40,7 +40,7 @@ namespace AsistenciaLenguas.Api.Services
             _context = context;
             _studentService = studentService;
             _quoteService = quoteService;
-            _maxCapacity = configuration.GetValue<int>("LibrarySettings:MaxCapacity", 60);
+            _maxCapacity = configuration.GetValue<int>("LibrarySettings:MaxCapacity", 100);
         }
 
         // Helper: build an attendance record from a LibraryPerson

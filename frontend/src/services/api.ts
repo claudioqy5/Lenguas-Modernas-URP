@@ -327,7 +327,7 @@ export const api = {
       const res = await fetch(`${API_BASE}/attendance/occupancy`);
       if (res.ok) return await res.json();
     } catch (e) {}
-    return { currentOccupancy: 0, maxCapacity: 60, occupancyPercentage: 0 };
+    return { currentOccupancy: 0, maxCapacity: 100, occupancyPercentage: 0 };
   },
 
   // Get Server Time (Peru UTC-5 from VPS)

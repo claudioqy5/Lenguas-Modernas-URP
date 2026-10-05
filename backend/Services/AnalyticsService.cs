@@ -200,7 +200,7 @@ namespace AsistenciaLenguas.Api.Services
             }
             catch
             {
-                var (currentOccupancy, maxCapacity, percentage) = (0, 50, 0.0);
+                var (currentOccupancy, maxCapacity, percentage) = (0, 100, 0.0);
                 try
                 {
                     var occ = await _attendanceService.GetOccupancyAsync();

@@ -152,7 +152,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     totalVisitsToday: 0,
     totalVisitsThisMonth: 0,
     currentOccupancy: 0,
-    maxCapacity: 50,
+    maxCapacity: 100,
     occupancyPercentage: 0,
     peakHours: [],
     peakDays: [],

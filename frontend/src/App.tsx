@@ -67,7 +67,7 @@ export function App() {
   // Data State
   const [studentCodeInput, setStudentCodeInput] = useState('');
   const [selectedReason, setSelectedReason] = useState(VISIT_REASONS[0].id);
-  const [occupancy, setOccupancy] = useState<OccupancyData>({ currentOccupancy: 24, maxCapacity: 60, occupancyPercentage: 40 });
+  const [occupancy, setOccupancy] = useState<OccupancyData>({ currentOccupancy: 24, maxCapacity: 100, occupancyPercentage: 24 });
   const [checkInResult, setCheckInResult] = useState<CheckInResponse | null>(null);
   const [unregisteredCode, setUnregisteredCode] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
