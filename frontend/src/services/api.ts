@@ -133,6 +133,12 @@ export interface CheckInResponse {
   occupancyPercentage: number;
   quote?: LiteraryQuote;
   durationMinutes: number;
+  /** Alumno / Docente / Visitante / Maestrando / Doctorando */
+  personType?: string;
+  /** true = ingreso rechazado por aforo máximo completo */
+  isCapacityFull?: boolean;
+  /** true = ingreso rechazado por estar fuera del horario (08:00 - 22:00) */
+  isOutsideHours?: boolean;
 }
 
 export interface OccupancyData {
@@ -239,13 +245,24 @@ export const api = {
   // Check if student exists
   async checkStudent(code: string): Promise<{ exists: boolean; student?: Student }> {
     try {
-      const res = await fetch(`${API_BASE}/students/check/${code}`);
+      const res = await fetch(`${API_BASE}/students/check/${encodeURIComponent(code)}`);
       if (res.ok) {
         return await res.json();
       }
       return { exists: false };
     } catch (e) {
       return { exists: false };
+    }
+  },
+
+  // Lookup any community member (docente, maestrando, doctorando, visitante, alumno) by code or DNI
+  async lookupPerson(key: string): Promise<LibraryPerson | null> {
+    try {
+      const res = await fetch(`${API_BASE}/persons/lookup/${encodeURIComponent(key)}`);
+      if (res.ok) return await res.json();
+      return null;
+    } catch {
+      return null;
     }
   },
 

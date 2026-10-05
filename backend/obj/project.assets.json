@@ -1000,24 +1000,33 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\PC-37\\.nuget\\packages\\": {}
+    "C:\\Users\\ADMIN\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {},
+    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\PC-37\\Desktop\\PROYECTOS CFQY\\LENWAS\\Lenguas-Modernas-URP\\backend\\AsistenciaLenguas.Api.csproj",
+      "projectUniqueName": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\AsistenciaLenguas.Api.csproj",
       "projectName": "AsistenciaLenguas.Api",
-      "projectPath": "C:\\Users\\PC-37\\Desktop\\PROYECTOS CFQY\\LENWAS\\Lenguas-Modernas-URP\\backend\\AsistenciaLenguas.Api.csproj",
-      "packagesPath": "C:\\Users\\PC-37\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\PC-37\\Desktop\\PROYECTOS CFQY\\LENWAS\\Lenguas-Modernas-URP\\backend\\obj\\",
+      "projectPath": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\AsistenciaLenguas.Api.csproj",
+      "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\ADMIN\\Desktop\\MIS PROYECTOS\\Asistencia LenguasModernas\\backend\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+      ],
       "configFilePaths": [
-        "C:\\Users\\PC-37\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net9.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -1034,9 +1043,9 @@
       "restoreAuditProperties": {
         "enableAudit": "true",
         "auditLevel": "low",
-        "auditMode": "all"
+        "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.100"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net9.0": {
@@ -1078,7 +1087,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.100-rc.1.24452.12/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

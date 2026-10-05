@@ -75,6 +75,7 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [pulseGlobeTrigger, setPulseGlobeTrigger] = useState(0);
   const [scannerNotification, setScannerNotification] = useState<string | null>(null);
+  const [checkInError, setCheckInError] = useState<{title: string, message: string} | null>(null);
 
   // Sync clock with VPS Server Time (Peru UTC-5)
   useEffect(() => {
@@ -133,11 +134,22 @@ export function App() {
         setLoading(true);
       }
 
+      setCheckInError(null);
       const res = await api.checkIn(code, selectedReason, "General", method);
 
       if (res.isNewStudent) {
         setUnregisteredCode(code);
         setShowNewStudentModal(true);
+      } else if (res.isCapacityFull) {
+        setCheckInError({
+          title: "Aforo Máximo Alcanzado",
+          message: "Lo sentimos, la biblioteca ha alcanzado su capacidad máxima (60 personas). Por favor, intenta más tarde."
+        });
+      } else if (res.isOutsideHours) {
+        setCheckInError({
+          title: "Fuera de Horario",
+          message: "La biblioteca atiende de 08:00 a 22:00. No es posible registrar asistencia fuera de este horario."
+        });
       } else if (res.success) {
         setCheckInResult(res);
         setShowSuccessModal(true);
@@ -148,6 +160,11 @@ export function App() {
           occupancyPercentage: res.occupancyPercentage
         });
         setStudentCodeInput('');
+      } else {
+         setCheckInError({
+          title: "Error de Registro",
+          message: res.message || "Ocurrió un problema al registrar la asistencia."
+        });
       }
     } catch (err: any) {
       console.error(err);
@@ -385,12 +402,66 @@ export function App() {
         >
 
 
+          {/* Capacity Thermometer */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Users size={16} /> Aforo Actual
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: occupancy.currentOccupancy >= occupancy.maxCapacity ? '#ef4444' : '#059669' }}>
+                {occupancy.currentOccupancy} / {occupancy.maxCapacity}
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '10px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, occupancy.occupancyPercentage)}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                style={{
+                  height: '100%',
+                  background: occupancy.occupancyPercentage >= 100 
+                    ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)' 
+                    : occupancy.occupancyPercentage >= 80 
+                      ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
+                      : 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                  borderRadius: '10px'
+                }}
+              />
+            </div>
+          </div>
+
           <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#0f172a', marginBottom: '4px', letterSpacing: '-0.3px' }}>
             Registro de Asistencia
           </h2>
           <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '22px' }}>
             Acerca tu carné universitario al lector o digita tu código de estudiante URP:
           </p>
+
+          <AnimatePresence>
+            {checkInError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                style={{
+                  marginBottom: '20px',
+                  padding: '14px 18px',
+                  background: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '12px',
+                  color: '#991b1b'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <Shield size={18} color="#dc2626" />
+                  <strong style={{ fontSize: '0.9rem' }}>{checkInError.title}</strong>
+                </div>
+                <div style={{ fontSize: '0.82rem', paddingLeft: '26px' }}>
+                  {checkInError.message}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Form */}
           <form
@@ -411,7 +482,10 @@ export function App() {
                   required
                   autoFocus
                   value={studentCodeInput}
-                  onChange={(e) => setStudentCodeInput(e.target.value)}
+                  onChange={(e) => {
+                    setStudentCodeInput(e.target.value);
+                    if (checkInError) setCheckInError(null);
+                  }}
                   placeholder="Ej: 202410345 ó 74125896"
                   className="input-futuristic"
                   style={{

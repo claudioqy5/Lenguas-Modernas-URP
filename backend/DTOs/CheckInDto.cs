@@ -39,5 +39,14 @@ namespace AsistenciaLenguas.Api.DTOs
 
         /// <summary>Minutes spent in library (only meaningful when IsCheckOut = true).</summary>
         public int DurationMinutes { get; set; } = 0;
+
+        /// <summary>Tipo de persona: Alumno / Docente / Visitante / Maestrando / Doctorando.</summary>
+        public string PersonType { get; set; } = string.Empty;
+
+        /// <summary>true = ingreso rechazado porque el aforo máximo está completo.</summary>
+        public bool IsCapacityFull { get; set; } = false;
+
+        /// <summary>true = ingreso rechazado por estar fuera del horario de atención (08:00 - 22:00).</summary>
+        public bool IsOutsideHours { get; set; } = false;
     }
 }

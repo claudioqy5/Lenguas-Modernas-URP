@@ -196,8 +196,8 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
             {isCheckOut
-              ? `¡Hasta pronto, ${student?.firstName || 'Estudiante'}!`
-              : `${greetingWord}, ${student?.firstName || 'Estudiante'}!`
+              ? `¡Hasta pronto, ${student?.firstName || data.personType || 'Usuario'}!`
+              : `${greetingWord}, ${student?.firstName || data.personType || 'Usuario'}!`
             }
           </h2>
 
@@ -259,10 +259,10 @@ export const CheckInSuccessModal: React.FC<CheckInSuccessModalProps> = ({ data, 
                 <div style={{ borderLeft: '1px solid #e2e8f0' }} />
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Carrera
+                    {data.personType === 'Alumno' ? 'Carrera' : 'Rol / Programa'}
                   </div>
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-blue)', marginTop: '3px' }}>
-                    {student?.career || 'Universidad Ricardo Palma'}
+                    {student?.career || data.personType || 'Universidad Ricardo Palma'}
                   </div>
                 </div>
               </>

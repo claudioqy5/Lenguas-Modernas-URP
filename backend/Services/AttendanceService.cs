@@ -111,6 +111,7 @@ namespace AsistenciaLenguas.Api.Services
                 {
                     Success = false,
                     IsNewStudent = false,
+                    IsOutsideHours = true,
                     Message = mensaje,
                     CurrentOccupancy = occ,
                     MaxCapacity = maxCap,
@@ -120,35 +121,44 @@ namespace AsistenciaLenguas.Api.Services
             }
 
             // 3. Resolve the person: first check Students (Alumnos legacy), then LibraryPersons.
-            var student = await _studentService.GetByStudentCodeAsync(request.StudentCode);
+            var cleanKey = (request.StudentCode ?? string.Empty).Trim();
+            var student = await _studentService.GetByStudentCodeAsync(cleanKey);
             var (currentOccupancy, maxCapacity, percentage) = await GetOccupancyAsync();
 
             // Determine unified person info
-            string personId, personCode, firstName, career, faculty, personType;
+            string personId, personCode, firstName, fullName, career, faculty, personType;
+            LibraryPerson? libraryPerson = null;
 
             if (student != null)
             {
                 personId   = student.Id ?? string.Empty;
-                personCode = student.StudentCode;
-                firstName  = student.FirstName;
-                career     = student.Career;
-                faculty    = student.Faculty;
+                personCode = student.StudentCode ?? cleanKey;
+                firstName  = student.FirstName ?? string.Empty;
+                fullName   = student.FullName;
+                career     = student.Career ?? string.Empty;
+                faculty    = student.Faculty ?? string.Empty;
                 personType = Models.PersonType.Alumno;
             }
             else
             {
-                // Try LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos)
-                var libraryPerson = await _context.LibraryPersons
-                    .Find(p => p.Code == request.StudentCode || p.DocumentNumber == request.StudentCode)
+                // Try LibraryPersons (Docentes, Visitantes, Maestrandos, Doctorandos, Alumnos)
+                libraryPerson = await _context.LibraryPersons
+                    .Find(p => p.Code == cleanKey || p.DocumentNumber == cleanKey)
                     .FirstOrDefaultAsync();
 
                 if (libraryPerson == null)
                 {
+                    // Aforo lleno: no tiene sentido pedir registro si no podrá ingresar.
+                    if (currentOccupancy >= maxCapacity)
+                    {
+                        return BuildCapacityFullResponse(currentOccupancy, maxCapacity, percentage, null, string.Empty);
+                    }
+
                     return new CheckInResponseDto
                     {
                         Success = false,
                         IsNewStudent = true,
-                        Message = $"El código/DNI '{request.StudentCode}' no está registrado. Por favor completa tus datos.",
+                        Message = $"El código/DNI '{cleanKey}' no está registrado. Por favor completa tus datos.",
                         CurrentOccupancy = currentOccupancy,
                         MaxCapacity = maxCapacity,
                         OccupancyPercentage = percentage,
@@ -158,11 +168,37 @@ namespace AsistenciaLenguas.Api.Services
 
                 personId   = libraryPerson.Id ?? string.Empty;
                 personCode = libraryPerson.LookupKey;
-                firstName  = libraryPerson.FirstName;
-                career     = libraryPerson.Career.Length > 0 ? libraryPerson.Career : libraryPerson.Program;
-                faculty    = libraryPerson.Faculty;
-                personType = libraryPerson.PersonType;
+                firstName  = libraryPerson.FirstName ?? string.Empty;
+                fullName   = libraryPerson.FullName;
+                career     = !string.IsNullOrWhiteSpace(libraryPerson.Career)
+                                ? libraryPerson.Career
+                                : (libraryPerson.Program ?? string.Empty);
+                faculty    = libraryPerson.Faculty ?? string.Empty;
+                personType = string.IsNullOrWhiteSpace(libraryPerson.PersonType)
+                                ? Models.PersonType.Visitante
+                                : libraryPerson.PersonType;
             }
+
+            if (string.IsNullOrWhiteSpace(fullName)) fullName = firstName;
+
+            // Perfil unificado que se envía al kiosco: garantiza que el saludo y la
+            // despedida muestren el nombre para TODOS los tipos de usuario
+            // (alumnos, docentes, maestrandos, doctorandos y visitantes).
+            var profile = student ?? new Student
+            {
+                Id             = libraryPerson!.Id,
+                StudentCode    = personCode,
+                DocumentNumber = libraryPerson.DocumentNumber ?? string.Empty,
+                FirstName      = firstName,
+                LastName       = libraryPerson.LastName ?? string.Empty,
+                Career         = career,
+                Faculty        = faculty,
+                Email          = libraryPerson.Email ?? string.Empty,
+                Phone          = libraryPerson.Phone ?? string.Empty,
+                TotalVisits    = libraryPerson.TotalVisits,
+                LastVisitAt    = libraryPerson.LastVisitAt,
+                CreatedAt      = libraryPerson.CreatedAt
+            };
 
             var nowUtc = DateTime.UtcNow;
             var peruNow = DateTimeUtils.NowPeru();
@@ -191,7 +227,8 @@ namespace AsistenciaLenguas.Api.Services
                         IsNewStudent = false,
                         IsCheckOut = false,
                         Message = $"Entrada registrada hace {(int)secondsSinceEntry} segundos. Espera {remaining}s más para poder marcar tu salida.",
-                        Student = student,
+                        Student = profile,
+                        PersonType = personType,
                         CurrentOccupancy = currentOccupancy,
                         MaxCapacity = maxCapacity,
                         OccupancyPercentage = percentage
@@ -227,7 +264,8 @@ namespace AsistenciaLenguas.Api.Services
                     IsNewStudent = false,
                     IsCheckOut = true,
                     Message = $"¡Hasta pronto, {firstName}! Estuviste {FormatDuration(durationMinutes)} en la biblioteca.",
-                    Student = student,
+                    Student = profile,
+                    PersonType = personType,
                     AttendanceRecord = activeSession,
                     CurrentOccupancy = updatedOccupancy,
                     MaxCapacity = maxCapacity,
@@ -237,10 +275,16 @@ namespace AsistenciaLenguas.Api.Services
                 };
             }
 
+            // ── CAPACITY GUARD (solo aplica a ENTRADAS; las salidas siempre se permiten) ──
+            if (currentOccupancy >= maxCapacity)
+            {
+                return BuildCapacityFullResponse(currentOccupancy, maxCapacity, percentage, profile, personType);
+            }
+
             // ── CHECK-IN path ─────────────────────────────────────────────────────
             var record = BuildRecord(
-                personCode, personId, 
-                student != null ? student.FullName : $"{firstName}",
+                personCode, personId,
+                fullName,
                 career, faculty, personType,
                 nowUtc, peruNow, todayStr,
                 request.VisitReason, request.EntryMethod);
@@ -269,6 +313,8 @@ namespace AsistenciaLenguas.Api.Services
                     .Inc(p => p.TotalVisits, 1)
                     .Set(p => p.LastVisitAt, nowUtc);
                 await _context.LibraryPersons.UpdateOneAsync(p => p.Id == personId, updatePerson);
+                profile.TotalVisits += 1;
+                profile.LastVisitAt = nowUtc;
             }
 
             var newOccupancy = Math.Min(currentOccupancy + 1, maxCapacity);
@@ -281,13 +327,39 @@ namespace AsistenciaLenguas.Api.Services
                 Success = true,
                 IsNewStudent = false,
                 IsCheckOut = false,
-                Message = $"¡Bienvenido/a, {student.FirstName}! Asistencia registrada con éxito.",
-                Student = student,
+                Message = $"¡Bienvenido/a, {firstName}! Asistencia registrada con éxito.",
+                Student = profile,
+                PersonType = personType,
                 AttendanceRecord = record,
                 CurrentOccupancy = newOccupancy,
                 MaxCapacity = maxCapacity,
                 OccupancyPercentage = newPercentage,
                 Quote = _quoteService.GetRandomQuote()
+            };
+        }
+
+        // Respuesta estándar cuando el aforo máximo está completo.
+        private CheckInResponseDto BuildCapacityFullResponse(
+            int currentOccupancy, int maxCapacity, double percentage,
+            Student? profile, string personType)
+        {
+            var saludo = profile != null && !string.IsNullOrWhiteSpace(profile.FirstName)
+                ? $"Lo sentimos, {profile.FirstName}. "
+                : "Lo sentimos. ";
+
+            return new CheckInResponseDto
+            {
+                Success = false,
+                IsNewStudent = false,
+                IsCheckOut = false,
+                IsCapacityFull = true,
+                Message = $"{saludo}La biblioteca alcanzó su aforo máximo ({currentOccupancy}/{maxCapacity}). " +
+                          "Por favor espera a que se libere un espacio para poder ingresar.",
+                Student = profile,
+                PersonType = personType,
+                CurrentOccupancy = currentOccupancy,
+                MaxCapacity = maxCapacity,
+                OccupancyPercentage = percentage
             };
         }
 
