@@ -82,14 +82,17 @@ export const KPICards: React.FC<KPICardsProps> = ({
 
   const avgDurationStr = formatDuration(avgDurationMinutes);
 
-  // Calculate unique users count for the selected records/day
+  // Calculate unique users count for the selected records/day or period
   const uniqueUsersCount = React.useMemo(() => {
+    if (periodType && typeof periodUniqueStudentsCount === 'number') {
+      return periodUniqueStudentsCount;
+    }
     if (!records || records.length === 0) return 0;
     const uniqueKeys = new Set(
       records.map(r => (r.studentCode?.trim() || r.studentId?.trim() || r.studentName?.trim() || '')).filter(Boolean)
     );
     return uniqueKeys.size;
-  }, [records]);
+  }, [records, periodType, periodUniqueStudentsCount]);
 
   // Determine Card 3 Title & Subtitle based on mode
   const isPeriodMode = Boolean(periodType);
@@ -106,6 +109,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isPeriodMode ? 'repeat(auto-fit, minmax(220px, 1fr))' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      {/* 1. Usuarios Registrados */}
       <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -122,6 +126,7 @@ export const KPICards: React.FC<KPICardsProps> = ({
         </div>
       </div>
 
+      {/* 2. Asistencias del Día / Período */}
       <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -138,6 +143,24 @@ export const KPICards: React.FC<KPICardsProps> = ({
         </div>
       </div>
 
+      {/* 3. Usuarios Únicos */}
+      <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              Usuarios Únicos
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-purple)', marginTop: '2px', lineHeight: 1.1 }}>
+              {uniqueUsersCount}
+            </div>
+          </div>
+          <div style={{ padding: '7px', borderRadius: '8px', background: '#f5f3ff', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <UserCheck size={17} />
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Tiempo Prom. de Estadía */}
       <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -155,41 +178,22 @@ export const KPICards: React.FC<KPICardsProps> = ({
       </div>
 
       {!isPeriodMode && (
-        <>
-          {/* Aforo Actual Widget */}
-          <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                  Aforo Actual
-                </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', marginTop: '2px', lineHeight: 1.1 }}>
-                  {currentOccupancy} <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {maxCapacity}</span>
-                </div>
+        /* 5. Aforo Actual */
+        <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                Aforo Actual
               </div>
-              <div style={{ padding: '7px', borderRadius: '8px', background: isOverCapacity ? '#fef2f2' : 'var(--urp-green-light)', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Users size={17} />
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', marginTop: '2px', lineHeight: 1.1 }}>
+                {currentOccupancy} <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: 600 }}>/ {maxCapacity}</span>
               </div>
             </div>
-          </div>
-
-          {/* Unique Users of the selected Date */}
-          <div className="glass-panel" style={{ padding: '12px 16px', background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                  Usuarios Únicos
-                </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-purple)', marginTop: '2px', lineHeight: 1.1 }}>
-                  {uniqueUsersCount}
-                </div>
-              </div>
-              <div style={{ padding: '7px', borderRadius: '8px', background: '#f5f3ff', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <UserCheck size={17} />
-              </div>
+            <div style={{ padding: '7px', borderRadius: '8px', background: isOverCapacity ? '#fef2f2' : 'var(--urp-green-light)', color: isOverCapacity ? '#ef4444' : 'var(--urp-green-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Users size={17} />
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

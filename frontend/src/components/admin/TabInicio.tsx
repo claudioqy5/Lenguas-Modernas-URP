@@ -1033,10 +1033,10 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 <PieChartIcon size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {formattedDateLabel ? `Afluencia por Tipo (${formattedDateLabel})` : 'Afluencia por Tipo (Hoy)'}
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Afluencia por Tipo de Usuario
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su rol</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Distribución de usuarios según su rol</p>
               </div>
             </div>
 
@@ -1105,10 +1105,10 @@ export const TabInicio: React.FC<TabInicioProps> = ({ summary, selectedDate, rec
                 <Building2 size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {formattedDateLabel ? `Afluencia por Programa Académico (${formattedDateLabel})` : 'Afluencia por Programa Académico (Hoy)'}
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Afluencia por Programa Académico
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Distribución de usuarios según su programa o carrera</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Distribución de usuarios según su programa o carrera</p>
               </div>
             </div>
 
