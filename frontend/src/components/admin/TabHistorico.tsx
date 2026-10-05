@@ -101,9 +101,12 @@ const formatMinutesDuration = (minutes: number): string => {
   return `${m} min`;
 };
 
-const CustomDayTooltip = ({ active, payload }: any) => {
+const CustomTemporalTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
+    const titleLabel = data.fullDate 
+      ? `${data.dayName} ${data.fullDate}` 
+      : (data.fullLabel || data.day);
     return (
       <div style={{
         background: '#ffffff',
@@ -114,7 +117,7 @@ const CustomDayTooltip = ({ active, payload }: any) => {
         minWidth: '220px'
       }}>
         <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem', marginBottom: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
-          {data.day}
+          {titleLabel}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -122,7 +125,7 @@ const CustomDayTooltip = ({ active, payload }: any) => {
             <span style={{ fontWeight: 700, color: '#0f5142' }}>{data.count} {data.count === 1 ? 'visita' : 'visitas'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: '#64748b' }}>⏱️ Minutos Usados:</span>
+            <span style={{ color: '#64748b' }}>⏱️ Tiempo de Permanencia:</span>
             <span style={{ fontWeight: 700, color: '#b45309' }}>{data.formattedTime} ({Number(data.totalMinutes).toLocaleString()} min)</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px dashed #f1f5f9' }}>
@@ -136,21 +139,26 @@ const CustomDayTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-const renderCustomDayBarLabel = (props: any, mode: 'visits' | 'minutes') => {
+const renderCustomTemporalBarLabel = (props: any, mode: 'visits' | 'minutes', isMonthly: boolean, maxVal: number) => {
   const { x, y, width, payload } = props;
   if (isNaN(Number(x)) || isNaN(Number(y))) return null;
-  const labelText = mode === 'visits' 
-    ? (payload?.count > 0 ? `${payload.count}` : '')
-    : (payload?.totalMinutes > 0 ? payload.formattedTime : '');
+  const val = mode === 'visits' ? payload?.count : payload?.totalMinutes;
+  if (!val || val <= 0) return null;
 
-  if (!labelText) return null;
+  // En vista mensual con 31 días, solo mostrar etiqueta en los picos para evitar colisión de texto
+  if (isMonthly && val !== maxVal) return null;
+
+  const labelText = mode === 'visits' 
+    ? `${payload.count}`
+    : payload.formattedTime;
+
   return (
     <text
       x={Number(x) + Number(width) / 2}
       y={Number(y) - 6}
       fill="#334155"
       textAnchor="middle"
-      fontSize={10}
+      fontSize={isMonthly ? 9 : 10}
       fontWeight={700}
     >
       {labelText}
@@ -265,6 +273,183 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
       };
     });
   }, [effectiveRecords]);
+
+  // Compute Daily Trend for Month (1 to 28/29/30/31)
+  const monthDaysData = useMemo(() => {
+    if (filterType !== 'month' || !effectiveRecords) return [];
+
+    let numDays = 31;
+    let yearNum = new Date().getFullYear();
+    let monthNum = new Date().getMonth() + 1;
+    if (filterValue && filterValue.includes('-')) {
+      const parts = filterValue.split('-').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        yearNum = parts[0];
+        monthNum = parts[1];
+        numDays = new Date(yearNum, monthNum, 0).getDate();
+      }
+    }
+
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const monthPrefix = `${yearNum}-${String(monthNum).padStart(2, '0')}`;
+
+    const daysList = [];
+    for (let d = 1; d <= numDays; d++) {
+      const dayStr = String(d).padStart(2, '0');
+      const fullDateStr = `${monthPrefix}-${dayStr}`;
+      const dayDate = new Date(yearNum, monthNum - 1, d, 12, 0, 0);
+      const dayName = dayNames[dayDate.getDay()];
+
+      const dayRecords = effectiveRecords.filter(r => getRecordDateStr(r) === fullDateStr);
+      const count = dayRecords.length;
+      const totalMinutes = dayRecords.reduce((acc, r) => acc + getRecordMinutes(r), 0);
+      const avgMinutes = count > 0 ? Math.round(totalMinutes / count) : 0;
+
+      daysList.push({
+        day: `${d}`,
+        fullDate: `${dayStr}/${String(monthNum).padStart(2, '0')}/${yearNum}`,
+        dayName,
+        count,
+        totalMinutes,
+        formattedTime: formatMinutesDuration(totalMinutes),
+        avgMinutes,
+        formattedAvg: formatMinutesDuration(avgMinutes)
+      });
+    }
+
+    return daysList;
+  }, [filterType, filterValue, effectiveRecords]);
+
+  // Compute Monthly Trend for Year (Ene to Dic)
+  const yearMonthsData = useMemo(() => {
+    if (filterType !== 'year' || !effectiveRecords) return [];
+
+    const yearStr = filterValue || String(new Date().getFullYear());
+    const monthNames = [
+      { num: 1, short: 'Ene', full: 'Enero' },
+      { num: 2, short: 'Feb', full: 'Febrero' },
+      { num: 3, short: 'Mar', full: 'Marzo' },
+      { num: 4, short: 'Abr', full: 'Abril' },
+      { num: 5, short: 'May', full: 'Mayo' },
+      { num: 6, short: 'Jun', full: 'Junio' },
+      { num: 7, short: 'Jul', full: 'Julio' },
+      { num: 8, short: 'Ago', full: 'Agosto' },
+      { num: 9, short: 'Set', full: 'Setiembre' },
+      { num: 10, short: 'Oct', full: 'Octubre' },
+      { num: 11, short: 'Nov', full: 'Noviembre' },
+      { num: 12, short: 'Dic', full: 'Diciembre' },
+    ];
+
+    return monthNames.map(m => {
+      const monthPrefix = `${yearStr}-${String(m.num).padStart(2, '0')}`;
+      const monthRecords = effectiveRecords.filter(r => {
+        const d = getRecordDateStr(r);
+        return d && d.startsWith(monthPrefix);
+      });
+      const count = monthRecords.length;
+      const totalMinutes = monthRecords.reduce((acc, r) => acc + getRecordMinutes(r), 0);
+      const avgMinutes = count > 0 ? Math.round(totalMinutes / count) : 0;
+
+      return {
+        day: m.short,
+        fullLabel: `${m.full} ${yearStr}`,
+        count,
+        totalMinutes,
+        formattedTime: formatMinutesDuration(totalMinutes),
+        avgMinutes,
+        formattedAvg: formatMinutesDuration(avgMinutes)
+      };
+    });
+  }, [filterType, filterValue, effectiveRecords]);
+
+  // Compute Yearly Trend for All Time (Histórico Completo)
+  const allTimeData = useMemo(() => {
+    if (filterType !== 'all' || !effectiveRecords) return [];
+
+    const yearsMap: Record<string, { count: number; totalMinutes: number }> = {};
+    effectiveRecords.forEach(r => {
+      const dateStr = getRecordDateStr(r);
+      const year = dateStr ? dateStr.slice(0, 4) : 'Desconocido';
+      if (!yearsMap[year]) {
+        yearsMap[year] = { count: 0, totalMinutes: 0 };
+      }
+      yearsMap[year].count++;
+      yearsMap[year].totalMinutes += getRecordMinutes(r);
+    });
+
+    const sortedYears = Object.keys(yearsMap).sort();
+    return sortedYears.map(yr => {
+      const data = yearsMap[yr];
+      const count = data.count;
+      const totalMinutes = data.totalMinutes;
+      const avgMinutes = count > 0 ? Math.round(totalMinutes / count) : 0;
+      return {
+        day: yr,
+        fullLabel: `Año ${yr}`,
+        count,
+        totalMinutes,
+        formattedTime: formatMinutesDuration(totalMinutes),
+        avgMinutes,
+        formattedAvg: formatMinutesDuration(avgMinutes)
+      };
+    });
+  }, [filterType, effectiveRecords]);
+
+  // Active Temporal Data depending on current filter
+  const activeTemporalData = useMemo(() => {
+    if (filterType === 'month') return monthDaysData;
+    if (filterType === 'year') return yearMonthsData;
+    if (filterType === 'all') return allTimeData.length > 0 ? allTimeData : peakDaysData;
+    return peakDaysData;
+  }, [filterType, monthDaysData, yearMonthsData, allTimeData, peakDaysData]);
+
+  // Max value among the active temporal dataset for peak detection & highlight
+  const maxTemporalValue = useMemo(() => {
+    if (!activeTemporalData || activeTemporalData.length === 0) return 0;
+    return Math.max(...activeTemporalData.map(d => dayMetricMode === 'visits' ? d.count : d.totalMinutes), 0);
+  }, [activeTemporalData, dayMetricMode]);
+
+  // Dynamic config for Card 1 header and bars
+  const temporalChartConfig = useMemo(() => {
+    if (filterType === 'month') {
+      return {
+        title: 'Tendencia Diaria de Visitas del Mes',
+        subtitle: dayMetricMode === 'visits' 
+          ? `Distribución del día 1 al ${monthDaysData.length} en ${periodDescription}`
+          : `Permanencia total del día 1 al ${monthDaysData.length} en ${periodDescription}`,
+        barSize: 16,
+        labelInterval: 0
+      };
+    }
+    if (filterType === 'year') {
+      return {
+        title: 'Tendencia Mensual de Visitas y Permanencia',
+        subtitle: dayMetricMode === 'visits'
+          ? `Distribución mensual de asistencias en ${periodDescription}`
+          : `Distribución mensual de permanencia en ${periodDescription}`,
+        barSize: 32,
+        labelInterval: 0
+      };
+    }
+    if (filterType === 'all') {
+      return {
+        title: 'Evolución Histórica de Visitas y Permanencia',
+        subtitle: dayMetricMode === 'visits'
+          ? `Distribución global de asistencias en ${periodDescription}`
+          : `Distribución global de permanencia en ${periodDescription}`,
+        barSize: 40,
+        labelInterval: 0
+      };
+    }
+    return {
+      title: 'Días de la Semana con Más Visitas y Permanencia',
+      subtitle: dayMetricMode === 'visits'
+        ? `Suma total de asistencias según día en ${periodDescription}`
+        : `Suma total de minutos de permanencia según día en ${periodDescription}`,
+      barSize: 44,
+      labelInterval: 0
+    };
+  }, [filterType, periodDescription, dayMetricMode, monthDaysData.length]);
 
   // Aggregate metrics for summary badge and peak indicators
   const totalPeriodVisits = useMemo(() => {
@@ -420,347 +605,345 @@ export const TabHistorico: React.FC<TabHistoricoProps> = ({
           </div>
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '24px', alignItems: 'start' }}>
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Card 1: Días de la Semana con Más Visitas y Permanencia */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              flexWrap: 'wrap', 
-              gap: '12px', 
-              marginBottom: '16px' 
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                    Días de la Semana con Más Visitas y Permanencia
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                    {dayMetricMode === 'visits' 
-                      ? `Suma total de asistencias según día en ${periodDescription}`
-                      : `Suma total de minutos de permanencia según día en ${periodDescription}`
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Toggle Switcher: Visitas vs Minutos Usados */}
-              <div style={{
-                display: 'inline-flex',
-                background: '#f1f5f9',
-                padding: '3px',
-                borderRadius: '8px',
-                gap: '2px'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setDayMetricMode('visits')}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    background: dayMetricMode === 'visits' ? '#ffffff' : 'transparent',
-                    color: dayMetricMode === 'visits' ? '#0f5142' : '#64748b',
-                    boxShadow: dayMetricMode === 'visits' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  👥 Total Visitas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDayMetricMode('minutes')}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    background: dayMetricMode === 'minutes' ? '#ffffff' : 'transparent',
-                    color: dayMetricMode === 'minutes' ? '#b45309' : '#64748b',
-                    boxShadow: dayMetricMode === 'minutes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  ⏱️ Minutos Usados
-                </button>
-              </div>
-            </div>
-
-            <div style={{ height: '260px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart key={`peak-days-chart-${dayMetricMode}-${filterType}-${filterValue}`} data={peakDaysData} margin={{ top: 18, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis 
-                    stroke="#64748b" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={false}
-                    allowDecimals={false}
-                    tickFormatter={(val) => {
-                      if (dayMetricMode === 'visits') return `${val}`;
-                      if (val >= 60) {
-                        const h = Math.floor(val / 60);
-                        const m = val % 60;
-                        return m > 0 ? `${h}h${m}m` : `${h}h`;
-                      }
-                      return `${val}m`;
-                    }}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(15, 81, 66, 0.04)' }}
-                    content={<CustomDayTooltip />}
-                  />
-                  <Bar 
-                    dataKey={dayMetricMode === 'visits' ? 'count' : 'totalMinutes'} 
-                    radius={[6, 6, 0, 0]}
-                    isAnimationActive={true}
-                    animationDuration={1200}
-                    animationEasing="ease-out"
-                  >
-                    <LabelList 
-                      content={(props: any) => renderCustomDayBarLabel(props, dayMetricMode)} 
-                    />
-                    {peakDaysData.map((entry, index) => {
-                      if (dayMetricMode === 'visits') {
-                        const maxVal = Math.max(...peakDaysData.map(d => d.count), 0);
-                        const isPeak = maxVal > 0 && entry.count === maxVal;
-                        return (
-                          <Cell 
-                            key={`cell-v-${index}`} 
-                            fill={isPeak ? '#b45309' : '#0f5142'} 
-                          />
-                        );
-                      } else {
-                        const maxVal = Math.max(...peakDaysData.map(d => d.totalMinutes), 0);
-                        const isPeak = maxVal > 0 && entry.totalMinutes === maxVal;
-                        return (
-                          <Cell 
-                            key={`cell-m-${index}`} 
-                            fill={isPeak ? '#0f5142' : '#b45309'} 
-                          />
-                        );
-                      }
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Card 2: Ranking de Usuarios Asiduos */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', 
+        gap: '24px', 
+        alignItems: 'stretch' 
+      }}>
+        {/* Card 1: Tendencia Temporal (Semanal / Mensual / Anual) */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '12px', 
+            marginBottom: '16px',
+            minHeight: '44px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <Trophy size={18} />
+                <Calendar size={18} />
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Ranking de Usuarios Asiduos
+                  {temporalChartConfig.title}
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Usuarios con mayor cantidad de visitas en {periodDescription}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  {temporalChartConfig.subtitle}
+                </p>
               </div>
             </div>
 
-            <div style={{ height: '280px', width: '100%', marginTop: '10px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  key={`top-students-chart-${filterType}-${filterValue}`}
-                  data={topStudentsData} 
-                  layout="vertical"
-                  margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" stroke="#64748b" fontSize={11} />
-                  <YAxis type="category" dataKey="fullName" stroke="#64748b" fontSize={11} width={100} tickFormatter={(val) => val.split(' ')[0] + ' ' + (val.split(' ')[1] ? val.split(' ')[1].charAt(0) + '.' : '')} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
-                    contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                    formatter={(val: any) => [`${val} visitas`, 'Total']}
-                  />
-                  <Bar 
-                    dataKey="visitCount" 
-                    radius={[0, 6, 6, 0]} 
-                    barSize={24}
-                    isAnimationActive={true}
-                    animationDuration={1200}
-                    animationEasing="ease-out"
-                  >
-                    {topStudentsData.map((_, index) => {
-                      const solidColors = ['#b45309', '#475569', '#0f5142', '#64748b', '#94a3b8'];
-                      return (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={solidColors[index] || '#94a3b8'} 
-                        />
-                      );
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            {/* Toggle Switcher: Visitas vs Minutos Usados */}
+            <div style={{
+              display: 'inline-flex',
+              background: '#f1f5f9',
+              padding: '3px',
+              borderRadius: '8px',
+              gap: '2px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setDayMetricMode('visits')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: dayMetricMode === 'visits' ? '#ffffff' : 'transparent',
+                  color: dayMetricMode === 'visits' ? '#0f5142' : '#64748b',
+                  boxShadow: dayMetricMode === 'visits' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                👥 Total Visitas
+              </button>
+              <button
+                type="button"
+                onClick={() => setDayMetricMode('minutes')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: dayMetricMode === 'minutes' ? '#ffffff' : 'transparent',
+                  color: dayMetricMode === 'minutes' ? '#b45309' : '#64748b',
+                  boxShadow: dayMetricMode === 'minutes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                ⏱️ Minutos Usados
+              </button>
             </div>
+          </div>
+
+          <div style={{ height: '275px', width: '100%', marginTop: '6px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                key={`temporal-chart-${filterType}-${filterValue}-${dayMetricMode}`} 
+                data={activeTemporalData} 
+                margin={{ top: 18, right: 10, left: -15, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis 
+                  dataKey="day" 
+                  stroke="#64748b" 
+                  fontSize={filterType === 'month' ? (monthDaysData.length > 28 ? 9 : 10) : 11} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  interval={temporalChartConfig.labelInterval}
+                />
+                <YAxis 
+                  stroke="#64748b" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false}
+                  allowDecimals={false}
+                  tickFormatter={(val) => {
+                    if (dayMetricMode === 'visits') return `${val}`;
+                    if (val >= 60) {
+                      const h = Math.floor(val / 60);
+                      const m = val % 60;
+                      return m > 0 ? `${h}h${m}m` : `${h}h`;
+                    }
+                    return `${val}m`;
+                  }}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(15, 81, 66, 0.04)' }}
+                  content={<CustomTemporalTooltip />}
+                />
+                <Bar 
+                  dataKey={dayMetricMode === 'visits' ? 'count' : 'totalMinutes'} 
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={temporalChartConfig.barSize}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
+                  <LabelList 
+                    content={(props: any) => renderCustomTemporalBarLabel(props, dayMetricMode, filterType === 'month', maxTemporalValue)} 
+                  />
+                  {activeTemporalData.map((entry, index) => {
+                    const val = dayMetricMode === 'visits' ? entry.count : entry.totalMinutes;
+                    const isPeak = maxTemporalValue > 0 && val === maxTemporalValue;
+                    return (
+                      <Cell 
+                        key={`cell-temp-${index}`} 
+                        fill={isPeak ? '#b45309' : '#0f5142'} 
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Card 3: Person Type Distribution (Pie Chart) - Afluencia por Tipo (SOBRE EL DE CARRERAS) */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
-                <PieChartIcon size={18} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Afluencia por Tipo de Usuario
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  Distribución de usuarios según su rol en {periodDescription}
-                </p>
-              </div>
+        {/* Card 2: Afluencia por Tipo de Usuario */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', minHeight: '44px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-green-light)', color: 'var(--urp-green-primary)' }}>
+              <PieChartIcon size={18} />
             </div>
-
-            {sortedPersonTypeData.length === 0 ? (
-              <div style={{ height: '270px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
-                No hay registros de tipos de usuario en este período.
-              </div>
-            ) : (
-              <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
-                {/* Pie Chart */}
-                <div style={{ flex: '0 0 55%', height: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart key={`roles-pie-chart-${filterType}-${filterValue}`}>
-                      <Pie
-                        data={sortedPersonTypeData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={50}
-                        paddingAngle={3}
-                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                        isAnimationActive={true}
-                        animationDuration={1200}
-                        animationEasing="ease-out"
-                      >
-                        {sortedPersonTypeData.map((_, index) => (
-                          <Cell key={`cell-role-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                        formatter={(val: any) => [`${val} asistencias`, 'Total']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Custom Legend - sorted descending */}
-                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
-                  {sortedPersonTypeData.map((item, index) => (
-                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        background: BAR_COLORS[index % BAR_COLORS.length]
-                      }} />
-                      <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
-                        {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                Afluencia por Tipo de Usuario
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Distribución de usuarios según su rol en {periodDescription}
+              </p>
+            </div>
           </div>
 
-          {/* Card 4: Career Distribution Donut Chart (Gráfico circular de alumnos por carrera) */}
-          <div className="glass-panel" style={{ padding: '24px', background: '#ffffff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
-                <Building2 size={18} />
+          {sortedPersonTypeData.length === 0 ? (
+            <div style={{ height: '275px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
+              No hay registros de tipos de usuario en este período.
+            </div>
+          ) : (
+            <div style={{ height: '275px', width: '100%', display: 'flex', alignItems: 'center', marginTop: '6px' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: '0 0 55%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart key={`roles-pie-chart-${filterType}-${filterValue}`}>
+                    <Pie
+                      data={sortedPersonTypeData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={50}
+                      paddingAngle={3}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                    >
+                      {sortedPersonTypeData.map((_, index) => (
+                        <Cell key={`cell-role-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                      formatter={(val: any) => [`${val} asistencias`, 'Total']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                  Afluencia por Programa Académico
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  Distribución de usuarios según programa académico o rol en {periodDescription}
-                </p>
+              {/* Custom Legend - sorted descending */}
+              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                {sortedPersonTypeData.map((item, index) => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: BAR_COLORS[index % BAR_COLORS.length]
+                    }} />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
+        </div>
 
-            {sortedCareerData.length === 0 ? (
-              <div style={{ height: '270px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
-                No hay registros de carreras o programas en este período.
-              </div>
-            ) : (
-              <div style={{ height: '270px', width: '100%', display: 'flex', alignItems: 'center' }}>
-                {/* Pie Chart */}
-                <div style={{ flex: '0 0 55%', height: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart key={`career-pie-chart-${filterType}-${filterValue}`}>
-                      <Pie
-                        data={sortedCareerData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={50}
-                        paddingAngle={3}
-                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                        isAnimationActive={true}
-                        animationDuration={1200}
-                        animationEasing="ease-out"
-                      >
-                        {sortedCareerData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Custom Legend - sorted descending */}
-                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
-                  {sortedCareerData.map((item, index) => (
-                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        background: BAR_COLORS[index % BAR_COLORS.length]
-                      }} />
-                      <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
-                        {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* Card 3: Ranking de Usuarios Asiduos */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', minHeight: '44px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+              <Trophy size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                Ranking de Usuarios Asiduos
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Usuarios con mayor cantidad de visitas en {periodDescription}</p>
+            </div>
           </div>
+
+          <div style={{ height: '275px', width: '100%', marginTop: '6px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                key={`top-students-chart-${filterType}-${filterValue}`}
+                data={topStudentsData} 
+                layout="vertical"
+                margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" stroke="#64748b" fontSize={11} />
+                <YAxis type="category" dataKey="fullName" stroke="#64748b" fontSize={11} width={100} tickFormatter={(val) => val.split(' ')[0] + ' ' + (val.split(' ')[1] ? val.split(' ')[1].charAt(0) + '.' : '')} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                  formatter={(val: any) => [`${val} visitas`, 'Total']}
+                />
+                <Bar 
+                  dataKey="visitCount" 
+                  radius={[0, 6, 6, 0]} 
+                  barSize={24}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationEasing="ease-out"
+                >
+                  {topStudentsData.map((_, index) => {
+                    const solidColors = ['#b45309', '#475569', '#0f5142', '#64748b', '#94a3b8'];
+                    return (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={solidColors[index] || '#94a3b8'} 
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Card 4: Afluencia por Programa Académico */}
+        <div className="glass-panel" style={{ padding: '24px', background: '#ffffff', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', minHeight: '44px' }}>
+            <div style={{ padding: '8px', borderRadius: '8px', background: 'var(--urp-gold-light)', color: 'var(--urp-gold-primary)' }}>
+              <Building2 size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                Afluencia por Programa Académico
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Distribución de usuarios según programa académico o rol en {periodDescription}
+              </p>
+            </div>
+          </div>
+
+          {sortedCareerData.length === 0 ? (
+            <div style={{ height: '275px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', fontSize: '0.9rem' }}>
+              No hay registros de carreras o programas en este período.
+            </div>
+          ) : (
+            <div style={{ height: '275px', width: '100%', display: 'flex', alignItems: 'center', marginTop: '6px' }}>
+              {/* Pie Chart */}
+              <div style={{ flex: '0 0 55%', height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart key={`career-pie-chart-${filterType}-${filterValue}`}>
+                    <Pie
+                      data={sortedCareerData}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={50}
+                      paddingAngle={3}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                    >
+                      {sortedCareerData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} 
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Custom Legend - sorted descending */}
+              <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '8px' }}>
+                {sortedCareerData.map((item, index) => (
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: BAR_COLORS[index % BAR_COLORS.length]
+                    }} />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>
+                      {item.name} <strong style={{ color: 'var(--text-main)' }}>({item.count})</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
