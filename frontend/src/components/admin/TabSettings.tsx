@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api, AuthSession } from '../../services/api';
-import { Save, User, Lock, Shield, Check, AlertTriangle, Eye, EyeOff, UserCircle } from 'lucide-react';
+import { Save, User, Lock, Shield, Check, AlertTriangle, Eye, EyeOff, UserCircle, Code2, Mail, MessageCircle, Phone } from 'lucide-react';
 
 interface TabSettingsProps {
   session: AuthSession;
@@ -213,6 +213,198 @@ export const TabSettings: React.FC<TabSettingsProps> = ({ session }) => {
 
         </form>
       </div>
+
+      {/* About & Developer Contact Card */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid var(--border-card)',
+        borderRadius: '12px',
+        padding: '24px',
+        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(15, 81, 66, 0.1)', color: 'var(--urp-green-primary)' }}>
+            <Code2 size={18} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Acerca del Sistema & Soporte Técnico
+            </h3>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Desarrollo, autoría y contacto para mantenimiento
+            </span>
+          </div>
+        </div>
+
+        {/* Profile Card / Developer Info */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 81, 66, 0.04) 0%, rgba(2, 132, 199, 0.04) 100%)',
+          border: '1px solid rgba(15, 81, 66, 0.15)',
+          borderRadius: '12px',
+          padding: '18px 20px',
+          marginBottom: '16px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #0f5142 0%, #0284c7 100%)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.1rem',
+              fontWeight: 800,
+              boxShadow: '0 4px 10px rgba(15, 81, 66, 0.2)'
+            }}>
+              CQ
+            </div>
+            <div style={{ flex: 1, minWidth: '220px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Claudio Fernando Quello Yapu
+                </h4>
+                <span style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  color: '#065f46',
+                  background: '#d1fae5',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  border: '1px solid #a7f3d0'
+                }}>
+                  Desarrollador
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Facultad de Humanidades y Lenguas Modernas &mdash; URP
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Links Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+          {/* Phone / WhatsApp */}
+          <a
+            href="https://wa.me/51962956919?text=Hola%20Claudio,%20te%20contacto%20sobre%20el%20Sistema%20de%20Biblioteca%20URP"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              background: '#ffffff',
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+              color: 'inherit'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#22c55e';
+              e.currentTarget.style.background = '#f0fdf4';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#dcfce7',
+              color: '#16a34a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <MessageCircle size={18} />
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Celular / WhatsApp
+              </div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '1px' }}>
+                962 956 919
+              </div>
+            </div>
+          </a>
+
+          {/* Email */}
+          <a
+            href="mailto:claudioquello5@gmail.com?subject=Consulta%20-%20Sistema%20de%20Biblioteca%20URP"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              background: '#ffffff',
+              textDecoration: 'none',
+              transition: 'all 0.2s ease',
+              color: 'inherit'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#0284c7';
+              e.currentTarget.style.background = '#f0f9ff';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: '#e0f2fe',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Mail size={18} />
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Correo Electrónico
+              </div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '1px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                claudioquello5@gmail.com
+              </div>
+            </div>
+          </a>
+        </div>
+
+        {/* Footer info note */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '8px',
+          paddingTop: '12px',
+          borderTop: '1px solid #f1f5f9',
+          fontSize: '0.76rem',
+          color: 'var(--text-muted)'
+        }}>
+          <span>Biblioteca Especializada &ldquo;San Jerónimo&rdquo; &mdash; Versión 2.5</span>
+          <span style={{ fontWeight: 600, color: 'var(--urp-green-primary)' }}>Universidad Ricardo Palma</span>
+        </div>
+      </div>
+
       {/* Danger Zone */}
       <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>

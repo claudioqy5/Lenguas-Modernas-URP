@@ -506,7 +506,7 @@ export function App() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', color: 'var(--text-subtle)', marginTop: '6px' }}>
                 <Info size={13} color="#059669" />
-                <span>Si eres nuevo estudiante, podrás registrar tus datos de inmediato al ingresar tu código.</span>
+                <span>Si eres nuevo, podrás registrar tus datos de inmediato al ingresar tu código.</span>
               </div>
             </div>
 
