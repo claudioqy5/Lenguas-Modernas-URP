@@ -541,7 +541,7 @@ export const NewStudentModal: React.FC<NewPersonModalProps> = ({
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>
-                  Teléfono / Celular (Opcional)
+                  Teléfono / Celular
                 </label>
                 <input
                   type="tel"

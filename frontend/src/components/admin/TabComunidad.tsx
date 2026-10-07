@@ -16,6 +16,7 @@ export interface UnifiedCommunityMember {
   career: string;
   program: string;
   email: string;
+  phone: string;
   totalVisits: number;
   lastVisitAt?: string;
   createdAt?: string;
@@ -76,6 +77,7 @@ export const unifyCommunityMembers = (students: Student[], persons: LibraryPerso
       faculty: (p.faculty || '').trim(),
       career: (p.career || '').trim(),
       program: (p.program || '').trim(),
+      email: (p.email || '').trim(),
       phone: (p.phone || '').trim(),
       totalVisits: p.totalVisits || 0,
       lastVisitAt: p.lastVisitAt,
@@ -131,6 +133,7 @@ export const unifyCommunityMembers = (students: Student[], persons: LibraryPerso
         faculty: (s.faculty || '').trim(),
         career: (s.career || '').trim(),
         program: '',
+        email: (s.email || '').trim(),
         phone: (s.phone || '').trim(),
         totalVisits: s.totalVisits || 0,
         lastVisitAt: s.lastVisitAt,
